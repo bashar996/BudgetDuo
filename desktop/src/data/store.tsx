@@ -73,7 +73,8 @@ export function makeActions(be: Backend, getData: () => Data | null) {
 
     // Us two
     toggleCheck(key: string) { const on = !!getData()?.household.checks?.[key]; commit(hh({ ['checks.' + key]: !on })) },
-    setSettled(ym: string, v: boolean) { commit(hh({ ['settled.' + ym]: v })) },
+    /** Records what was moved between you, so later shared spending still shows. */
+    setSettled(ym: string, amount: number) { commit(hh({ ['settled.' + ym]: inc(amount) })) },
 
     /** Shared settings: names, currency, budget style, rollover, cushion, … */
     updateHousehold(fields: Partial<Household>) { commit(hh(fields as Record<string, unknown>)) },

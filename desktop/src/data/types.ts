@@ -30,8 +30,8 @@ export interface Household {
   coachTips?: boolean
   splitMode?: 'One joint pot' | 'Split shared costs'
   splitRule?: '50/50' | 'By income'
-  /** "YYYY-MM" → settled up */
-  settled?: Record<string, boolean>
+  /** "YYYY-MM" → amount already settled (A owes B is negative) */
+  settled?: Record<string, number>
   roundUps?: boolean
   sweep?: boolean
 }
