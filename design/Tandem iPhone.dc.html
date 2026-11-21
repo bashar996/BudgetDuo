@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#e9e9ee}a{color:#3a3566}a:hover{color:#0b0b0c}</style>
+</helmet>
+<div style="padding:36px 24px 80px;font-family:'Geist',system-ui,sans-serif;color:#0b0b0c;-webkit-font-smoothing:antialiased">
+  <sc-if value="{{ showDuo }}" hint-placeholder-val="{{ true }}">
+  <div style="margin-bottom:30px">
+    <div style="font-size:14px;color:#6b6878">Twofold for iPhone Duo</div>
+    <h1 style="font-size:44px;font-weight:500;letter-spacing:-.035em;line-height:1.05;margin:6px 0 12px">Open it, and the budget opens with it.</h1>
+    <p style="font-size:17px;line-height:1.45;color:#3a3a44;max-width:660px;margin:0;text-wrap:pretty">Unfolded, the inner display splits in two: your budget on the left, the detail on the right. Adding an entry uses both halves, with amount and category on one side and the keypad on the other. Folded, the cover display runs the whole app.</p>
+  </div>
+  <div style="zoom:{{ zoomDuo }};display:flex;flex-direction:column;gap:48px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="padding:11px;border-radius:54px;background:#0b0b0c;box-shadow:0 34px 70px rgba(20,18,40,.3),inset 0 0 0 2px #2c2c33;width:max-content">
+        <div style="position:relative;width:890px;height:626px;border-radius:44px;overflow:hidden;background:#0b0b0c;display:flex">
+          <div style="width:445px;height:626px;flex:none"><dc-import name="TandemScreen" ph="{{ duoL }}" hint-size="445px,626px"></dc-import></div>
+          <div style="width:445px;height:626px;flex:none"><dc-import name="TandemScreen" ph="{{ duoR }}" hint-size="445px,626px"></dc-import></div>
+          <div style="position:absolute;top:-6px;left:0;right:0;z-index:30;pointer-events:none"><x-import component-from-global-scope="IOSStatusBar" from="./ios-frame.jsx" dark="{{ yes }}" hint-size="100%,54px"></x-import></div>
+          <div style="position:absolute;top:0;bottom:0;left:444px;width:2px;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(0,0,0,.3));z-index:31;pointer-events:none"></div>
+          <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:170px;height:5px;border-radius:3px;background:rgba(255,255,255,.7);z-index:32;pointer-events:none"></div>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:500">Unfolded · 7.6-inch inner display</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <dc-import name="TandemDevice" ph="{{ cover }}" hint-size="488px,700px"></dc-import>
+      <div style="font-size:15px;font-weight:500">Folded · 5.4-inch cover display</div>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ showPhones }}" hint-placeholder-val="{{ true }}">
+  <div style="margin:72px 0 30px">
+    <div style="font-size:14px;color:#6b6878">Twofold for iPhone</div>
+    <h1 style="font-size:44px;font-weight:500;letter-spacing:-.035em;line-height:1.05;margin:6px 0 12px">One budget, two phones.</h1>
+    <p style="font-size:17px;line-height:1.45;color:#3a3a44;max-width:660px;margin:0;text-wrap:pretty">Both phones are live and share the same money as the Duo above. Add an entry, pay a bill or move savings on one, and the others update straight away.</p>
+  </div>
+  <div style="display:flex;gap:56px;align-items:flex-start;zoom:{{ zoom }}">
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center;transform:{{ rotA }};transition:transform .4s"><dc-import name="TandemDevice" ph="{{ phoneA }}" hint-size="424px,896px"></dc-import><div style="font-size:15px;font-weight:500">{{ labelA }}</div></div>
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center;transform:{{ rotB }};transition:transform .4s"><dc-import name="TandemDevice" ph="{{ phoneB }}" hint-size="424px,896px"></dc-import><div style="font-size:15px;font-weight:500">{{ labelB }}</div></div>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;show&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Both&quot;,&quot;iPhone Duo only&quot;,&quot;iPhones only&quot;],&quot;default&quot;:&quot;Both&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Showcase&quot;},&quot;tilt&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Showcase&quot;},&quot;partnerA&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Bashar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;partnerB&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Eman&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;currency&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;AED&quot;,&quot;د.إ&quot;,&quot;SAR&quot;,&quot;$&quot;,&quot;€&quot;,&quot;£&quot;],&quot;default&quot;:&quot;AED&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;}}">
+const KEY='tandem-budget-v3';
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const pad=n=>String(n).padStart(2,'0');
+const ymOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1);
+const addM=(ym,n)=>{const p=ym.split('-').map(Number);return ymOf(new Date(p[0],p[1]-1+n,1))};
+const dim=ym=>{const p=ym.split('-').map(Number);return new Date(p[0],p[1],0).getDate()};
+const mLabel=(ym,s)=>{const p=ym.split('-').map(Number);return(s?MN[p[1]-1].slice(0,3):MN[p[1]-1])+' '+p[0]};
+const isoD=s=>{const p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+const dLab=d=>WD[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()].slice(0,3);
+const hue=h=>'oklch(0.62 0.08 '+Math.round((195+h/360*225)%360)+')';
+const CATS=[
+{id:'housing',name:'Housing',g:'needs',limit:7500,h:255},
+{id:'groceries',name:'Groceries',g:'needs',limit:3000,h:145,n:9,lo:150,hi:450,m:['Hypermarket','Corner grocery','Fruit & veg market','Bakery','Online groceries']},
+{id:'utilities',name:'Utilities',g:'needs',limit:1550,h:215},
+{id:'transport',name:'Transport',g:'needs',limit:1400,h:190,n:7,lo:60,hi:260,m:['Petrol','Road tolls','Parking','Taxi']},
+{id:'insurance',name:'Insurance',g:'needs',limit:850,h:285},
+{id:'health',name:'Health',g:'needs',limit:600,h:170,n:2,lo:60,hi:180,m:['Pharmacy','Clinic visit']},
+{id:'kids',name:'Kids & family',g:'needs',limit:2800,h:55,n:3,lo:60,hi:220,m:['School supplies','Kids’ clothes','Swimming lessons','Toy shop']},
+{id:'debt',name:'Debt payments',g:'needs',limit:3300,h:320},
+{id:'dining',name:'Dining out',g:'wants',limit:1400,h:35,n:8,lo:60,hi:280,m:['Shawarma place','Café','Friday brunch','Delivery order','Sushi night','Karak & snacks']},
+{id:'fun',name:'Entertainment',g:'wants',limit:500,h:350,n:3,lo:60,hi:200,m:['Cinema','Beach day','Desert trip','Bookshop']},
+{id:'shopping',name:'Shopping',g:'wants',limit:1200,h:75,n:4,lo:100,hi:450,m:['Home goods','Clothing','Hardware store','Online order']},
+{id:'subs',name:'Subscriptions',g:'wants',limit:150,h:300},
+{id:'travel',name:'Travel & events',g:'wants',limit:1500,h:105,n:1,lo:300,hi:1400,m:['Flight tickets','Staycation','Visa fees']},
+{id:'gifts',name:'Gifts & giving',g:'wants',limit:500,h:15,n:1,lo:100,hi:400,m:['Eid gifts','Birthday gift','Charity']},
+{id:'allowA',name:'',g:'personal',limit:800,h:35,n:4,lo:40,hi:200,who:'A',m:['Lunch out','Hobby shop','Barber','Games']},
+{id:'allowB',name:'',g:'personal',limit:800,h:275,n:4,lo:40,hi:200,who:'B',m:['Coffee with friends','Yoga class','Books','Skincare']}];
+const BILLS=[[1,'Rent',7500,'housing'],[2,'Nursery fees',2200,'kids'],[3,'Gym membership',250,'health'],[5,'Car insurance',420,'insurance'],[5,'Health cover top-up',380,'insurance'],[8,'Electricity & water',780,'utilities'],[9,'Video streaming',56,'subs',1],[12,'Home internet & TV',389,'utilities'],[14,'Music family plan',33,'subs',1],[18,'Mobile plans',350,'utilities'],[22,'Cloud storage',11,'subs',1],[26,'Car loan',1850,'debt'],[28,'Personal loan',1450,'debt']];
+const TABS=[['home','Today'],['activity','Activity'],['budget','Budget'],['bills','Bills'],['accounts','Accounts'],['savings','Savings'],['goals','Debt'],['reports','Reports'],['plan','Plan ahead'],['us','Us two']];
+const TYPE={current:['Current account','var(--ink)'],cash:['Cash','var(--mute)'],card:['Credit card','var(--a)'],save:['Savings','var(--acc)'],invest:['Investment','var(--b)']};
+const CHECKS=['Look at the categories that ran over','Confirm next month’s bills','Top up the savings goals','Agree on planned purchases','Pick one thing to celebrate'];
+const EKEY='tandem-budget-empty-v1';
+const blank=()=>{const budgets={};CATS.forEach(c=>budgets[c.id]=0);return{tx:[],nextId:1,budgets,bills:[],incomes:[{who:'A',amt:0,day:1},{who:'B',amt:0,day:1}],goals:[],debts:[],accounts:[],planned:[],events:[],settled:{},checks:{},selAcct:null,roundUps:false,sweep:false,sweepPot:null,roundSwept:{},strat:'avalanche',extra:0}};
+const ITEM={income:{list:'incomes',t:'pay',amt:'amt',al:'Monthly take-home pay',ex:'day',el:'Payday (day of the month)'},bill:{list:'bills',t:'bill',amt:'amt',al:'Amount each month',ex:'day',el:'Day of the month it’s due'},goal:{list:'goals',t:'goal',amt:'target',al:'Target amount',ex:'monthly',el:'Monthly contribution'},debt:{list:'debts',t:'debt',amt:'balance',al:'Balance owed',ex:'apr',el:'Interest rate (APR %)'},planned:{list:'planned',t:'planned purchase',amt:'cost',al:'Expected cost'},account:{list:'accounts',t:'account',amt:'balance',al:'Current balance'},event:{list:'events',t:'trip or event',amt:'budget',al:'Total budget',ex:'when',el:'When (e.g. Mar 2027)',text:1}};
+const PERSIST=['tx','nextId','budgets','bills','incomes','goals','debts','accounts','planned','events','settled','checks','tab','strat','extra','selAcct','roundUps','sweep','sweepPot','roundSwept'];
+const seed=today=>{
+  let s=11;const rnd=()=>(s=s*16807%2147483647)/2147483647;
+  const cur=ymOf(today),tx=[];let id=1;
+  const goals=[{id:'g1',name:'Emergency fund',target:100000,saved:62000,monthly:3000,acct:'a4',due:'',auto:true},{id:'g2',name:'Summer trip',target:18000,saved:7500,monthly:1500,acct:'a4',due:addM(cur,7),auto:true},{id:'g3',name:'School fees fund',target:24000,saved:11000,monthly:2000,acct:'a4',due:addM(cur,5),auto:true},{id:'g4',name:'Home down payment',target:300000,saved:106500,monthly:1500,acct:'a5',due:'',auto:true}];
+  const bills=BILLS.map((b,i)=>({id:'b'+i,day:b[0],name:b[1],amt:b[2],cat:b[3],sub:!!b[4],paid:{}}));
+  for(let k=-5;k<=0;k++){
+    const ym=addM(cur,k),dm=dim(ym),last=k===0?today.getDate():dm;
+    const add=(day,name,cat,amt,who,type,billId,acct,x)=>{if(day<=last)tx.push(Object.assign({id:id++,date:ym+'-'+pad(day),name,cat,amt:Math.round(amt),who,type:type||'exp',billId,acct:acct||'a1'},x))};
+    add(1,'Salary','income',21000,'A','inc');add(3,'Salary','income',15500,'B','inc');goals.forEach(g=>add(4,'Auto-save · '+g.name,'transfer',g.monthly,'J','xfer',undefined,'a1',{to:g.acct,pot:g.id}));
+    bills.forEach(b=>{if(b.day<=last){b.paid[ym]=true;add(b.day,b.name,b.cat,b.amt,'J','exp',b.id)}});
+    CATS.forEach(c=>{for(let i=0;i<(c.n||0);i++){const day=1+Math.floor(rnd()*dm),amt=c.lo+rnd()*(c.hi-c.lo),r=rnd(),m=c.m[Math.floor(rnd()*c.m.length)],r2=rnd();add(day,m,c.id,amt,c.who||(r<.4?'A':r<.75?'B':'J'),'exp',undefined,r2<.28?'a3':r2<.36?'a2':'a1')}});
+  }
+  const budgets={};CATS.forEach(c=>budgets[c.id]=c.limit);
+  return{tx,nextId:id,budgets,bills,incomes:[{who:'A',amt:21000,day:1},{who:'B',amt:15500,day:3}],
+    goals,
+    debts:[{id:'d1',name:'Car loan',balance:68000,apr:4.2,min:1850},{id:'d2',name:'Personal loan',balance:41000,apr:7.9,min:1450}],
+    accounts:[{id:'a1',name:'Joint current account',type:'current',who:'J',bank:'Main bank',last4:'4821',balance:24600},{id:'a2',name:'Cash at home',type:'cash',who:'J',balance:1200},{id:'a3',name:'Shared credit card',type:'card',who:'J',bank:'Main bank',last4:'0937',balance:-6400,limit:25000,apr:36},{id:'a4',name:'High-yield saver',type:'save',who:'J',bank:'Online bank',apy:4.25,balance:84000},{id:'a5',name:'Home fixed deposit',type:'save',who:'J',bank:'Main bank',apy:5.1,balance:106500},{id:'a6',name:'Brokerage',type:'invest',who:'J',balance:64000},{id:'a7',name:'Long-term investment plan',type:'invest',who:'A',balance:92000},{id:'a8',name:'Long-term investment plan',type:'invest',who:'B',balance:58000}],
+    planned:[{id:'p1',name:'New sofa',cost:5200,A:true,B:true},{id:'p2',name:'Stand mixer',cost:1600,A:false,B:true},{id:'p3',name:'Anniversary weekend',cost:2400,A:true,B:true},{id:'p4',name:'Laptop upgrade',cost:6000,A:true,B:false}],
+    events:[{id:'e1',name:'Eid break getaway',when:'Mar 2027',budget:9000,spent:3200},{id:'e2',name:'Kids’ birthday party',when:'Jan 2027',budget:2500,spent:600},{id:'e3',name:'Summer family visit',when:'Jul 2027',budget:7500,spent:0}],
+    settled:{},checks:{},selAcct:'a1',roundUps:true,sweep:false,sweepPot:'g1',roundSwept:{}};
+};
+const simDebt=(debts,extra,strat)=>{
+  const ds=debts.map(d=>({id:d.id,b:d.balance,apr:d.apr,min:d.min}));
+  const order=[...ds].sort(strat==='snowball'?(a,b)=>a.b-b.b:(a,b)=>b.apr-a.apr);
+  let months=0,interest=0;const done={};
+  while(ds.some(d=>d.b>.01)&&months<720){months++;let pool=extra;
+    ds.forEach(d=>{if(d.b>.01){const i=d.b*d.apr/1200;interest+=i;d.b+=i;const p=Math.min(d.b,d.min);d.b-=p;pool+=d.min-p}else pool+=d.min});
+    for(const d of order){if(pool<=0)break;if(d.b>.01){const p=Math.min(d.b,pool);d.b-=p;pool-=p}}
+    ds.forEach(d=>{if(d.b<=.01&&!done[d.id])done[d.id]=months});}
+  return{months,interest,done,order:order.map(d=>d.id)};
+};
+const LAV='#b9b0ff',BLK='#0b0b0c',CRM='#fbf9ef',RED='#ff8f85',CUSH=5000;
+class Component extends DCLogic {
+  state=this.init();
+  init(){
+    let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+    const data=saved&&saved.tx&&saved.accounts&&saved.goals?saved:seed(new Date());this.rest=data;
+    const ph=(who,tab,sub,x)=>Object.assign({who,tab,sub,sheet:null,shown:false,d:{},q:'',fWho:'all',fAcct:'all'},x);
+    return{tx:data.tx,nextId:data.nextId,budgets:data.budgets,bills:data.bills,incomes:data.incomes,goals:data.goals,accounts:data.accounts,debts:data.debts||[],roundSwept:data.roundSwept||{},checks:data.checks||{},strat:data.strat||'avalanche',extra:data.extra==null?1000:data.extra,phones:[ph('A','home',null),ph('B','more','insights'),ph('A','home',null),ph('A','home',null,{role:'left',detailIdx:4}),ph('A','more','insights',{role:'right',sheetIdx:3})],w:window.innerWidth};
+  }
+  componentDidMount(){this.onRz=()=>this.setState({w:window.innerWidth});window.addEventListener('resize',this.onRz)}
+  componentWillUnmount(){window.removeEventListener('resize',this.onRz)}
+  componentDidUpdate(){
+    const s=this.state;
+    try{localStorage.setItem(KEY,JSON.stringify(Object.assign({},this.rest,{tx:s.tx,nextId:s.nextId,budgets:s.budgets,bills:s.bills,goals:s.goals,accounts:s.accounts,roundSwept:s.roundSwept,checks:s.checks,strat:s.strat,extra:s.extra})))}catch(e){}
+    s.phones.forEach((p,i)=>{if(p.sheet&&!p.shown&&!p.closing)setTimeout(()=>{const q=this.state.phones[i];if(q.sheet&&!q.shown&&!q.closing)this.ph(i,{shown:true})},20)});
+  }
+  ph(i,patch){this.setState(s=>({phones:s.phones.map((p,k)=>k===i?Object.assign({},p,typeof patch==='function'?patch(p):patch):p)}))}
+  shut(s,i){return s.phones.map((p,k)=>k===i?Object.assign({},p,{sheet:null,shown:false,closing:false,d:{}}):p)}
+  closeSheet(i){this.ph(i,{shown:false,closing:true});setTimeout(()=>{if(this.state.phones[i].closing)this.ph(i,{sheet:null,d:{},closing:false})},280)}
+  nav(i,tab,sub,extra){this.ph(i,Object.assign({tab,sub:sub||null},extra))}
+  mainAcct(s){return(s.accounts.find(a=>a.type==='current')||s.accounts[0]||{}).id}
+  apply(s,t,k){let accounts=s.accounts,goals=s.goals;const adj=(id,v)=>{accounts=accounts.map(a=>a.id===id?Object.assign({},a,{balance:a.balance+v}):a)};
+    if(t.type==='exp')adj(t.acct,-t.amt*k);else if(t.type==='inc')adj(t.acct,t.amt*k);else{adj(t.acct,-t.amt*k);adj(t.to,t.amt*k);if(t.pot)goals=goals.map(g=>g.id===t.pot?Object.assign({},g,{saved:Math.max(0,g.saved+(t.potDir==='out'?-1:1)*t.amt*k)}):g)}
+    return{accounts,goals}}
+  openAdd(i,pre,t){const n=new Date(),p=this.state.phones[i];this.ph(i,{sheet:'add',shown:false,d:t?Object.assign({},t,{amt:String(t.amt)}):Object.assign({type:'exp',amt:'',name:'',cat:'groceries',who:p.who,acct:this.mainAcct(this.state),to:'',date:ymOf(n)+'-'+pad(n.getDate())},pre)})}
+  key(i,k){this.ph(i,p=>{let a=p.d.amt||'';if(k==='⌫')a=a.slice(0,-1);else if(k==='.'){if(!a.includes('.'))a=(a||'0')+'.'}else{const dot=a.indexOf('.');if(a==='0')a=k;else if(dot<0?a.length<7:a.length-dot<3)a+=k}return{d:Object.assign({},p.d,{amt:a,err:''})}})}
+  setD(i,k,v){this.ph(i,p=>({d:Object.assign({},p.d,{err:'',[k]:v})}))}
+  saveAdd(i){const d=this.state.phones[i].d,amt=parseFloat(d.amt);if(!(amt>0))return this.setD(i,'err','Enter an amount first');
+    const x=d.type==='xfer',inc=d.type==='inc';if(x&&(!d.acct||!d.to||d.acct===d.to))return this.setD(i,'err','Pick two different accounts');
+    const cat=x?'transfer':inc?'income':(d.cat==='income'||d.cat==='transfer')?'groceries':d.cat,c=CATS.concat(this.rest.custom||[]).find(z=>z.id===cat);
+    const t={id:d.id,date:d.date,name:(d.name||'').trim()||(x?'Transfer':inc?'Income':c&&c.name||'Pocket money'),cat,amt,who:d.who,type:d.type,note:d.note||'',billId:d.billId,acct:d.acct,to:x?d.to:undefined,pot:x?d.pot:undefined,potDir:x?d.potDir:undefined};
+    this.setState(s=>{const old=d.id&&s.tx.find(z=>z.id===d.id);let st={accounts:s.accounts,goals:s.goals};if(old)st=this.apply(st,old,-1);st=this.apply(st,t,1);
+      return Object.assign(st,d.id?{tx:s.tx.map(z=>z.id===d.id?t:z)}:{tx:s.tx.concat(Object.assign({},t,{id:s.nextId})),nextId:s.nextId+1},{phones:this.shut(s,i)})})}
+  delAdd(i){const d=this.state.phones[i].d;this.setState(s=>{const old=s.tx.find(t=>t.id===d.id);return Object.assign(old?this.apply(s,old,-1):{},{tx:s.tx.filter(t=>t.id!==d.id),phones:this.shut(s,i)})})}
+  payBill(b,ym){this.setState(s=>{const paid=!!(b.paid&&b.paid[ym]),bills=s.bills.map(x=>x.id===b.id?Object.assign({},x,{paid:Object.assign({},x.paid,{[ym]:!paid})}):x);
+    if(paid){const old=s.tx.find(t=>t.billId===b.id&&t.date.slice(0,7)===ym);return Object.assign(old?this.apply(s,old,-1):{},{bills,tx:s.tx.filter(t=>t!==old)})}
+    const t={id:s.nextId,date:ym+'-'+pad(Math.min(b.day,dim(ym))),name:b.name,cat:b.cat,amt:b.amt,who:'J',type:'exp',billId:b.id,acct:this.mainAcct(s)};
+    return Object.assign(this.apply(s,t,1),{bills,nextId:s.nextId+1,tx:s.tx.concat(t)})})}
+  openBudget(i,id){const S=this.state,cur=ymOf(new Date());let tot=0;for(let k=1;k<=3;k++){const m=addM(cur,-k);tot+=S.tx.filter(t=>t.cat===id&&t.type==='exp'&&t.date.slice(0,7)===m).reduce((a,t)=>a+t.amt,0)}
+    this.ph(i,{sheet:'budget',shown:false,d:{cat:id,limit:S.budgets[id]||0,avg:Math.round(tot/3/10)*10}})}
+  saveBudget(i){const d=this.state.phones[i].d;this.setState(s=>({budgets:Object.assign({},s.budgets,{[d.cat]:Math.max(0,d.limit)}),phones:this.shut(s,i)}))}
+  renderVals(){
+    const S=this.state,P=this.props,A=P.partnerA??'Bashar',B=P.partnerB??'Eman',cur0=P.currency??'AED';
+    const num=n=>{const r=Math.round(n);return(r<0?'−':'')+Math.abs(r).toLocaleString('en-US')};
+    const f=n=>{const s=num(n),neg=s[0]==='−';return(neg?'−':'')+cur0+' '+(neg?s.slice(1):s)};
+    const pc=x=>Math.max(0,Math.min(100,(x||0)*100)).toFixed(1)+'%';
+    const today=new Date(),ym=ymOf(today),tDay=today.getDate(),days=dim(ym),daysLeft=days-tDay+1,mon=MN[today.getMonth()].slice(0,3);
+    const whoName={A,B,J:'Joint'};
+    const cats=CATS.concat(this.rest.custom||[]).map(c=>Object.assign({},c,{name:c.id==='allowA'?A+'’s pocket money':c.id==='allowB'?B+'’s pocket money':c.name}));
+    const catBy={income:{name:'Income'},transfer:{name:'Transfer'}};cats.forEach(c=>catBy[c.id]=c);
+    const acctBy={};S.accounts.forEach(a=>acctBy[a.id]=a);const aName=id=>(acctBy[id]||{}).name||'Account';
+    const sum=(a,k)=>a.reduce((s,x)=>s+(k?k(x):x.amt),0);
+    const desc=(a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id;
+    const mtx=S.tx.filter(t=>t.date.slice(0,7)===ym),exp=mtx.filter(t=>t.type==='exp');
+    const spent={};exp.forEach(t=>spent[t.cat]=(spent[t.cat]||0)+t.amt);
+    const income=sum(S.incomes),goalsMo=sum(S.goals,g=>g.monthly);
+    const rows=cats.map(c=>{const limit=S.budgets[c.id]||0,sp=spent[c.id]||0;return{id:c.id,g:c.g,name:c.name,limit,sp,left:limit-sp,r:limit>0?sp/limit:sp>0?1.01:0}});
+    const tLimit=sum(rows,r=>r.limit),tSpent=sum(rows,r=>r.sp);
+    const billsM=S.bills.map(b=>Object.assign({},b,{d:Math.min(b.day,days),isPaid:!!(b.paid&&b.paid[ym])})).sort((a,b)=>a.d-b.d);
+    const unpaidB=billsM.filter(b=>!b.isPaid),unpaid=sum(unpaidB),safe=tLimit-tSpent-unpaid,leftAssign=income-tLimit-goalsMo;
+    const billSub=b=>b.isPaid?'Paid':b.d<tDay?'Overdue':b.d===tDay?'Due today':'Due in '+(b.d-tDay)+' days';
+    const assets=sum(S.accounts.filter(a=>a.balance>0),a=>a.balance),liab=sum(S.debts,x=>x.balance)+sum(S.accounts.filter(a=>a.balance<0),a=>-a.balance);
+    const inPots=sum(S.goals,g=>g.saved),potIn=sum(mtx.filter(t=>t.type==='xfer'&&t.pot),t=>t.potDir==='out'?-t.amt:t.amt);
+    const ru=Math.max(0,Math.round(sum(exp.filter(t=>!t.billId),t=>Math.ceil(t.amt/10)*10-t.amt)-(S.roundSwept[ym]||0))),ruPot=S.goals[0];
+    const wk=[];for(let k=6;k>=0;k--){const dt=new Date(today.getFullYear(),today.getMonth(),tDay-k),iso=ymOf(dt)+'-'+pad(dt.getDate());wk.push({d:WD[dt.getDay()],v:sum(S.tx.filter(t=>t.type==='exp'&&!t.billId&&t.date===iso))})}
+    const wMax=Math.max(1,...wk.map(x=>x.v)),hiI=wk.findIndex(x=>x.v===wMax);
+    const cardDebts=S.accounts.filter(a=>a.type==='card'&&a.balance<0).map(a=>({id:a.id,name:a.name,balance:-a.balance,apr:a.apr||36,min:Math.max(100,Math.round(-a.balance*.05))}));
+    const allDebts=S.debts.concat(cardDebts),res=simDebt(allDebts,S.extra,S.strat),debtFree=allDebts.length?mLabel(addM(ym,res.months),1):'Debt-free';
+    const dv={free:debtFree,sub:allDebts.length?f(sum(allDebts,x=>x.balance))+' owed today · '+f(res.interest)+' interest to go':'Nothing owed. Enjoy it.',
+      strat:[['avalanche','Highest interest first'],['snowball','Smallest balance first']].map(x=>({label:x[1],on:()=>this.setState({strat:x[0]}),bg:S.strat===x[0]?BLK:'transparent',fg:S.strat===x[0]?'#ffffff':BLK})),
+      extra:num(S.extra),minus:()=>this.setState(s=>({extra:Math.max(0,s.extra-250)})),plus:()=>this.setState(s=>({extra:s.extra+250})),
+      list:res.order.map((id,k)=>{const x=allDebts.find(z=>z.id===id);return{n:k+1,name:x.name,meta:x.apr+'% · '+f(x.min)+' a month',bal:f(x.balance),done:'Clear by '+mLabel(addM(ym,res.done[id]||res.months),1)}}),none:!allDebts.length};
+    const cash=sum(S.accounts.filter(a=>a.type==='current'||a.type==='cash'),a=>a.balance),sinceD=new Date(today.getFullYear(),today.getMonth(),tDay-60),sinceIso=ymOf(sinceD)+'-'+pad(sinceD.getDate());
+    const varAvg=sum(S.tx.filter(t=>t.type==='exp'&&!t.billId&&t.date>=sinceIso))/60,dAt=k=>new Date(today.getFullYear(),today.getMonth(),tDay+k),evs=[];
+    for(let k=0;k<=30;k++){const dt=dAt(k),m=ymOf(dt),dd=dt.getDate(),dm=dim(m);
+      S.bills.forEach(b=>{const bd=Math.min(b.day,dm);if(!(b.paid&&b.paid[m])&&(bd===dd||(k===0&&bd<dd)))evs.push({k,dt,name:b.name,amt:-b.amt})});
+      if(k>0)S.incomes.forEach(x=>{if(x.amt>0&&Math.min(x.day,dm)===dd)evs.push({k,dt,name:whoName[x.who]+'’s salary',amt:x.amt})})}
+    let bal=cash;const series=[];for(let k=0;k<=30;k++){evs.filter(e=>e.k===k).forEach(e=>bal+=e.amt);if(k>0)bal-=varAvg;series.push(bal)}
+    const sLo=Math.min(0,...series),sHi=Math.max(CUSH,...series)*1.05,minV=Math.min(...series),low=minV<CUSH,surplus=Math.max(0,leftAssign),planned=this.rest.planned||[],trips=this.rest.events||[];
+    const pl={end:num(series[30]),endFg:low&&S.accounts.length?RED:'#ffffff',note:!S.accounts.length?'Add an account and your bills, and the next 30 days appear here.':low?'Dips to '+f(minV)+' around '+dLab(dAt(series.indexOf(minV)))+', below your '+f(CUSH)+' cushion.':'Stays above your '+f(CUSH)+' cushion all month.',
+      bars:series.map((v,k)=>({h:pc(Math.max(.04,(v-sLo)/(sHi-sLo||1))),bg:v<CUSH?RED:k===0?LAV:CRM})),from:'Today · '+f(cash),to:dLab(dAt(30)),
+      evs:evs.slice(0,6).map(e=>({day:e.dt.getDate(),mon:MN[e.dt.getMonth()].slice(0,3),name:e.name,amt:(e.amt>0?'+':'')+f(e.amt)})),noEvs:!evs.length,
+      items:planned.map(p=>{const n=surplus>0?Math.ceil(p.cost/surplus):0;return{name:p.name,cost:f(p.cost),verdict:safe>=p.cost?'Fits in this month’s safe-to-spend':n?'Set aside '+f(Math.ceil(p.cost/n))+' a month, yours by '+mLabel(addM(ym,n),1):'Needs room in the budget first'}}),noItems:!planned.length,
+      trips:trips.map(e=>({name:e.name,when:e.when,w:pc(e.spent/(e.budget||1)),detail:f(e.spent)+' of '+f(e.budget)+' spent'})),noTrips:!trips.length};
+    const dlRep=()=>{const all=rows.filter(r=>r.sp>0).sort((a,b)=>b.sp-a.sp),L=[['Twofold report',mLabel(ym)],['Household',A+' & '+B],[],['Spent ('+cur0+')',Math.round(tSpent)],['Income ('+cur0+')',Math.round(income)],[],['Category','Spent ('+cur0+')','Share']].concat(all.map(r=>[r.name,Math.round(r.sp),Math.round(r.sp/(tSpent||1)*100)+'%']),[[],['Who','Spent ('+cur0+')']],['A','B','J'].map(w=>[whoName[w],Math.round(sum(exp.filter(t=>t.who===w)))]));
+      const el=document.createElement('a');el.href=URL.createObjectURL(new Blob([L.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'}));el.download='twofold-report-'+ym+'.csv';el.click()};
+    const chip=(label,on,fn,sel)=>({label,on:fn,bg:on?(sel||'#ffffff'):'transparent',fg:on?BLK:'#ffffff',bd:on?(sel||'#ffffff'):'rgba(255,255,255,.3)'});
+    const build=i=>{
+      const p=S.phones[i],me=p.who,other=me==='A'?'B':'A',scr=p.sub||p.tab,sI=p.sheetIdx==null?i:p.sheetIdx,dI=p.detailIdx==null?i:p.detailIdx,sp=S.phones[sI],d=sp.d,role=p.role||'solo',mode=role==='left'?'L':role==='right'?'R':i===2?'C':'P',sz=mode==='P'?[402,874]:mode==='C'?[466,678]:[445,626];
+      const txRow=t=>{const c=catBy[t.cat]||{name:'Other'},inc=t.type==='inc',x=t.type==='xfer';return{name:t.name,ini:((t.name||'?').trim()[0]||'?').toUpperCase(),sub:x?aName(t.acct)+' → '+aName(t.to):c.name+' · '+whoName[t.who],amt:(inc?'+':x?'':'−')+f(t.amt),open:()=>this.openAdd(sI,null,t)}};
+      const is={};['home','budget','pots','more','activity','accounts','bills','insights','debt','plan','us'].forEach(k=>is[k]=scr===k);
+      const go={};['activity','accounts','bills','insights','debt','plan','us'].forEach(k=>go[k]=()=>this.nav(dI,S.phones[dI].tab,k,k==='activity'?{fAcct:'all',q:''}:null));
+      const tb={};['home','budget','pots','more'].forEach(k=>tb[k]={go:()=>this.nav(i,k,null),fg:p.tab===k&&!p.sub?LAV:'#ffffff'});
+      const act={income:()=>this.openAdd(sI,{type:'inc'}),transfer:()=>this.openAdd(sI,{type:'xfer'}),expense:()=>this.openAdd(sI)};
+      const h={hi:'Hi, '+whoName[me],sub:'You & '+whoName[other]+' · '+MN[today.getMonth()],safe:num(safe),
+        perDay:safe>0?'About '+f(safe/daysLeft)+' a day for '+daysLeft+' days, bills covered':'Budgets are used up for now — bills are still covered',
+        spentW:pc(tSpent/(tLimit||1)),spent:'Spent '+f(tSpent),limit:'of '+f(tLimit),
+        up:unpaidB.slice(0,2).map(b=>({day:b.d,mon,name:b.name,sub:billSub(b)+' · '+f(b.amt),pay:()=>this.payBill(b,ym)})),noUp:!unpaidB.length,
+        recent:[...mtx].sort(desc).slice(0,6).map(txRow),noRecent:!mtx.length};
+      const bView={kicker:leftAssign<0?'Over-assigned this month':'Left to assign · '+MN[today.getMonth()],left:num(leftAssign),
+        note:leftAssign<0?'You’ve planned more than comes in. Trim a category to get back to zero.':leftAssign===0?'Every bit of income has a job.':'Give it a job — a category or a pot.',
+        income:f(income),budgeted:f(tLimit),goals:f(goalsMo),
+        groups:[['needs','Needs'],['wants','Wants'],['personal','Pocket money']].map(g=>{const rs=rows.filter(r=>r.g===g[0]);return{name:g[1],total:f(sum(rs,r=>r.sp))+' of '+f(sum(rs,r=>r.limit)),
+          rows:rs.map(r=>({name:r.name,pct:Math.round(r.r*100)+'%',w:pc(r.r),fill:r.left<0?'#d0453a':LAV,fg:r.left<0?'#b3352b':BLK,detail:f(r.sp)+' of '+f(r.limit)+' · '+(r.left<0?f(-r.left)+' over':f(r.left)+' left'),open:()=>this.openBudget(i,r.id)}))}})};
+      const pView={total:num(inPots),sub:(potIn>=0?'+':'')+f(potIn)+' moved in this month',
+        pots:S.goals.map(g=>{const r=g.target?g.saved/g.target:0,rem=Math.max(0,g.target-g.saved),n=g.monthly>0?Math.ceil(rem/g.monthly):0,a=acctBy[g.acct]||{};
+          return{name:g.name,where:(a.name||'Savings')+(a.apy?' · '+a.apy+'% a year':''),pct:Math.round(r*100)+'%',w:pc(r),saved:f(g.saved),target:f(g.target),status:rem<=0?'Reached':n?'There by '+mLabel(addM(ym,n),1):'Paused',
+            add:()=>this.openAdd(sI,{type:'xfer',to:g.acct,pot:g.id,potDir:'in',name:'Deposit · '+g.name}),take:()=>this.openAdd(sI,{type:'xfer',acct:g.acct,to:this.mainAcct(S),pot:g.id,potDir:'out',name:'Withdrawal · '+g.name})}}),
+        noPots:!S.goals.length,ruCan:ru>0&&!!ruPot,ruText:f(ru)+' of spare change from this month’s purchases is ready to save.',ruBtn:ruPot?'Move to '+ruPot.name:'',
+        ruMove:()=>this.setState(s=>{const t={id:s.nextId,date:ym+'-'+pad(tDay),name:'Round-ups · '+ruPot.name,cat:'transfer',amt:ru,who:'J',type:'xfer',acct:this.mainAcct(s),to:ruPot.acct,pot:ruPot.id};return Object.assign(this.apply(s,t,1),{tx:s.tx.concat(t),nextId:s.nextId+1,roundSwept:Object.assign({},s.roundSwept,{[ym]:(s.roundSwept[ym]||0)+ru})})})};
+      const mView={sub:whoName[me]+' & '+whoName[other]+' · shared budget',rows:[['Activity',mtx.length+' entries this month','activity'],['Bills',unpaidB.length?f(unpaid)+' still due this month':'All paid this month','bills'],['Accounts','Net worth '+f(assets-liab),'accounts'],['Debt',allDebts.length?'Debt-free by '+debtFree:'Nothing owed','debt'],['Reports','Where the money went','insights'],['Plan ahead','Next 30 days and big purchases','plan'],['Us two','Pocket money and money date','us']].map(r=>{const on=dI!==i&&S.phones[dI].sub===r[2];return{t:r[0],s:r[1],go:go[r[2]],abg:on?BLK:'transparent',afg:on?'#ffffff':BLK}})};
+      const ac={net:num(assets-liab),sub:'Own '+f(assets)+' · owe '+f(liab),list:S.accounts.map(a=>({type:(TYPE[a.type]||TYPE.current)[0],name:a.name,meta:[a.bank,a.last4?'•• '+a.last4:'',whoName[a.who]||'Joint'].filter(Boolean).join(' · '),bal:f(a.balance),fg:a.balance<0?'#b3352b':BLK,open:()=>this.nav(dI,S.phones[dI].tab,'activity',{fAcct:a.id,q:'',fWho:'all'})}))};
+      const bl={due:num(unpaid),sub:f(sum(billsM.filter(b=>b.isPaid)))+' paid so far · '+billsM.length+' bills',list:billsM.map(b=>({day:b.d,mon,name:b.name,sub:billSub(b)+' · '+f(b.amt),btn:b.isPaid?'Paid':'Pay',bg:b.isPaid?'transparent':BLK,fg:b.isPaid?BLK:'#ffffff',pay:()=>this.payBill(b,ym)}))};
+      const spRows=rows.filter(r=>r.sp>0).sort((a,b)=>b.sp-a.sp).slice(0,5);
+      const ins={dl:dlRep,total:f(sum(wk,x=>x.v)),bars:wk.map((x,k)=>({d:x.d,h:pc(Math.max(.05,x.v/wMax)),bg:k===hiI?LAV:CRM,tag:k===hiI?f(x.v):'',tagO:k===hiI?1:0})),
+        cats:spRows.map(r=>({name:r.name,pct:Math.round(r.sp/(tSpent||1)*100)+'%',w:pc(r.sp/(spRows[0].sp||1)),amt:f(r.sp)+' this month'})),noCats:!spRows.length,
+        who:['A','B','J'].map(w=>({name:whoName[w],ini:whoName[w][0],amt:f(sum(exp.filter(t=>t.who===w))),bg:w==='A'?LAV:w==='B'?BLK:'#ebe8da',fg:w==='B'?'#ffffff':BLK}))};
+      const us={names:A+' & '+B,note:'One joint pot. Everything you both add lands in the same budget.',
+        pocket:[['allowA',A],['allowB',B]].map(a=>{const r=rows.find(x=>x.id===a[0]);return{name:a[1],left:r.left<0?f(-r.left)+' over':f(r.left)+' left',w:pc(r.r),detail:f(r.sp)+' of '+f(r.limit)+' spent'}}),
+        checks:CHECKS.map((t,k)=>{const key=ym+':'+k,on=!!S.checks[key];return{t,mark:on?'✓':'',bg:on?BLK:'transparent',deco:on?'line-through':'none',toggle:()=>this.setState(s=>({checks:Object.assign({},s.checks,{[key]:!on})}))}}),
+        checkLabel:CHECKS.filter((t,k)=>S.checks[ym+':'+k]).length+' of '+CHECKS.length+' done this month'};
+      const q=p.q.trim().toLowerCase(),flt=mtx.filter(t=>(p.fWho==='all'||t.who===p.fWho)&&(p.fAcct==='all'||t.acct===p.fAcct||t.to===p.fAcct)&&(!q||(t.name+' '+((catBy[t.cat]||{}).name||'')).toLowerCase().includes(q))).sort(desc),groups=[];
+      flt.forEach(t=>{let g=groups[groups.length-1];if(!g||g.date!==t.date)groups.push(g={date:t.date,label:dLab(isoD(t.date)),n:0,items:[]});g.items.push(txRow(t));g.n+=t.type==='inc'?t.amt:t.type==='exp'?-t.amt:0});
+      groups.forEach(g=>g.total=(g.n>0?'+':'')+f(g.n));
+      const av={q:p.q,onQ:e=>this.ph(i,{q:e.target.value}),who:[['all','Everyone'],['A',A],['B',B],['J','Joint']].map(w=>chip(w[1],p.fWho===w[0],()=>this.ph(i,{fWho:w[0]}))),groups:groups.slice(0,40),empty:!flt.length,hasNote:p.fAcct!=='all',note:aName(p.fAcct)+' only  ×',clear:()=>this.ph(i,{fAcct:'all'})};
+      const open=sp.sheet==='add',x=d.type==='xfer',inc=d.type==='inc',pot=d.pot?S.goals.find(g=>g.id===d.pot):null,out=d.potDir==='out',liquid=S.accounts.filter(a=>a.type==='current'||a.type==='cash'),usable=S.accounts.filter(a=>a.type!=='invest');
+      const tile=(label,on,fn)=>({ab:label.replace(/[^A-Za-z]/g,'').slice(0,2)||'•',label,on:fn,bg:on?LAV:'#ffffff',ring:on?LAV:'transparent',fg:on?LAV:'#ffffff'});
+      const aChips=(list,k)=>list.map(a=>chip(a.name,d[k]===a.id,()=>this.setD(sI,k,a.id)));
+      const a={open,tf:sp.shown?'translateY(0)':'translateY(100%)',close:()=>this.closeSheet(sI),del:()=>this.delAdd(sI),delO:d.id?1:0,delPe:d.id?'auto':'none',
+        title:pot?(out?'Withdraw from ':'Add to ')+pot.name:d.id?'Edit entry':x?'Move money':inc?'New income':'New expense',showTypes:open&&!pot,
+        types:[['exp','Expense'],['inc','Income'],['xfer','Transfer']].map(t=>({label:t[1],on:()=>this.setD(sI,'type',t[0]),bg:d.type===t[0]?BLK:'transparent',fg:d.type===t[0]?'#ffffff':BLK})),
+        amt:d.amt||'0',amtFg:d.amt?BLK:'#6f66b8',name:d.name||'',onName:e=>this.setD(sI,'name',e.target.value),ph:x?'Add a note':inc?'Where from?':'What was it?',err:d.err||'',
+        showTiles:open&&!inc&&!pot,tiles:!open?[]:x?S.accounts.filter(z=>z.id!==d.acct).map(z=>tile(z.name,d.to===z.id,()=>this.setD(sI,'to',z.id))):cats.map(c=>tile(c.name,d.cat===c.id,()=>this.setD(sI,'cat',c.id))),
+        rows:!open?[]:pot?[{chips:aChips(liquid,out?'to':'acct')}]:x?[{chips:aChips(S.accounts,'acct')}]:(w=>mode==='P'?[{chips:w.concat(aChips(usable,'acct'))}]:[{chips:w},{chips:aChips(usable,'acct')}])(['J','A','B'].map(w=>chip(whoName[w],d.who===w,()=>this.setD(sI,'who',w),LAV))),
+        keys:['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k=>({k,on:()=>this.key(sI,k),bg:k==='.'||k==='⌫'?'transparent':'#ffffff',fg:k==='.'||k==='⌫'?'#ffffff':BLK})),
+        save:()=>this.saveAdd(sI),saveLabel:pot?(out?'Withdraw':'Add to '+pot.name):d.id?'Save changes':x?'Move money':inc?'Save income':'Save expense'};
+      const bo=p.sheet==='budget',bc=bo?catBy[d.cat]:null,step=v=>()=>this.ph(i,z=>({d:Object.assign({},z.d,{limit:Math.max(0,z.d.limit+v)})}));
+      const bs={open:bo,op:p.shown?1:0,tf:p.shown?'translateY(0)':'translateY(100%)',close:()=>this.closeSheet(i),name:bc?bc.name:'',limit:bo?num(d.limit):'',minus:step(-50),plus:step(50),
+        info:bo?'Spent '+f(spent[d.cat]||0)+' so far this month':'',avg:()=>this.ph(i,z=>({d:Object.assign({},z.d,{limit:z.d.avg||0})})),avgLabel:bo?'3-month avg · '+num(d.avg||0):'',save:()=>this.saveBudget(i)};
+      const kh=mode==='R'?'80px':mode==='C'?'50px':'54px';a.keys.forEach(k=>k.h=kh);
+      Object.assign(a,{showTop:open&&mode!=='R',showL:open&&mode!=='R',showR:open&&mode!=='L',chipsL:mode==='P'||mode==='C',chipsR:mode==='R',tw:mode==='L'?'61px':'68px',ts:mode==='L'?'54px':'60px',dir:mode==='C'?'row':'column',flexL:mode==='P'?'none':mode==='C'?'1.2 1 0':'1 1 0',flexR:mode==='P'||mode==='L'?'none':'1 1 0',mtR:mode==='P'?'auto':'0',wrap:mode==='L'?'wrap':'nowrap',pad:mode==='R'?'58px 18px 30px':'0 14px 30px',topGap:mode==='L'?'44px':'0px',topR:mode==='L'?'28px 28px 0 0':'0',topPad:mode==='L'?'10px 12px 0':'56px 12px 0'});
+      return{w:sz[0],h:sz[1],hpx:sz[1]+'px',showTabs:role!=='right',backV:role==='right'?'hidden':'visible',dark:!open,cur:cur0,ini:whoName[me][0],pini:whoName[other][0],stop:e=>e.stopPropagation(),back:()=>this.ph(i,{sub:null}),is,go,tb,act,h,b:bView,p:pView,m:mView,ac,bl,ins,dv,pl,us,av,a,bs};
+    };
+    const tilt=P.tilt??false,show=P.show??'Both';
+    return{zoom:Math.max(.4,Math.min(1,(S.w-48)/904)),zoomDuo:Math.max(.4,Math.min(1,(S.w-48)/912)),showDuo:show!=='iPhones only',showPhones:show!=='iPhone Duo only',yes:true,cover:build(2),duoL:build(3),duoR:build(4),phoneA:build(0),phoneB:build(1),labelA:A+'’s iPhone',labelB:B+'’s iPhone',rotA:tilt?'rotate(-3deg)':'none',rotB:tilt?'rotate(3deg) translateY(28px)':'none'};
+  }
+}
+</script>
+</body>
+</html>
