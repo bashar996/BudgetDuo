@@ -1,0 +1,101 @@
+// Same Firestore documents as the iPhone app (ios/Twofold/Model/Models.swift).
+// Balances and pot totals are never stored: they are worked out from entries.
+
+export type Who = 'A' | 'B' | 'J'
+export type TxType = 'exp' | 'inc' | 'xfer'
+export type AccountType = 'current' | 'cash' | 'card' | 'save' | 'invest'
+
+export interface Income { who: Who; amt: number; day: number }
+export interface CustomCategory { id: string; name: string; g: 'needs' | 'wants' }
+
+/** households/{code} */
+export interface Household {
+  nameA: string
+  nameB: string
+  currency: string
+  members: string[]
+  memberWho: Record<string, Who>
+  budgets: Record<string, number>
+  incomes: Income[]
+  checks: Record<string, boolean>
+  roundSwept: Record<string, number>
+  roundUpPot?: string | null
+  custom?: CustomCategory[]
+  strat?: 'avalanche' | 'snowball'
+  extra?: number
+  // Settings from the web design, shared by both of you:
+  budgetStyle?: 'Zero-based' | 'Category limits' | '50/30/20'
+  rollover?: boolean
+  cushion?: number
+  coachTips?: boolean
+  splitMode?: 'One joint pot' | 'Split shared costs'
+  splitRule?: '50/50' | 'By income'
+  /** "YYYY-MM" → settled up */
+  settled?: Record<string, boolean>
+  roundUps?: boolean
+  sweep?: boolean
+}
+
+/** households/{code}/tx/{id} */
+export interface Tx {
+  id: string
+  date: string
+  name: string
+  cat: string
+  amt: number
+  who: Who
+  type: TxType
+  note?: string | null
+  billId?: string | null
+  acct: string
+  to?: string | null
+  pot?: string | null
+  potDir?: 'in' | 'out' | null
+  createdAt?: Date | null
+}
+
+/** households/{code}/accounts/{id}; live balance = opening + entries */
+export interface Account {
+  id: string
+  name: string
+  type: AccountType
+  who: Who
+  bank?: string | null
+  last4?: string | null
+  opening: number
+  limit?: number | null
+  apy?: number | null
+  apr?: number | null
+  createdAt?: Date | null
+}
+
+/** households/{code}/bills/{id} */
+export interface Bill { id: string; day: number; name: string; amt: number; cat: string; sub: boolean; paid: Record<string, boolean> }
+
+/** households/{code}/goals/{id}; saved = startSaved + pot moves */
+export interface Goal {
+  id: string
+  name: string
+  target: number
+  startSaved: number
+  monthly: number
+  acct: string
+  due?: string | null
+  auto?: boolean
+  createdAt?: Date | null
+}
+
+export interface Debt { id: string; name: string; balance: number; apr: number; min: number; createdAt?: Date | null }
+export interface Planned { id: string; name: string; cost: number; A: boolean; B: boolean; createdAt?: Date | null }
+export interface Trip { id: string; name: string; when: string; budget: number; spent: number; createdAt?: Date | null }
+
+export interface Data {
+  household: Household
+  tx: Tx[]
+  accounts: Account[]
+  bills: Bill[]
+  goals: Goal[]
+  debts: Debt[]
+  planned: Planned[]
+  trips: Trip[]
+}
