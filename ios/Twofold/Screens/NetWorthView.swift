@@ -1,14 +1,15 @@
 import SwiftUI
 
 /// Everything you own (accounts in the black, investments, assets) minus everything
-/// you owe. Read-only on the phone: assets and investments are edited on the Mac.
+/// you owe. Assets and investments are added and edited here, as on the Mac.
 @MainActor
 struct NetWorthView: View {
     var showBack = true
     @Environment(HouseholdStore.self) private var store
+    @Environment(Router.self) private var router
 
-    /// Cash, Savings, Investments, Property & other assets.
-    private static let groupColors: [Color] = [Palette.black, Palette.lavender, Palette.accentText, Palette.gray]
+    /// Cash, Savings, Investments, Property & other assets. Computed, so it follows the accent.
+    private static var groupColors: [Color] { [Palette.black, Palette.lavender, Palette.accentText, Palette.gray] }
 
     var body: some View {
         if let L = store.ledger() {
@@ -42,29 +43,49 @@ struct NetWorthView: View {
                     .accessibilityElement(children: .combine)
                 }
 
-                Text("Assets").font(.geist(22, .medium)).tracking(em: -0.01, size: 22).padding(.top, 24)
+                Group {
+                SectionTitle(title: "Assets", action: (label: "+ Add asset", run: { router.form = .asset(nil) })).padding(.top, 18)
                 ForEach(L.assets) { a in
-                    row(initial: a.kindLabel, title: a.name, meta: a.kindLabel) {
-                        Text(L.money.f(a.value)).font(.geist(15, .medium)).lineLimit(1).fixedSize()
-                    }
-                }
-                if L.assets.isEmpty { EmptyNote(text: "No assets yet. Add a home, car or gold in the Mac app.").padding(.vertical, 2) }
-
-                Text("Investments").font(.geist(22, .medium)).tracking(em: -0.01, size: 22).padding(.top, 24)
-                ForEach(L.investments) { a in
-                    row(initial: a.name, title: a.name, meta: L.name(a.who)) {
-                        VStack(alignment: .trailing, spacing: 0) {
-                            Text(L.money.f(L.balance(a))).font(.geist(15, .medium)).lineLimit(1)
-                            if let g = L.gain(a), let cost = a.cost {
-                                Text(gainText(g, cost: cost, money: L.money))
-                                    .font(.geist(12.5)).foregroundStyle(g < 0 ? Palette.bad : Palette.accentText).lineLimit(1)
-                            }
+                    Button { router.form = .asset(a) } label: {
+                        row(initial: a.kindLabel, title: a.name, meta: a.kindLabel) {
+                            Text(L.money.f(a.value)).font(.geist(15, .medium)).lineLimit(1).fixedSize()
                         }
-                        .fixedSize()
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Edits the asset")
                 }
-                if L.investments.isEmpty { EmptyNote(text: "No investments yet.").padding(.vertical, 2) }
+                if L.assets.isEmpty {
+                    EmptyNote(text: "Add a home, a car, gold or anything else of value that doesn’t sit in an account.")
+                        .fixedSize(horizontal: false, vertical: true).padding(.vertical, 2)
+                }
 
+                SectionTitle(title: "Investments", action: (label: "+ Add investment", run: { router.form = .newInvestment })).padding(.top, 18)
+                ForEach(L.investments) { a in
+                    Button { router.form = .account(a) } label: {
+                        row(initial: a.name, title: a.name, meta: [L.name(a.who), a.bank ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")) {
+                            VStack(alignment: .trailing, spacing: 0) {
+                                Text(L.money.f(L.balance(a))).font(.geist(15, .medium)).lineLimit(1)
+                                if let g = L.gain(a), let cost = a.cost {
+                                    Text(gainText(g, cost: cost, money: L.money))
+                                        .font(.geist(12.5)).foregroundStyle(g < 0 ? Palette.bad : Palette.accentText).lineLimit(1)
+                                } else {
+                                    Text("Add what you put in to see the gain").font(.geist(12.5)).foregroundStyle(Palette.gray).lineLimit(1)
+                                }
+                            }
+                            .fixedSize()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Edits the investment: its value now and what you put in")
+                }
+                if L.investments.isEmpty {
+                    EmptyNote(text: "Add a brokerage, fund or long-term plan with what it’s worth today.")
+                        .fixedSize(horizontal: false, vertical: true).padding(.vertical, 2)
+                }
+
+                }
+
+                Group {
                 titleRow("What you owe", total: L.money.f(L.liabilities)).padding(.top, 24)
                 ForEach(owing, id: \.id) { o in
                     HStack(spacing: 12) {
@@ -80,11 +101,14 @@ struct NetWorthView: View {
                     .accessibilityElement(children: .combine)
                 }
                 if owing.isEmpty { EmptyNote(text: "Nothing owed.").padding(.vertical, 2) }
-
-                Text("Assets and investments are added and edited in the Mac app.")
-                    .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 18)
-                    .fixedSize(horizontal: false, vertical: true)
+                Button { router.drill(.debt) } label: {
+                    Text("Payoff plan →").font(.geist(14, .medium)).frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                }
             }
+
         }
     }
 
@@ -113,8 +137,10 @@ struct NetWorthView: View {
         let cards: [OweRow] = L.accounts.filter { L.balance($0) < 0 }.map { a in
             OweRow(id: "a-" + a.id, name: a.name, meta: a.type.label, amount: -L.balance(a))
         }
-        let loans: [OweRow] = L.debts.map { d in
-            OweRow(id: "d-" + d.id, name: d.name, meta: "\(fmt(d.apr))% interest", amount: d.balance)
+        let loans: [OweRow] = L.debts.compactMap { (d: Debt) -> OweRow? in
+            let st = L.loanState(d)
+            guard st.balance > 0.005 else { return nil }
+            return OweRow(id: "d-" + d.id, name: d.name, meta: "\(d.kindLabel) · \(rateText(st))", amount: st.balance)
         }
         return cards + loans
     }
@@ -138,6 +164,7 @@ struct NetWorthView: View {
             trailing()
         }
         .padding(.vertical, 11)
+        .contentShape(Rectangle())
         .overlay(alignment: .bottom) { Hairline(opacity: 0.12) }
         .accessibilityElement(children: .combine)
     }

@@ -7,7 +7,7 @@ import type { Ledger } from '../data/ledger'
 import type { Tx } from '../data/types'
 import { ACCOUNT_TYPES, assetKind } from '../data/catalog'
 import { css, sx } from '../lib/css'
-import { addM, dim, MN, pad } from '../lib/dates'
+import { addM, dim, MN, mLabel, pad } from '../lib/dates'
 import { pc, sum } from '../lib/money'
 
 const LAV = 'var(--accBase)', CRM = '#fbf9ef'
@@ -41,7 +41,7 @@ function Body({ L }: { L: Ledger }) {
   const { f } = L
   const own = L.assets
   const owe = L.accounts.filter((a) => a.balance < 0).map((a) => ({ id: a.id, name: a.name, meta: (ACCOUNT_TYPES[a.type] ?? ACCOUNT_TYPES.current)[0], bal: -a.balance }))
-    .concat(L.data.debts.map((x) => ({ id: x.id, name: x.name, meta: x.apr + '% interest', bal: x.balance })))
+    .concat(L.loans.filter((l) => l.st.balance > 0.005).map(({ doc: x, st }) => ({ id: x.id, name: x.name, meta: Math.round(st.rate * 100) / 100 + '% ' + (st.rateType === 'flat' ? 'flat' : 'interest') + (st.endsYm ? ' · ends ' + mLabel(st.endsYm, true) : ''), bal: st.balance })))
 
   return (
     <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start')}>
@@ -76,11 +76,11 @@ function Body({ L }: { L: Ledger }) {
                 <span style={css('font-size:16px;font-weight:500')}>{o.name}</span>
                 <span style={css('font-size:13px;color:var(--mute)')}>{o.meta}</span>
               </span>
-              <span style={css('font-size:15px;font-weight:500;white-space:nowrap')}>{f(o.bal)}</span>
+              <span style={css('font-size:15px;font-weight:500;white-space:nowrap')}>{f(Math.round(o.bal))}</span>
             </div>
           ))}
           {!owe.length && <div style={css('padding:8px 0;font-size:14px;color:var(--mute)')}>Nothing owed.</div>}
-          <div style={css('display:flex;justify-content:space-between;gap:10px;padding-top:12px;font-size:15px;font-weight:500')}><span>Total owed</span><span>{f(L.liab)}</span></div>
+          <div style={css('display:flex;justify-content:space-between;gap:10px;padding-top:12px;font-size:15px;font-weight:500')}><span>Total owed</span><span>{f(Math.round(L.liab))}</span></div>
         </section>
       </div>
 
@@ -143,16 +143,16 @@ export const worthTab: TabDef = {
       h: pc(Math.max(0.08, (v - hLo) / (hHi - hLo || 1))),
       bg: i === 5 ? LAV : CRM,
       label: MN[(m0 - 5 + i + 12) % 12].slice(0, 3),
-      tag: i === 5 ? f(v) : '',
+      tag: i === 5 ? f(Math.round(v)) : '',
       title: f(Math.round(v)),
     }))
     return {
       label: 'Net worth',
       cur: true,
-      num: L.num(net),
+      num: L.num(Math.round(net)),
       fg: '#ffffff',
-      sub: (net - hist[4] >= 0 ? '+' : '') + f(net - hist[4]) + ' since last month',
-      stats: [['You own', f(L.assets)], ['You owe', f(L.liab)], ['Investment gain', L.invGain === null ? '—' : (L.invGain >= 0 ? '+' : '') + f(L.invGain)]],
+      sub: (net - hist[4] >= 0 ? '+' : '') + f(Math.round(net - hist[4])) + ' since last month',
+      stats: [['You own', f(L.assets)], ['You owe', f(Math.round(L.liab))], ['Investment gain', L.invGain === null ? '—' : (L.invGain >= 0 ? '+' : '') + f(L.invGain)]],
       bars,
     }
   },

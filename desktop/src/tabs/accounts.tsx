@@ -3,6 +3,7 @@
 // Design: Tandem Budget.dc.html, template `is.accounts` and `acc` in renderVals().
 import type { TabDef, HeroBar } from '../shell/ui'
 import { useUI } from '../shell/ui'
+import { EntryRow } from '../shell/entry'
 import type { Ledger } from '../data/ledger'
 import type { Tx } from '../data/types'
 import { ACCOUNT_TYPES } from '../data/catalog'
@@ -11,6 +12,8 @@ import { addDays, addM, dim, dLab, isoD, isoOf, MN, mLabel, pad } from '../lib/d
 import { pc, sum } from '../lib/money'
 
 const LAV = 'var(--accBase)', CRM = '#fbf9ef'
+const round2 = (n: number) => Math.round(n * 100) / 100
+const num2 = (n: number) => String(round2(n))
 const tOf = (type: string) => ACCOUNT_TYPES[type] ?? ACCOUNT_TYPES.current
 
 const flow = (t: Tx, id: string) =>
@@ -64,19 +67,19 @@ function Body({ L }: { L: Ledger }) {
 
       {sel && <Detail L={L} id={sel.id} />}
 
-      {L.data.debts.length > 0 && (
+      {L.loans.length > 0 && (
         <section style={css('max-width:620px')}>
           <div style={css('display:flex;justify-content:space-between;align-items:baseline')}>
             <span style={H22}>Loans</span>
             <button onClick={() => ui.go('goals')} style={css("height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0")}>Payoff plan →</button>
           </div>
-          {L.data.debts.map((x) => (
-            <button key={x.id} onClick={() => ui.open({ kind: 'item', item: 'debt', id: x.id })} style={css('display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left')}>
+          {L.loans.map(({ doc: x, st }) => (
+            <button key={x.id} className="h-row" onClick={() => ui.open({ kind: 'loan', id: x.id })} style={css('display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left')}>
               <span style={css('flex:1;min-width:0;display:flex;flex-direction:column')}>
                 <span style={css('font-size:16px;font-weight:500')}>{x.name}</span>
-                <span style={css('font-size:13px;color:var(--mute)')}>{x.apr + '% interest · ' + f(x.min) + '/mo'}</span>
+                <span style={css('font-size:13px;color:var(--mute)')}>{num2(st.rate) + '% ' + (st.rateType === 'flat' ? 'flat' : 'interest') + ' · ' + f(round2(st.installment)) + '/mo'}</span>
               </span>
-              <span style={css('font-size:15px;font-weight:500')}>{f(-x.balance)}</span>
+              <span style={css('font-size:15px;font-weight:500')}>{f(-Math.round(st.balance))}</span>
             </button>
           ))}
         </section>
@@ -130,6 +133,7 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
         <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>
           <button onClick={() => ui.open({ kind: 'tx', pre: { acct: id } })} style={css("font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer")}>+ Entry</button>
           <button onClick={() => ui.open({ kind: 'tx', pre: { type: 'xfer', acct: id, to: '' } })} style={BTN_LINE}>Transfer out</button>
+          {sel.type !== 'invest' && <button onClick={() => ui.open({ kind: 'import', acct: id })} style={BTN_LINE}>Import statement</button>}
           <button onClick={() => ui.open({ kind: 'acct', acct: L.data.accounts.find((a) => a.id === id) })} style={BTN_LINE}>Edit</button>
         </div>
       </div>
@@ -139,7 +143,7 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
           <span style={css('font-size:13px;color:var(--mute)')}>{mLed.length + ' in ' + mLabel(L.ym, true)}</span>
         </div>
         {mLed.slice(0, 12).map((x) => (
-          <button key={x.t.id} onClick={() => ui.open({ kind: 'tx', tx: x.t })} style={css('display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left')}>
+          <EntryRow key={x.t.id} t={x.t} rowStyle={{ minHeight: 54, padding: '8px 0' }}>
             <span style={css('font-size:13px;width:50px;flex:none;color:var(--mute)')}>{dLab(isoD(x.t.date)).slice(4)}</span>
             <span style={css('flex:1;min-width:0;display:flex;flex-direction:column')}>
               <span style={css('font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{x.t.name}</span>
@@ -149,7 +153,7 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
               <span style={sx('font-weight:500;white-space:nowrap', { color: x.v > 0 ? 'var(--good)' : 'var(--ink)' })}>{(x.v > 0 ? '+' : '') + f(x.v)}</span>
               <span style={css('font-size:12px;color:var(--mute)')}>{f(Math.round(x.after))}</span>
             </span>
-          </button>
+          </EntryRow>
         ))}
         {!mLed.length && <div style={css('padding:20px 0;color:var(--mute);font-size:14px')}>Nothing moved through this account this month.</div>}
         <div style={css('font-size:12.5px;color:var(--mute);padding-top:12px')}>{mLed.length > 12 ? 'Showing the latest 12. Filter Activity by this account for the rest.' : 'Small figure under each amount is the balance after it.'}</div>

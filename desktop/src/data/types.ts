@@ -1,5 +1,6 @@
 // Same Firestore documents as the iPhone app (ios/Twofold/Model/Models.swift).
 // Balances and pot totals are never stored: they are worked out from entries.
+import type { LoanDoc } from './loans'
 
 export type Who = 'A' | 'B' | 'J'
 export type TxType = 'exp' | 'inc' | 'xfer'
@@ -52,10 +53,16 @@ export interface Tx {
   type: TxType
   note?: string | null
   billId?: string | null
+  /** Loan payment: the loan it pays, and whether it's the installment or an extra payment. */
+  debtId?: string | null
+  debtPart?: 'installment' | 'extra' | null
   acct: string
   to?: string | null
   pot?: string | null
   potDir?: 'in' | 'out' | null
+  /** Statement import: stable ID of the statement line (see import/dedupe.ts), and where it came from. */
+  importId?: string | null
+  source?: 'import' | null
   createdAt?: Date | null
 }
 
@@ -73,6 +80,11 @@ export interface Account {
   apr?: number | null
   /** Investments only: the amount put in; gain = balance − cost. */
   cost?: number | null
+  // Credit cards only (see loans.ts cardState; defaults in CARD_DEFAULTS):
+  statementDay?: number | null
+  dueDay?: number | null
+  minPct?: number | null
+  minFloor?: number | null
   createdAt?: Date | null
 }
 
@@ -80,7 +92,11 @@ export interface Account {
 export interface Asset { id: string; name: string; kind: AssetKind; value: number; createdAt?: Date | null }
 
 /** households/{code}/bills/{id} */
-export interface Bill { id: string; day: number; name: string; amt: number; cat: string; sub: boolean; paid: Record<string, boolean> }
+export interface Bill {
+  id: string; day: number; name: string; amt: number; cat: string; sub: boolean; paid: Record<string, boolean>
+  /** Set when the bill shows a loan's installment (paying it pays the loan). */
+  debtId?: string | null
+}
 
 /** households/{code}/goals/{id}; saved = startSaved + pot moves */
 export interface Goal {
@@ -95,7 +111,8 @@ export interface Goal {
   createdAt?: Date | null
 }
 
-export interface Debt { id: string; name: string; balance: number; apr: number; min: number; createdAt?: Date | null }
+/** households/{code}/debts/{id}: a loan. Its fields and maths live in loans.ts. */
+export type Debt = LoanDoc
 export interface Planned { id: string; name: string; cost: number; A: boolean; B: boolean; createdAt?: Date | null }
 export interface Trip { id: string; name: string; when: string; budget: number; spent: number; createdAt?: Date | null }
 

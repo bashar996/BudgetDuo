@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { css, sx } from '../lib/css'
 import { addM, mLabel } from '../lib/dates'
 import { makeLedger } from '../data/ledger'
 import { useStore } from '../data/store'
 import { Icon, ICON } from './icons'
-import { TABS, UICtx, type HeroSpec, type Panel, type TabId, type UI, type ViewState } from './ui'
+import { TABS, UICtx, type HeroSpec, type MenuSpec, type Panel, type TabId, type UI, type ViewState } from './ui'
 import { TAB_DEFS } from '../tabs'
 import { PanelHost } from '../panels/PanelHost'
 import { ymOf } from '../lib/dates'
+import { isStatementFile } from '../import/read'
 
 const LS = {
   get(k: string) { try { return localStorage.getItem('twofold:' + k) } catch { return null } },
@@ -21,6 +22,8 @@ export function Shell() {
   const [view, setViewState] = useState<ViewState>({ q: '', fWho: 'all', fCat: 'all', fAcct: 'all', selAcct: null })
   const [panel, setPanel] = useState<Panel | null>(null)
   const [navMin, setNavMin] = useState(() => LS.get('navMin') === '1')
+  const [toast, setToast] = useState<{ n: number; text: string; undo?: () => void } | null>(null)
+  const [menu, setMenu] = useState<MenuSpec | null>(null)
 
   // Per-Mac look: theme and accent colour.
   useEffect(() => {
@@ -34,8 +37,39 @@ export function Shell() {
     setYm,
     setView: (p) => setViewState((v) => ({ ...v, ...p })),
     open: setPanel,
-    close: () => setPanel(null),
+    close: () => setPanel((p) => (p && 'back' in p && p.back) || null),
+    closeAll: () => setPanel(null),
+    toast: (text, undo) => setToast((t) => ({ n: (t?.n ?? 0) + 1, text, undo })),
+    menu: setMenu,
   }
+
+  // Drop a statement anywhere on the window to import it. Every drag is cancelled here,
+  // so a dropped file never replaces the page (Electron would open it).
+  const [dragging, setDragging] = useState(false)
+  const panelRef = useRef(panel)
+  panelRef.current = panel
+  useEffect(() => {
+    let depth = 0
+    const files = (e: DragEvent) => !!e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')
+    const enter = (e: DragEvent) => { if (!files(e)) return; e.preventDefault(); depth++; setDragging(true) }
+    const over = (e: DragEvent) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = files(e) ? 'copy' : 'none' }
+    const leave = (e: DragEvent) => { if (!files(e)) return; depth = Math.max(0, depth - 1); if (!depth) setDragging(false) }
+    const drop = (e: DragEvent) => {
+      e.preventDefault(); depth = 0; setDragging(false)
+      const f = e.dataTransfer?.files?.[0]
+      if (!f) return
+      if (!isStatementFile(f.name)) { ui.toast('Drop a CSV, Excel or PDF statement to import it.'); return }
+      const p = panelRef.current
+      setMenu(null)
+      setPanel({ kind: 'import', file: f, acct: p?.kind === 'import' ? p.acct : view.fAcct !== 'all' ? view.fAcct : tab === 'accounts' ? view.selAcct ?? undefined : undefined })
+    }
+    window.addEventListener('dragenter', enter); window.addEventListener('dragover', over)
+    window.addEventListener('dragleave', leave); window.addEventListener('drop', drop)
+    return () => {
+      window.removeEventListener('dragenter', enter); window.removeEventListener('dragover', over)
+      window.removeEventListener('dragleave', leave); window.removeEventListener('drop', drop)
+    }
+  }, [view.fAcct, view.selAcct, tab])
 
   const L = useMemo(() => makeLedger(data, ym), [data, ym])
   const def = TAB_DEFS[tab]
@@ -110,7 +144,69 @@ export function Shell() {
       {/* Drag the window by its top edge (macOS hidden title bar). */}
       <div className="drag" aria-hidden="true" style={css('position:fixed;top:0;left:0;right:0;height:28px;z-index:40')} />
       <PanelHost L={L} />
+      {menu && <Menu m={menu} close={() => setMenu(null)} />}
+      {dragging && <DropTarget />}
+      {toast && <Toast key={toast.n} text={toast.text} undo={toast.undo} lift={!!panel} close={() => setToast(null)} />}
     </UICtx.Provider>
+  )
+}
+
+/** Shown while a file is dragged over the window. */
+function DropTarget() {
+  return (
+    <div className="nodrag" aria-hidden="true" style={css('position:fixed;inset:0;z-index:90;pointer-events:none;background:rgba(11,11,12,.62);display:grid;place-items:center;padding:28px;box-sizing:border-box')}>
+      <div style={css('width:100%;height:100%;box-sizing:border-box;border:2px dashed var(--accBase);border-radius:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#ffffff;text-align:center')}>
+        <span style={css('width:72px;height:72px;border-radius:24px;background:var(--accBase);color:#0b0b0c;display:grid;place-items:center')}><Icon d={ICON.import} size={32} /></span>
+        <span style={css("font:500 30px 'Geist',sans-serif;letter-spacing:-.02em;margin-top:6px")}>Drop to import your statement</span>
+        <span style={css('font-size:15px;color:#d9d7e4')}>CSV, Excel or PDF from your bank or card</span>
+      </div>
+    </div>
+  )
+}
+
+/** "Deleted Groceries · Undo": black pill at the bottom, gone after 5 s. */
+function Toast({ text, undo, lift, close }: { text: string; undo?: () => void; lift: boolean; close(): void }) {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const a = setTimeout(() => setShown(true), 20), b = setTimeout(() => setShown(false), 5000), c = setTimeout(close, 5300)
+    return () => { clearTimeout(a); clearTimeout(b); clearTimeout(c) }
+  }, [])
+  return (
+    <div role="status" className="nodrag" style={sx("position:fixed;left:50%;z-index:60;display:flex;align-items:center;gap:6px;max-width:min(560px,calc(100vw - 40px));box-sizing:border-box;padding:6px 6px 6px 20px;border-radius:20px;background:#0b0b0c;color:#ffffff;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 12px 32px rgba(0,0,0,.28);font:500 14.5px 'Geist',sans-serif;transition:opacity .2s,bottom .2s,transform .28s cubic-bezier(.2,.8,.2,1)", { bottom: lift ? 104 : 28, opacity: shown ? 1 : 0, transform: 'translateX(-50%) translateY(' + (shown ? 0 : 16) + 'px)' })}>
+      <span style={css('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px')}>{text}</span>
+      {undo && <button onClick={() => { undo(); close() }} style={css("flex:none;height:40px;padding:0 18px;border:none;border-radius:14px;background:var(--accBase);color:#0b0b0c;font:500 14px 'Geist',sans-serif;cursor:pointer")}>Undo</button>}
+      <button className="h-dark" onClick={close} aria-label="Dismiss" style={css('flex:none;width:40px;height:40px;border:none;border-radius:14px;background:transparent;color:#a9a7b8;font-size:18px;cursor:pointer')}>×</button>
+    </div>
+  )
+}
+
+/** Right-click menu: dark island at the pointer, closes on any click elsewhere, Escape or scrolling. */
+function Menu({ m, close }: { m: MenuSpec; close(): void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ x: m.x, y: m.y })
+  useEffect(() => {
+    const r = ref.current?.getBoundingClientRect()
+    if (r) setPos({ x: Math.max(8, Math.min(m.x, innerWidth - r.width - 8)), y: Math.max(8, Math.min(m.y, innerHeight - r.height - 8)) })
+    const down = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) close() }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('mousedown', down, true)
+    window.addEventListener('keydown', key)
+    window.addEventListener('blur', close)
+    window.addEventListener('resize', close)
+    window.addEventListener('wheel', close, true)
+    return () => {
+      window.removeEventListener('mousedown', down, true); window.removeEventListener('keydown', key)
+      window.removeEventListener('blur', close); window.removeEventListener('resize', close); window.removeEventListener('wheel', close, true)
+    }
+  }, [m])
+  return (
+    <div ref={ref} role="menu" className="nodrag" onContextMenu={(e) => e.preventDefault()}
+      style={sx('position:fixed;z-index:70;min-width:168px;padding:6px;border-radius:18px;background:#17171b;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 14px 36px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:2px', { left: pos.x, top: pos.y })}>
+      {m.items.map((it) => (
+        <button key={it.label} role="menuitem" className="h-menu" onClick={() => { close(); it.run() }}
+          style={sx("height:40px;padding:0 14px;border:none;border-radius:12px;background:transparent;font:500 14.5px 'Geist',sans-serif;text-align:left;cursor:pointer", { color: it.bad ? '#ff8f85' : '#ffffff' })}>{it.label}</button>
+      ))}
+    </div>
   )
 }
 

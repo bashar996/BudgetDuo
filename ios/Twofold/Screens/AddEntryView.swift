@@ -56,7 +56,7 @@ struct AddEntryView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: d.amt)
         .confirmationDialog("Delete this entry?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
-                if let t = store.tx.first(where: { $0.id == d.txId }) { store.deleteEntry(t) }
+                if let t = store.tx.first(where: { $0.id == d.txId }) { router.delete(t, store) }
                 dismiss()
             }
         } message: {
@@ -98,12 +98,16 @@ struct AddEntryView: View {
                 Button { dismiss() } label: { Text("×").font(.geist(26)).frame(width: 64, height: 44, alignment: .leading).padding(.leading, 10) }
                     .accessibilityLabel("Close")
                 Text(title).font(.geist(19, .medium)).lineLimit(1).frame(maxWidth: .infinity)
-                Button("Delete") { confirmDelete = true }.font(.geist(14, .medium)).frame(width: 64, height: 44)
-                    .opacity(d.txId.isEmpty ? 0 : 1).disabled(d.txId.isEmpty)
+                Button { confirmDelete = true } label: {
+                    Text("Delete").font(.geist(14, .semibold)).foregroundStyle(Palette.bad).frame(width: 64, height: 44)
+                }
+                .buttonStyle(.plain)
+                .opacity(d.txId.isEmpty ? 0 : 1).disabled(d.txId.isEmpty)
+                .accessibilityHidden(d.txId.isEmpty)
             }
             if pot == nil {
                 HStack(spacing: 6) {
-                    ForEach([(TxType.expense, "Expense"), (.income, "Income"), (.transfer, "Transfer")], id: \.0) { t in
+                    ForEach(AddEntryView.typeChoices, id: \.0) { t in
                         let on = d.type == t.0
                         Button {
                             d.type = t.0; d.error = ""
@@ -139,6 +143,8 @@ struct AddEntryView: View {
         .background(Palette.lavender)
         .foregroundStyle(Palette.black)
     }
+
+    private static let typeChoices: [(TxType, String)] = [(.expense, "Expense"), (.income, "Income"), (.transfer, "Transfer")]
 
     private var placeholder: String { d.type == .transfer ? "Add a note" : d.type == .income ? "Where from?" : "What was it?" }
 
@@ -297,7 +303,9 @@ struct AddEntryView: View {
         let existing = store.tx.first { $0.id == d.txId }
         let t = Tx(id: d.txId, date: DateKit.iso(d.date), name: name, cat: cat, amt: amt, who: d.who, type: d.type,
                    note: d.note, billId: d.billId, acct: d.acct, to: isX ? d.to : nil, pot: isX ? d.pot : nil,
-                   potDir: isX ? d.potDir : nil, createdAt: existing?.createdAt)
+                   potDir: isX ? d.potDir : nil, createdAt: existing?.createdAt,
+                   debtId: d.type == .expense ? d.debtId : nil, debtPart: d.type == .expense ? d.debtPart : nil,
+                   importId: existing?.importId, source: existing?.source)
         store.save(t)
         dismiss()
     }

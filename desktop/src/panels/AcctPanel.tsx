@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Ledger } from '../data/ledger'
 import type { Account, AccountType, Who } from '../data/types'
 import { ACCOUNT_TYPES } from '../data/catalog'
+import { CARD_DEFAULTS } from '../data/loans'
 import { useStore } from '../data/store'
 import { css } from '../lib/css'
 import { useUI } from '../shell/ui'
@@ -16,8 +17,9 @@ export function AcctPanel({ L, acct, preset }: { L: Ledger; acct?: Account; pres
   const old = acct ? L.data.accounts.find((a) => a.id === acct.id) : undefined
   const curBal = old ? L.balance(old) : 0
   const [d, setD] = useState(() => old
-    ? { name: old.name, atype: old.type, who: old.who, amt: String(Math.round(curBal * 100) / 100), bank: old.bank ?? '', last4: old.last4 ?? '', limit: old.limit ? String(old.limit) : '', apr: old.apr ? String(old.apr) : '', apy: old.apy ? String(old.apy) : '', cost: old.cost ? String(old.cost) : '' }
-    : { name: '', atype: preset ?? ('current' as AccountType), who: 'J' as Who, amt: '', bank: '', last4: '', limit: '', apr: '', apy: '', cost: '' })
+    ? { name: old.name, atype: old.type, who: old.who, amt: String(Math.round(curBal * 100) / 100), bank: old.bank ?? '', last4: old.last4 ?? '', limit: old.limit ? String(old.limit) : '', apr: old.apr ? String(old.apr) : '', apy: old.apy ? String(old.apy) : '', cost: old.cost ? String(old.cost) : '',
+        stmt: old.statementDay ? String(old.statementDay) : '', due: old.dueDay ? String(old.dueDay) : '', minPct: old.minPct != null ? String(old.minPct) : '', minFloor: old.minFloor != null ? String(old.minFloor) : '' }
+    : { name: '', atype: preset ?? ('current' as AccountType), who: 'J' as Who, amt: '', bank: '', last4: '', limit: '', apr: '', apy: '', cost: '', stmt: '', due: '', minPct: '', minFloor: '' })
   const [err, setErr] = useState('')
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => { setErr(''); setD((x) => ({ ...x, [k]: v })) }
 
@@ -28,11 +30,15 @@ export function AcctPanel({ L, acct, preset }: { L: Ledger; acct?: Account; pres
     const opening = old ? old.opening + (bal - curBal) : bal
     const card = d.atype === 'card', sav = d.atype === 'save', inv = d.atype === 'invest'
     const cost = inv ? parse(d.cost) : NaN
+    const day = (s: string) => { const v = Math.round(parse(s)); return card && v >= 1 && v <= 31 ? v : null }
+    const opt = (s: string) => { const v = parse(s); return card && v >= 0 ? v : null }
+    if (card && ((d.stmt && !day(d.stmt)) || (d.due && !day(d.due)))) return setErr('Statement and due days are days of the month, 1 to 31.')
     const id = act.saveAccount({
       id: old?.id, createdAt: old?.createdAt ?? undefined, name, type: d.atype, who: d.who, opening,
       bank: d.bank.trim() || null, last4: d.last4.trim() || null,
       limit: card ? parse(d.limit) || 0 : null, apr: card ? parse(d.apr) || null : null, apy: sav ? parse(d.apy) || 0 : null,
       cost: cost > 0 ? cost : undefined,
+      statementDay: day(d.stmt), dueDay: day(d.due), minPct: opt(d.minPct), minFloor: opt(d.minFloor),
     })
     setView({ selAcct: id })
     close()
@@ -58,7 +64,19 @@ export function AcctPanel({ L, acct, preset }: { L: Ledger; acct?: Account; pres
         {d.atype === 'card' && (
           <Pair>
             <TextField label="Credit limit" decimal value={d.limit} onChange={(v) => set('limit', v)} />
-            <TextField label="Interest rate (APR %)" decimal value={d.apr} onChange={(v) => set('apr', v)} />
+            <TextField label="Interest rate (APR %)" decimal placeholder={String(CARD_DEFAULTS.apr)} value={d.apr} onChange={(v) => set('apr', v)} />
+          </Pair>
+        )}
+        {d.atype === 'card' && (
+          <Pair>
+            <TextField label="Statement day (of the month)" decimal placeholder="e.g. 20" value={d.stmt} onChange={(v) => set('stmt', v.replace(/\D/g, ''))} />
+            <TextField label="Payment due day" decimal placeholder="e.g. 12" value={d.due} onChange={(v) => set('due', v.replace(/\D/g, ''))} />
+          </Pair>
+        )}
+        {d.atype === 'card' && (
+          <Pair>
+            <TextField label="Minimum payment (% of balance)" decimal placeholder={String(CARD_DEFAULTS.minPct)} value={d.minPct} onChange={(v) => set('minPct', v)} />
+            <TextField label={'Minimum at least (' + L.cur + ')'} decimal placeholder={String(CARD_DEFAULTS.minFloor)} value={d.minFloor} onChange={(v) => set('minFloor', v)} />
           </Pair>
         )}
         {d.atype === 'save' && <TextField label="Interest rate (% a year)" decimal value={d.apy} onChange={(v) => set('apy', v)} />}

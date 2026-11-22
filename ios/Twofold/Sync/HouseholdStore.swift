@@ -18,7 +18,7 @@ final class HouseholdStore {
     private(set) var debts: [Debt] = []
     private(set) var planned: [Planned] = []
     private(set) var trips: [Trip] = []
-    /// Homes, cars, gold … (added in the Mac app; a missing collection is just empty).
+    /// Homes, cars, gold … (a missing collection is just empty).
     private(set) var assets: [Asset] = []
     /// True while something saved on this phone hasn't reached the server yet.
     private(set) var syncing = false
@@ -28,6 +28,8 @@ final class HouseholdStore {
     @ObservationIgnored private var listeners: [ListenerRegistration] = []
     @ObservationIgnored private let db = Firestore.firestore()
     @ObservationIgnored private var pending: [String: Bool] = [:]
+    /// Loan schedules are replayed only when the loans, the entries or the day change.
+    @ObservationIgnored private var loanCache: (day: String, debts: [Debt], tx: [Tx], states: [String: LoanState])?
 
     init(uid: String, householdId: String) {
         self.uid = uid
@@ -84,8 +86,16 @@ final class HouseholdStore {
 
     func ledger(today: Date = Date()) -> Ledger? {
         guard let household else { return nil }
+        let day = DateKit.iso(today)
+        let states: [String: LoanState]
+        if let c = loanCache, c.day == day, c.debts == debts, c.tx == tx {
+            states = c.states
+        } else {
+            states = Ledger.computeLoanStates(debts, tx, today: day)
+            loanCache = (day: day, debts: debts, tx: tx, states: states)
+        }
         return Ledger(household: household, tx: tx, accounts: accounts, bills: bills, goals: goals,
-                      debts: debts, planned: planned, trips: trips, assets: assets, today: today)
+                      debts: debts, planned: planned, trips: trips, assets: assets, today: today, loanStates: states)
     }
 
     // MARK: Writes
@@ -119,8 +129,81 @@ final class HouseholdStore {
         batch.commit(completion: report)
     }
 
+    /// Puts a deleted entry back with the same id and fields (Undo). A bill payment
+    /// also marks its bill paid again, as deleting it had unmarked it.
+    func restore(_ t: Tx) {
+        guard !t.id.isEmpty else { return }
+        let batch = db.batch()
+        let ref = col("tx").document(t.id)
+        write { try batch.setData(from: t, forDocument: ref) }
+        if let billId = t.billId, bills.contains(where: { $0.id == billId }) {
+            batch.updateData(["paid.\(t.month)": true], forDocument: col("bills").document(billId))
+        }
+        batch.commit(completion: report)
+    }
+
+    // MARK: Statement import
+
+    /// Writes imported entries in batches of at most 450 writes (an entry and the bill it
+    /// pays always share a batch). A bill match uses its fixed entry id and marks the bill
+    /// paid for that month. Returns what Undo needs.
+    @discardableResult
+    func importEntries(_ entries: [ImportEntry]) -> ImportUndo {
+        var ids: [String] = []
+        var marked: [BillMonth] = []
+        var batch = db.batch()
+        var count = 0
+        for e in entries {
+            let paysBill = e.bill.map { b in bills.contains { $0.id == b.id } } ?? false
+            if count + (paysBill ? 2 : 1) > 450 {
+                batch.commit(completion: report)
+                batch = db.batch()
+                count = 0
+            }
+            var t = e.tx
+            let ref = t.id.isEmpty ? col("tx").document() : col("tx").document(t.id)
+            t.id = ref.documentID
+            if t.createdAt == nil { t.createdAt = Date() }
+            let current = batch
+            write { try current.setData(from: t, forDocument: ref) }
+            count += 1
+            ids.append(t.id)
+            if paysBill, let b = e.bill {
+                batch.updateData(["paid.\(b.ym)": true], forDocument: col("bills").document(b.id))
+                marked.append(b)
+                count += 1
+            }
+        }
+        if count > 0 { batch.commit(completion: report) }
+        return ImportUndo(txIds: ids, bills: marked)
+    }
+
+    /// Undo for an import: deletes exactly those entries and marks unpaid the bills it marked paid.
+    func undoImport(_ u: ImportUndo) {
+        var batch = db.batch()
+        var count = 0
+        for id in u.txIds where !id.isEmpty {
+            if count >= 450 { batch.commit(completion: report); batch = db.batch(); count = 0 }
+            batch.deleteDocument(col("tx").document(id))
+            count += 1
+        }
+        for b in u.bills where bills.contains(where: { $0.id == b.id }) {
+            if count >= 450 { batch.commit(completion: report); batch = db.batch(); count = 0 }
+            batch.updateData(["paid.\(b.ym)": false], forDocument: col("bills").document(b.id))
+            count += 1
+        }
+        if count > 0 { batch.commit(completion: report) }
+    }
+
+    /// `id` if that account still exists.
+    private func existingAccount(_ id: String?) -> String? {
+        guard let id, accounts.contains(where: { $0.id == id }) else { return nil }
+        return id
+    }
+
     /// Marks a bill paid (adding its expense) or unpaid (removing it). The entry's
     /// ID is fixed per bill and month, so paying on both phones can't double-count.
+    /// A loan's bill logs a loan payment (debtId, installment) from the loan's account.
     func togglePaid(_ row: BillRow, ym: String, account: String?) {
         let b = row.bill
         let batch = db.batch()
@@ -130,9 +213,11 @@ final class HouseholdStore {
             batch.deleteDocument(txRef)
         } else {
             let day = min(b.day, DateKit.daysIn(ym))
+            let loan = b.debtId.flatMap { id in debts.first(where: { $0.id == id }) }
+            let acct = existingAccount(loan?.acct) ?? account ?? ""
             let t = Tx(id: txRef.documentID, date: "\(ym)-\(DateKit.pad(day))", name: b.name, cat: b.cat, amt: b.amt,
-                       who: .joint, type: .expense, note: nil, billId: b.id, acct: account ?? "", to: nil, pot: nil,
-                       potDir: nil, createdAt: Date())
+                       who: .joint, type: .expense, note: nil, billId: b.id, acct: acct, to: nil, pot: nil,
+                       potDir: nil, createdAt: Date(), debtId: b.debtId, debtPart: b.debtId == nil ? nil : "installment")
             write { try batch.setData(from: t, forDocument: txRef) }
         }
         batch.commit(completion: report)
@@ -140,6 +225,12 @@ final class HouseholdStore {
 
     func setBudget(_ cat: String, _ limit: Double) {
         root.updateData(["budgets.\(cat)": max(0, limit)], completion: report)
+    }
+
+    /// Moves part of one category's limit into another (as the Mac's `moveBudget`).
+    func moveBudget(from: String, to: String, amount: Double) {
+        guard amount > 0, from != to else { return }
+        root.updateData(["budgets.\(from)": FieldValue.increment(-amount), "budgets.\(to)": FieldValue.increment(amount)], completion: report)
     }
 
     func setIncome(_ who: Who, amt: Double, day: Int) {
@@ -160,6 +251,19 @@ final class HouseholdStore {
 
     func updateSettings(nameA: String, nameB: String, currency: String) {
         root.updateData(["nameA": nameA, "nameB": nameB, "currency": currency], completion: report)
+    }
+
+    /// Shared settings the Mac also writes: budgetStyle, rollover, cushion, coachTips,
+    /// splitMode, splitRule, roundUps, sweep.
+    func updateHousehold(_ fields: [AnyHashable: Any]) {
+        guard !fields.isEmpty else { return }
+        root.updateData(fields, completion: report)
+    }
+
+    /// Records what was moved between you this month (settle-up), so later shared
+    /// spending still shows. `amount` is what was owed (B owes A positive).
+    func setSettled(ym: String, amount: Double) {
+        root.updateData(["settled.\(ym)": FieldValue.increment(amount)], completion: report)
     }
 
     func setRoundUpPot(_ id: String?) {
@@ -209,6 +313,16 @@ final class HouseholdStore {
     }
 
     func deleteGoal(_ id: String) { col("goals").document(id).delete(completion: report) }
+
+    /// Auto-save each payday on or off for one pot.
+    func setGoalAuto(_ id: String, _ on: Bool) {
+        col("goals").document(id).updateData(["auto": on], completion: report)
+    }
+
+    // MARK: Assets (home, car, gold …): valued by hand, never moved by entries
+
+    func save(_ a: Asset) { saveDoc(a, in: "assets", id: a.id) { $0.id = $1; if $0.createdAt == nil { $0.createdAt = Date() } } }
+    func deleteAsset(_ id: String) { col("assets").document(id).delete(completion: report) }
 
     // MARK: Categories
     // Your own categories live in `custom` and are rewritten directly; built-ins
@@ -277,14 +391,107 @@ final class HouseholdStore {
     func setStrategy(_ s: String) { root.updateData(["strat": s], completion: report) }
     func setExtra(_ v: Double) { root.updateData(["extra": max(0, v)], completion: report) }
 
-    func save(_ d: Debt) { saveDoc(d, in: "debts", id: d.id) { $0.id = $1; if $0.createdAt == nil { $0.createdAt = Date() } } }
-    func deleteDebt(_ id: String) { col("debts").document(id).delete(completion: report) }
+    // MARK: Loans
+
+    /// Saves a loan, also writing the legacy fields older builds and the debt plan
+    /// read (apr = rate, min = installment, balance = amount borrowed for loans with
+    /// a schedule). With `showInBills` the loan's bill is created or updated in the
+    /// same batch; without, a linked bill is deleted.
+    func saveLoan(_ loan: Debt, showInBills: Bool) {
+        var d = loan
+        let ref = d.id.isEmpty ? col("debts").document() : col("debts").document(d.id)
+        d.id = ref.documentID
+        if d.createdAt == nil { d.createdAt = Date() }
+        d.apr = d.rate ?? d.apr
+        let inst = Loans.installmentOf(d)
+        d.min = inst
+        if !Loans.isSimple(d) { d.balance = d.principal ?? d.balance }
+
+        let batch = db.batch()
+        let linked = d.billId.flatMap { id in bills.first(where: { $0.id == id }) }
+        if showInBills {
+            let billRef = linked.map { col("bills").document($0.id) } ?? col("bills").document()
+            let day = d.firstDue.flatMap { Int($0.dropFirst(8).prefix(2)) } ?? 1
+            let cat = ledger()?.catOr("debt") ?? "debt"
+            let bill = Bill(id: billRef.documentID, day: max(1, min(31, day)), name: d.name, amt: (inst * 100).rounded() / 100,
+                            cat: cat, sub: false, paid: linked?.paid ?? [:], debtId: d.id)
+            d.billId = billRef.documentID
+            write { try batch.setData(from: bill, forDocument: billRef) }
+        } else {
+            if let linked { batch.deleteDocument(col("bills").document(linked.id)) }
+            d.billId = nil
+        }
+        write { try batch.setData(from: d, forDocument: ref) }
+        batch.commit(completion: report)
+    }
+
+    /// Deletes a loan and its bill. Its payment entries stay in Activity.
+    func deleteLoan(_ d: Debt) {
+        let batch = db.batch()
+        batch.deleteDocument(col("debts").document(d.id))
+        for b in bills where b.id == d.billId || b.debtId == d.id {
+            batch.deleteDocument(col("bills").document(b.id))
+        }
+        batch.commit(completion: report)
+    }
+
+    /// Logs a loan payment: an expense in the debt category from the loan's account
+    /// (or the main one), dated today. `part` is "installment" or "extra".
+    func payLoan(_ d: Debt, amount: Double, part: String) {
+        guard let L = ledger() else { return }
+        let amt = (amount * 100).rounded() / 100
+        guard amt > 0 else { return }
+        let t = Tx(id: "", date: DateKit.iso(Date()), name: d.name + (part == "extra" ? " · extra payment" : " · installment"),
+                   cat: L.catOr("debt"), amt: amt, who: .joint, type: .expense, note: nil, billId: nil,
+                   acct: existingAccount(d.acct) ?? L.mainAccountId ?? "", to: nil, pot: nil, potDir: nil, createdAt: nil,
+                   debtId: d.id, debtPart: part)
+        save(t)
+    }
+
+    /// Pays the next installment: through the loan's bill for the month it's due when
+    /// that month isn't paid yet (so Bills stays in step), otherwise as a loan payment.
+    func payInstallment(_ d: Debt) {
+        guard let L = ledger() else { return }
+        let st = L.loanState(d)
+        if let bill = L.loanBill(d) {
+            let ym = String((st.nextDue ?? L.todayIso).prefix(7))
+            if !(bill.paid[ym] ?? false) {
+                togglePaid(BillRow(bill: bill, dueDay: bill.day, isPaid: false), ym: ym, account: L.mainAccountId)
+                return
+            }
+        }
+        payLoan(d, amount: st.installment, part: "installment")
+    }
 
     func save(_ p: Planned) { saveDoc(p, in: "planned", id: p.id) { $0.id = $1; if $0.createdAt == nil { $0.createdAt = Date() } } }
     func deletePlanned(_ id: String) { col("planned").document(id).delete(completion: report) }
     func vote(_ p: Planned, who: Who) {
         guard who != .joint else { return }
         col("planned").document(p.id).updateData([who.rawValue: !(who == .a ? p.A : p.B)], completion: report)
+    }
+
+    /// Logs the purchase as a Shopping expense today and takes it off the plan.
+    func buyPlanned(_ p: Planned, account: String) {
+        guard let L = ledger() else { return }
+        let batch = db.batch()
+        let ref = col("tx").document()
+        let t = Tx(id: ref.documentID, date: DateKit.iso(Date()), name: p.name, cat: L.catOr("shopping"), amt: p.cost, who: .joint,
+                   type: .expense, note: nil, billId: nil, acct: account, to: nil, pot: nil, potDir: nil, createdAt: Date())
+        write { try batch.setData(from: t, forDocument: ref) }
+        batch.deleteDocument(col("planned").document(p.id))
+        batch.commit(completion: report)
+    }
+
+    /// Logs spending on a trip as a Travel expense today and adds it to the trip.
+    func spendOnTrip(_ trip: Trip, amount: Double, account: String) {
+        guard let L = ledger(), amount > 0 else { return }
+        let batch = db.batch()
+        let ref = col("tx").document()
+        let t = Tx(id: ref.documentID, date: DateKit.iso(Date()), name: trip.name, cat: L.catOr("travel"), amt: amount, who: .joint,
+                   type: .expense, note: nil, billId: nil, acct: account, to: nil, pot: nil, potDir: nil, createdAt: Date())
+        write { try batch.setData(from: t, forDocument: ref) }
+        batch.updateData(["spent": FieldValue.increment(amount)], forDocument: col("events").document(trip.id))
+        batch.commit(completion: report)
     }
 
     func save(_ t: Trip) { saveDoc(t, in: "events", id: t.id) { $0.id = $1; if $0.createdAt == nil { $0.createdAt = Date() } } }

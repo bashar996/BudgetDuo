@@ -12,6 +12,11 @@ struct HomeView: View {
     private func content(_ L: Ledger) -> some View {
         let me = store.me, other: Who = me == .a ? .b : .a
         let safe = L.safeToSpend
+        let syncNote: String = store.syncing ? " · syncing…" : ""
+        let greetingSub: String = "You & \(L.name(other)) · \(L.monthName)\(syncNote)"
+        let perDay: String = "About \(L.money.f(safe / Double(L.daysLeft))) a day for \(L.daysLeft) days, bills covered"
+        let safeNote: String = safe > 0 ? perDay
+            : (L.totalLimit > 0 ? "Budgets are used up for now — bills are still covered" : "Give your categories a limit to see what’s safe to spend")
         return Screen(color: Palette.lavender) {
             HStack(spacing: 12) {
                 Text(String(L.name(me).prefix(1))).font(.geist(19, .semibold))
@@ -20,7 +25,7 @@ struct HomeView: View {
                     .foregroundStyle(Palette.black)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Hi, \(L.name(me))").font(.geist(20, .medium)).tracking(em: -0.01, size: 20)
-                    Text("You & \(L.name(other)) · \(L.monthName)" + (store.syncing ? " · syncing…" : ""))
+                    Text(greetingSub)
                         .font(.geist(13)).foregroundStyle(Palette.mute)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -43,16 +48,14 @@ struct HomeView: View {
             Text("Safe to spend this month").font(.geist(13)).foregroundStyle(Palette.ink)
             BigAmount(currency: L.money.currency, value: L.money.num(safe), color: Palette.black, currencyColor: Palette.ink)
                 .padding(.top, 2)
-            Text(safe > 0 ? "About \(L.money.f(safe / Double(L.daysLeft))) a day for \(L.daysLeft) days, bills covered"
-                          : L.totalLimit > 0 ? "Budgets are used up for now — bills are still covered"
-                                             : "Give your categories a limit to see what’s safe to spend")
+            Text(safeNote)
                 .font(.geist(13)).foregroundStyle(Palette.ink).padding(.top, 10)
-            ProgressLine(ratio: L.totalSpent / max(L.totalLimit, 1), fill: Palette.black, track: Palette.black.opacity(0.16), height: 6)
+            ProgressLine(ratio: L.totalSpent / max(L.totalAvail, 1), fill: Palette.black, track: Palette.black.opacity(0.16), height: 6)
                 .padding(.top, 14)
             HStack {
                 Text("Spent \(L.money.f(L.totalSpent))")
                 Spacer()
-                Text("of \(L.money.f(L.totalLimit))")
+                Text("of \(L.money.f(L.totalAvail))")
             }
             .font(.geist(12)).foregroundStyle(Palette.ink).padding(.top, 6)
             Hairline(opacity: 0.2).padding(.vertical, 18)
@@ -69,6 +72,12 @@ struct HomeView: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            if L.household.coachTips ?? true {
+                let tips = L.coachTips
+                if !tips.isEmpty { CoachTips(tips: tips).padding(.top, 18) }
+            }
+            if L.settleUp.split { BetweenYou(s: L.settleUp).padding(.top, 14) }
 
             Group {
             SectionTitle(title: "Coming up", action: (label: "All bills →", run: { router.open(.bills) })).padding(.top, 26)
@@ -95,10 +104,7 @@ struct HomeView: View {
 
             SectionTitle(title: "Transactions", action: (label: "See all →", run: { router.open(.activity(account: nil)) })).padding(.top, 22)
             ForEach(L.monthTx.prefix(6)) { t in
-                Button { router.edit(t) } label: {
-                    TxRow(tx: t, ledger: L, tile: .white.opacity(0.55), subColor: Palette.ink)
-                }
-                .buttonStyle(.plain)
+                EntryButton(tx: t, ledger: L, tile: .white.opacity(0.55), subColor: Palette.ink, sheet: Palette.lavender)
             }
             if L.monthTx.isEmpty { EmptyNote(text: "Nothing yet this month. Tap + to add the first one.", color: Palette.ink) }
             }
@@ -122,6 +128,54 @@ struct HomeView: View {
             .foregroundStyle(Palette.black)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Up to three tips from the numbers (Settings → Coach tips; a port of the Mac's Today tips).
+private struct CoachTips: View {
+    var tips: [String]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(tips.enumerated()), id: \.offset) { i, t in
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(DateKit.pad(i + 1)).font(.geist(12.5, .medium)).foregroundStyle(Palette.lavender)
+                    Text(t).font(.geist(14.5)).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.vertical, 14)
+                .overlay(alignment: .bottom) { if i < tips.count - 1 { Rectangle().fill(Palette.white.opacity(0.12)).frame(height: 1) } }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Tip \(i + 1): \(t)")
+            }
+        }
+        .padding(.horizontal, 18).padding(.vertical, 2)
+        .background(Palette.black, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .foregroundStyle(Palette.white)
+    }
+}
+
+/// Split shared costs: who owes whom this month, with a way to settle up on Us two.
+@MainActor
+private struct BetweenYou: View {
+    var s: SettleUp
+    @Environment(Router.self) private var router
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Between you two").font(.geist(13.5)).foregroundStyle(Palette.mute)
+            Text(s.line).font(.geist(26, .medium)).tracking(em: -0.02, size: 26).fixedSize(horizontal: false, vertical: true)
+            Text(s.sub).font(.geist(13.5)).foregroundStyle(Palette.soft).fixedSize(horizontal: false, vertical: true)
+            Button { router.open(.us) } label: {
+                Text("Open settle-up").font(.geist(14.5, .medium)).padding(.horizontal, 18).frame(height: 46)
+                    .background(Palette.lavender, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .foregroundStyle(Palette.black)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.black, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .foregroundStyle(Palette.white)
     }
 }
 

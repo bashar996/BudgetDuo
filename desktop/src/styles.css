@@ -25,3 +25,9 @@ body[data-theme=night] [data-stage=cream] .h-row:hover{background:rgba(255,255,2
 .drag button,.drag input,.drag a,.drag select,.drag textarea{-webkit-app-region:no-drag}
 .nodrag,.nodrag *{-webkit-app-region:no-drag}
 .h-focus-ink:focus{box-shadow:0 0 0 2px var(--ink)}
+/* Entry rows: the delete button shows on hover (or keyboard focus). */
+.tx-row .tx-del{opacity:0;transition:opacity .12s,background .12s,color .12s}
+.tx-row:hover .tx-del,.tx-row .tx-del:focus-visible{opacity:1}
+.tx-row .tx-del:hover{color:var(--bad) !important;background:var(--soft) !important}
+.h-menu:hover{background:#26262c !important}
+[data-stage=dark] .h-row:hover{background:rgba(255,255,255,.05) !important}

@@ -155,18 +155,9 @@ struct BillCalendarScreen: View {
 
     var body: some View {
         if let L = store.ledger() {
+            // Only shown unfolded, where Back is the one by the tab rail: just the title here.
             Screen(color: Palette.cream, mirrored: true, contentPadding: 16) {
-                HStack {
-                    Button { router.closeBillsSplit() } label: {
-                        Text("←").font(.geist(24)).frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("Back")
-                    Text("Bills").font(.geist(19, .medium)).frame(maxWidth: .infinity)
-                        .accessibilityAddTraits(.isHeader)
-                    Color.clear.frame(width: 44, height: 44)
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
+                NavRow(title: "Bills")
             } content: {
                 BillCalendar(L: L, hint: "That day’s bills show on the right")
             }

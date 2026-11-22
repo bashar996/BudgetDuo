@@ -17,7 +17,8 @@ function rep(L: Ledger) {
     return { m, i: sum(t.filter((x) => x.type === 'inc'), (x) => x.amt), e: sum(t.filter((x) => x.type === 'exp'), (x) => x.amt), kids: sum(t.filter((x) => x.cat === 'kids'), (x) => x.amt) }
   })
   const mx = Math.max(1, ...six.map((x) => Math.max(x.i, x.e)))
-  const varExp = exp.filter((t) => !t.billId)
+  // Everyday spending: no bills and no loan payments (those still count in Debt payments).
+  const varExp = exp.filter((t) => !t.billId && !t.debtId)
   const big = [...varExp].sort((a, b) => b.amt - a.amt)[0]
   const spendDays: Record<string, 1> = {}
   varExp.forEach((t) => (spendDays[t.date] = 1))

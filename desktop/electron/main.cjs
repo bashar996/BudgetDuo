@@ -38,7 +38,11 @@ app.whenReady().then(() => {
     const { pathname } = new URL(req.url)
     const file = path.normalize(path.join(DIST, decodeURIComponent(pathname)))
     if (!file.startsWith(DIST)) return new Response('Not found', { status: 404 })
-    return net.fetch(pathToFileURL(file).toString())
+    return net.fetch(pathToFileURL(file).toString()).then(async (res) => {
+      // Module scripts (the PDF reader's worker is .mjs) must be served as JavaScript.
+      if (!/\.m?js$/.test(file)) return res
+      return new Response(await res.arrayBuffer(), { status: res.status, headers: { 'content-type': 'text/javascript' } })
+    })
   })
   if (process.platform === 'darwin') Menu.setApplicationMenu(Menu.buildFromTemplate([
     { role: 'appMenu' }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' },

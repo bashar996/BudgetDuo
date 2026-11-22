@@ -68,8 +68,10 @@ struct BigAmount: View {
 }
 
 /// Back arrow + centred title used on pushed screens. Without a back arrow
-/// (the wide-screen detail pane, sheets) it's just the title, aligned with the
-/// content below instead of centred between two empty slots.
+/// (sheets) it's just the title, aligned with the content below instead of centred
+/// between two empty slots. Unfolded (wide), no pane has its own arrow: the one Back
+/// sits by the tab rail, so every pane shows its title centred.
+@MainActor
 struct NavRow: View {
     var title: String
     var showBack = true
@@ -77,7 +79,13 @@ struct NavRow: View {
     @Environment(Router.self) private var router
 
     var body: some View {
-        if showBack {
+        if router.isWide {
+            Text(title).font(.geist(19, .medium)).lineLimit(1)
+                .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 56)
+                .padding(.top, 8)
+        } else if showBack {
             HStack {
                 Button { router.back(dismiss) } label: {
                     Text("←").font(.geist(24)).frame(width: 44, height: 44)
@@ -194,6 +202,33 @@ struct TxRow: View {
     }
 }
 
+/// An entry row: tap to edit; touch and hold for Edit and Delete (with Undo).
+/// `sheet` is the colour behind the row, so the touch-and-hold preview matches.
+@MainActor
+struct EntryButton: View {
+    var tx: Tx
+    var ledger: Ledger
+    var tile: Color
+    var subColor: Color
+    var sheet: Color
+    var line: Double = 0.14
+    @Environment(HouseholdStore.self) private var store
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        Button { router.edit(tx) } label: {
+            TxRow(tx: tx, ledger: ledger, tile: tile, subColor: subColor, line: line)
+                .background(sheet)
+        }
+        .buttonStyle(.plain)
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contextMenu {
+            Button { router.edit(tx) } label: { Label("Edit", systemImage: "pencil") }
+            Button(role: .destructive) { router.delete(tx, store) } label: { Label("Delete", systemImage: "trash") }
+        }
+    }
+}
+
 /// Round chip used for filters and pickers on black.
 struct Chip: View {
     var label: String
@@ -239,6 +274,40 @@ struct EmptyNote: View {
     var color: Color = Palette.gray
     var body: some View {
         Text(text).font(.geist(14)).foregroundStyle(color).padding(.vertical, 6)
+    }
+}
+
+/// Unfolded (wide): docks a screen's main action at the bottom of the right pane, in
+/// thumb reach, instead of at the end of the list. Folded: nothing (the screen keeps
+/// its own button in the content).
+@MainActor
+private struct WideDockedAction: ViewModifier {
+    var title: String
+    var sheet: Color
+    var action: () -> Void
+    @Environment(Router.self) private var router
+    @Environment(\.screenTrailingInset) private var trailingInset
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if router.isWide {
+            content.safeAreaInset(edge: .bottom, spacing: 0) {
+                BlockButton(title: title, height: 54, action: action)
+                    .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 14)
+                    .padding(.trailing, trailingInset)
+                    .background(LinearGradient(colors: [sheet.opacity(0), sheet, sheet], startPoint: .top, endPoint: .bottom))
+            }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// See `WideDockedAction`.
+    @MainActor
+    func wideDockedAction(_ title: String, sheet: Color, action: @escaping () -> Void) -> some View {
+        modifier(WideDockedAction(title: title, sheet: sheet, action: action))
     }
 }
 

@@ -1,7 +1,8 @@
 // The design's sample household (Bashar & Eman), for the ?demo preview only.
 // Real use always starts empty.
 import { CATS } from './catalog'
-import type { Account, Bill, Data, Goal, Tx, Who } from './types'
+import type { Account, Bill, Data, Debt, Goal, Tx, Who } from './types'
+import { installmentOf } from './loans'
 import { addM, dim, pad, ymOf } from '../lib/dates'
 
 const SAMPLE: Record<string, { n: number; lo: number; hi: number; m: string[]; who?: Who }> = {
@@ -17,7 +18,7 @@ const SAMPLE: Record<string, { n: number; lo: number; hi: number; m: string[]; w
   allowA: { n: 4, lo: 40, hi: 200, who: 'A', m: ['Lunch out', 'Hobby shop', 'Barber', 'Games'] },
   allowB: { n: 4, lo: 40, hi: 200, who: 'B', m: ['Coffee with friends', 'Yoga class', 'Books', 'Skincare'] },
 }
-const LIMITS: Record<string, number> = { housing: 7500, groceries: 3000, utilities: 1550, transport: 1400, insurance: 850, health: 600, kids: 2800, debt: 3300, dining: 1400, fun: 500, shopping: 1200, subs: 150, travel: 1500, gifts: 500, allowA: 800, allowB: 800 }
+const LIMITS: Record<string, number> = { housing: 7500, groceries: 3000, utilities: 1550, transport: 1400, insurance: 850, health: 600, kids: 2800, debt: 3600, dining: 1400, fun: 500, shopping: 1200, subs: 150, travel: 1500, gifts: 500, allowA: 800, allowB: 800 }
 const BILLS: [number, string, number, string, number?][] = [[1, 'Rent', 7500, 'housing'], [2, 'Nursery fees', 2200, 'kids'], [3, 'Gym membership', 250, 'health'], [5, 'Car insurance', 420, 'insurance'], [5, 'Health cover top-up', 380, 'insurance'], [8, 'Electricity & water', 780, 'utilities'], [9, 'Video streaming', 56, 'subs', 1], [12, 'Home internet & TV', 389, 'utilities'], [14, 'Music family plan', 33, 'subs', 1], [18, 'Mobile plans', 350, 'utilities'], [22, 'Cloud storage', 11, 'subs', 1], [26, 'Car loan', 1850, 'debt'], [28, 'Personal loan', 1450, 'debt']]
 
 export function demoData(today = new Date()): Data {
@@ -33,14 +34,25 @@ export function demoData(today = new Date()): Data {
     { id: 'g4', name: 'Home down payment', target: 300000, saved: 106500, startSaved: 0, monthly: 1500, acct: 'a5', auto: true },
   ]
   const bills: Bill[] = BILLS.map((b, i) => ({ id: 'b' + i, day: b[0], name: b[1], amt: b[2], cat: b[3], sub: !!b[4], paid: {} }))
+  // Two full loans, paid through their bills: the car loan (flat rate) is 17 installments in,
+  // the personal loan (reducing) 12. The last five months were paid in the app, the rest before.
+  const loan = (d: Omit<Debt, 'balance' | 'apr' | 'min'>): Debt => {
+    const l = { ...d, balance: d.principal!, apr: d.rate!, min: 0 }
+    return { ...l, min: installmentOf(l) }
+  }
+  const debts: Debt[] = [
+    loan({ id: 'd1', name: 'Car loan', kind: 'car', lender: 'Main bank', principal: 90000, rate: 3.5, rateType: 'flat', termMonths: 48, firstDue: addM(cur, -17) + '-26', paidBefore: 12, fee: 0, acct: 'a1', billId: 'b11' }),
+    loan({ id: 'd2', name: 'Personal loan', kind: 'personal', lender: 'Online bank', principal: 72000, rate: 7.9, rateType: 'reducing', termMonths: 60, firstDue: addM(cur, -12) + '-28', paidBefore: 7, fee: 1, acct: 'a1', billId: 'b12' }),
+  ]
+  debts.forEach((l) => { const b = bills.find((x) => x.id === l.billId)!; b.debtId = l.id; b.amt = Math.round(l.min * 100) / 100 })
   for (let k = -5; k <= 0; k++) {
     const ym = addM(cur, k), dm = dim(ym), last = k === 0 ? today.getDate() : dm
     const add = (day: number, name: string, cat: string, amt: number, who: Who, type: Tx['type'], billId?: string, acct = 'a1', x: Partial<Tx> = {}) => {
-      if (day <= last) tx.push({ id: k === 0 && billId ? 'bill-' + billId + '-' + ym : 't' + id, date: ym + '-' + pad(day), name, cat, amt: Math.round(amt), who, type, billId, acct, createdAt: new Date(2026, 0, 1, 0, 0, id++), ...x })
+      if (day <= last) tx.push({ id: billId ? 'bill-' + billId + '-' + ym : 't' + id, date: ym + '-' + pad(day), name, cat, amt: billId ? amt : Math.round(amt), who, type, billId, acct, createdAt: new Date(2026, 0, 1, 0, 0, id++), ...x })
     }
     add(1, 'Salary', 'income', 21000, 'A', 'inc'); add(3, 'Salary', 'income', 15500, 'B', 'inc')
     goals.forEach((g) => add(4, 'Auto-save · ' + g.name, 'transfer', g.monthly, 'J', 'xfer', undefined, 'a1', { to: g.acct, pot: g.id, potDir: 'in' }))
-    bills.forEach((b) => { if (b.day <= last) { b.paid[ym] = true; add(b.day, b.name, b.cat, b.amt, 'J', 'exp', b.id) } })
+    bills.forEach((b) => { if (b.day <= last) { b.paid[ym] = true; add(b.day, b.name, b.cat, b.amt, 'J', 'exp', b.id, 'a1', b.debtId ? { debtId: b.debtId, debtPart: 'installment' } : {}) } })
     CATS.forEach((c) => {
       const m = SAMPLE[c.id]
       if (!m) return
@@ -53,7 +65,7 @@ export function demoData(today = new Date()): Data {
   const now: (Account & { balance: number })[] = [
     { id: 'a1', name: 'Joint current account', type: 'current', who: 'J', bank: 'Main bank', last4: '4821', balance: 24600, opening: 0 },
     { id: 'a2', name: 'Cash at home', type: 'cash', who: 'J', balance: 1200, opening: 0 },
-    { id: 'a3', name: 'Shared credit card', type: 'card', who: 'J', bank: 'Main bank', last4: '0937', balance: -6400, limit: 25000, apr: 36, opening: 0 },
+    { id: 'a3', name: 'Shared credit card', type: 'card', who: 'J', bank: 'Main bank', last4: '0937', balance: -6400, limit: 25000, apr: 36, statementDay: 20, dueDay: 12, opening: 0 },
     { id: 'a4', name: 'High-yield saver', type: 'save', who: 'J', bank: 'Online bank', apy: 4.25, balance: 84000, opening: 0 },
     { id: 'a5', name: 'Home fixed deposit', type: 'save', who: 'J', bank: 'Main bank', apy: 5.1, balance: 106500, opening: 0 },
     { id: 'a6', name: 'Brokerage', type: 'invest', who: 'J', balance: 64000, opening: 0, cost: 52000 },
@@ -79,7 +91,7 @@ export function demoData(today = new Date()): Data {
       settled: {}, roundUps: true, sweep: false,
     },
     tx, accounts, bills, goals: goalsOut,
-    debts: [{ id: 'd1', name: 'Car loan', balance: 68000, apr: 4.2, min: 1850 }, { id: 'd2', name: 'Personal loan', balance: 41000, apr: 7.9, min: 1450 }],
+    debts,
     planned: [{ id: 'p1', name: 'New sofa', cost: 5200, A: true, B: true }, { id: 'p2', name: 'Stand mixer', cost: 1600, A: false, B: true }, { id: 'p3', name: 'Anniversary weekend', cost: 2400, A: true, B: true }, { id: 'p4', name: 'Laptop upgrade', cost: 6000, A: true, B: false }],
     // Preview only: real households start with no assets and no investment costs.
     assets: [{ id: 's1', name: 'Family car', kind: 'vehicle', value: 78000 }, { id: 's2', name: 'Gold & jewellery', kind: 'gold', value: 36000 }],

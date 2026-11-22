@@ -61,6 +61,13 @@ enum DateKit {
         let m = cal.component(.month, from: d) - 1
         return "\(weekdays[wd]) \(day(d)) \(months[m].prefix(3))"
     }
+
+    /// "5 Mar 2027"
+    static func dateLabel(_ iso: String) -> String {
+        let p = iso.split(separator: "-").compactMap { Int($0) }
+        guard p.count == 3, (1...12).contains(p[1]) else { return iso }
+        return "\(p[2]) \(months[p[1] - 1].prefix(3)) \(p[0])"
+    }
 }
 
 struct Money {
