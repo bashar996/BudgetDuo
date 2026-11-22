@@ -3,7 +3,7 @@ import { css, sx } from './lib/css'
 import { memoryBackend } from './data/backend'
 import { demoData, emptyData } from './data/demo'
 import {
-  createHousehold, firebaseConfig, firestoreBackend, joinHousehold, leaveHousehold, logOut, niceError,
+  createHousehold, firebaseConfig, forgetConfig, parseConfig, saveConfig, firestoreBackend, joinHousehold, leaveHousehold, logOut, niceError,
   resetPassword, signIn, signUp, watchHousehold, watchHouseholdId, watchUser, type Live, type User,
 } from './data/firebase'
 import { makeActions, StoreCtx, type Ctx } from './data/store'
@@ -156,6 +156,8 @@ function AuthScreen() {
           <button type="button" disabled={!email} onClick={async () => { try { await resetPassword(email.trim()); setErr('Check your inbox for a reset link.') } catch (e) { setErr(niceError(e)) } }}
             style={css("height:44px;border:none;background:none;color:#0b0b0c;font:500 14px 'Geist',sans-serif;cursor:pointer;align-self:flex-start;padding:0")}>Forgot password?</button>
         )}
+        <button type="button" onClick={() => { forgetConfig(); location.reload() }}
+          style={css("height:44px;border:none;background:none;color:#3a3566;font:500 13px 'Geist',sans-serif;cursor:pointer;align-self:flex-start;padding:0")}>Use different Firebase settings</button>
       </form>
     </Frame>
   )
@@ -203,9 +205,25 @@ function SetupScreen({ uid }: { uid: string }) {
 }
 
 function NoConfig({ onPreview }: { onPreview(): void }) {
+  const [text, setText] = useState('')
+  const [err, setErr] = useState('')
+  const connect = () => {
+    const c = parseConfig(text)
+    if (!c) { setErr('That doesn’t look like the Firebase settings. Copy the whole firebaseConfig block, from { to }.'); return }
+    saveConfig(c)
+    location.reload()
+  }
   return (
-    <Frame kicker="Twofold" title={'Connect\nFirebase first.'}>
-      <Note>This copy of the app doesn’t have your Firebase settings yet. Add <b>src/firebase.config.json</b> as described in desktop/README.md, then build again.</Note>
+    <Frame kicker="Twofold" title={'Connect\nFirebase.'}>
+      <Note>
+        In the Firebase console: ⚙ Project settings → Your apps → your web app (or Add app → &lt;/&gt;). Copy the
+        <b> firebaseConfig</b> block — everything from <b>{'{'}</b> to <b>{'}'}</b> — and paste it below. You only do this once on this Mac.
+      </Note>
+      <textarea value={text} onChange={(e) => { setText(e.target.value); setErr('') }} spellCheck={false} rows={9}
+        placeholder={'{\n  apiKey: "AIza…",\n  authDomain: "….firebaseapp.com",\n  projectId: "…",\n  …\n}'}
+        className="h-focus" style={css("box-sizing:border-box;width:100%;padding:14px 16px;border:none;border-radius:16px;background:#0b0b0c;color:#ffffff;font:500 13.5px/1.5 ui-monospace,Menlo,monospace;outline:none;resize:vertical")} />
+      {err && <Err>{err}</Err>}
+      <Btn disabled={!text.trim()} onClick={connect}>Connect</Btn>
       <Btn outline onClick={onPreview}>Look around with sample data</Btn>
     </Frame>
   )
