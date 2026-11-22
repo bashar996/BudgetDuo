@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0b0c;font-family:'Geist',system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;--accBase:#b9b0ff;--blob:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 84' preserveAspectRatio='none'%3E%3Cpath fill-rule='evenodd' d='M0,84 L0,40 L84,40 Q96,40 96,52 L96,56 Q96,68 108,68 L170,68 Q182,68 182,56 L182,46 Q182,34 194,34 L306,34 Q318,34 318,46 L318,48 Q318,60 330,60 L392,60 Q404,60 404,48 L404,36 Q404,24 416,24 L536,24 Q548,24 548,36 L548,40 Q548,52 560,52 L640,52 Q652,52 652,40 L652,38 Q652,26 664,26 L778,26 Q790,26 790,38 L790,58 Q790,70 802,70 L860,70 Q872,70 872,58 L872,42 Q872,30 884,30 L998,30 Q1010,30 1010,42 L1010,54 Q1010,66 1022,66 L1084,66 Q1096,66 1096,54 L1096,52 Q1096,40 1108,40 L1200,40 L1200,84 Z M443,46 h52 a11,11 0 0 1 0,22 h-52 a11,11 0 0 1 0,-22 Z M704,50 h36 a10,10 0 0 1 0,20 h-36 a10,10 0 0 1 0,-20 Z'/%3E%3Crect x='112' y='26' width='56' height='20' rx='10'/%3E%3Crect x='802' y='30' width='58' height='20' rx='10'/%3E%3C/svg%3E")}
+body,[data-stage=cream]{--bg:#fbf9ef;--card:#ffffff;--ink:#0b0b0c;--mute:#6b6878;--line:rgba(11,11,12,.12);--chip:rgba(11,11,12,.3);--soft:#efecde;--acc:var(--accBase);--accInk:#0b0b0c;--accText:#4b40a8;--a:var(--accBase);--b:#0b0b0c;--good:#4b40a8;--warn:#9a4a3a;--bad:#c23b30;--track:#0b0b0c;--btn:#0b0b0c;--btnInk:#ffffff}
+[data-stage=lav]{--bg:var(--accBase);--card:rgba(255,255,255,.5);--mute:#3a3566;--line:rgba(11,11,12,.16);--chip:rgba(11,11,12,.4);--soft:rgba(255,255,255,.5);--acc:#ffffff;--accText:#0b0b0c;--a:#ffffff;--good:#0b0b0c;--warn:#7a2418;--bad:#a3261b}
+[data-stage=dark]{--bg:#0b0b0c;--card:#1d1d22;--ink:#ffffff;--mute:#a9a7b8;--line:rgba(255,255,255,.14);--chip:rgba(255,255,255,.3);--soft:#1d1d22;--acc:var(--accBase);--accText:var(--accBase);--a:var(--accBase);--b:#fbf9ef;--good:var(--accBase);--warn:#e0a08f;--bad:#ff8f85;--track:rgba(255,255,255,.22);--btn:var(--accBase);--btnInk:#0b0b0c}
+body[data-theme=night] [data-stage=cream]{--bg:#17171b;--card:#222227;--ink:#fbf9ef;--mute:#a9a7b8;--line:rgba(255,255,255,.12);--chip:rgba(255,255,255,.3);--soft:#26262c;--accText:var(--accBase);--b:#fbf9ef;--good:var(--accBase);--warn:#e0a08f;--bad:#ff8f85;--track:rgba(255,255,255,.2);--btn:var(--accBase);--btnInk:#0b0b0c}
+a{color:var(--accText)}a:hover{color:var(--ink)}
+input::placeholder{color:var(--mute)}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;background:#0b0b0c;color:#0b0b0c;font-size:15px;line-height:1.4">
+<sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+<aside style="width:{{ side.w }};flex:none;position:sticky;top:0;height:100vh;box-sizing:border-box;padding:14px;transition:width .28s cubic-bezier(.2,.8,.2,1)">
+  <div style="height:100%;box-sizing:border-box;background:#17171b;border-radius:28px;box-shadow:0 0 0 1px rgba(255,255,255,.08);padding:14px 10px;color:#ffffff;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:{{ side.jc }};height:46px">
+      <sc-if value="{{ side.open }}" hint-placeholder-val="{{ true }}"><span style="padding-left:13px;font:600 24px/1 'Geist',sans-serif;letter-spacing:-.03em;white-space:nowrap">Twofold</span></sc-if>
+      <button onClick="{{ side.toggle }}" aria-label="{{ side.tip }}" title="{{ side.tip }}" style="width:46px;height:46px;flex:none;border:none;border-radius:16px;background:transparent;color:#a9a7b8;display:grid;place-items:center;cursor:pointer" style-hover="background:#26262c;color:#ffffff"><svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z M9.5 4v16"></path></svg></button>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;min-height:0;overflow-y:auto;scrollbar-width:none">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="10">
+        <button onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:12px;width:100%;height:46px;flex:none;padding:0 13px;border:none;border-radius:16px;background:{{ n.bg }};color:{{ n.fg }};font:500 15px 'Geist',sans-serif;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;transition:background .15s"><svg viewBox="0 0 24 24" style="width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="{{ n.icon }}"></path></svg><span style="opacity:{{ side.labelO }};transition:opacity .18s">{{ n.label }}</span></button>
+      </sc-for>
+    </nav>
+  </div>
+</aside>
+</sc-if>
+<main style="flex:1;min-width:0;display:flex;flex-direction:column">
+<header data-stage="dark" style="padding:clamp(20px,3vw,32px) clamp(16px,3.5vw,44px) 0;color:#ffffff;display:flex;flex-direction:column;gap:clamp(22px,3vw,34px)">
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 14px">
+    <div style="display:flex;flex:none"><span style="width:46px;height:46px;border-radius:15px;background:var(--accBase);color:#0b0b0c;display:grid;place-items:center;font-weight:600;font-size:19px">{{ iniA }}</span><span style="width:46px;height:46px;margin-left:-10px;border-radius:15px;background:#fbf9ef;color:#0b0b0c;display:grid;place-items:center;font-weight:600;font-size:19px;box-shadow:0 0 0 3px #0b0b0c">{{ iniB }}</span></div>
+    <div style="flex:1;min-width:140px"><h1 style="font:500 22px/1.2 'Geist',sans-serif;letter-spacing:-.01em;margin:0">{{ title }}</h1><div style="font-size:13.5px;color:#a9a7b8">{{ kicker }}</div></div>
+    <div style="display:flex;align-items:center;gap:2px;background:#1d1d22;border-radius:16px;padding:0 4px;height:48px">
+      <button onClick="{{ prevMonth }}" aria-label="Previous month" style="width:40px;height:40px;border:none;border-radius:12px;background:transparent;color:#ffffff;font-size:20px;cursor:pointer" style-hover="background:#2a2a30">‹</button>
+      <span style="font:500 14px 'Geist',sans-serif;min-width:116px;text-align:center">{{ monthLabel }}</span>
+      <button onClick="{{ nextMonth }}" aria-label="Next month" style="width:40px;height:40px;border:none;border-radius:12px;background:transparent;color:#ffffff;font-size:20px;cursor:pointer" style-hover="background:#2a2a30">›</button>
+    </div>
+    <button onClick="{{ openAdd }}" style="font:500 15px 'Geist',sans-serif;padding:0 22px;height:48px;border-radius:16px;border:none;background:var(--accBase);color:#0b0b0c;cursor:pointer">+ Add entry</button>
+  </div>
+  <sc-if value="{{ hero.show }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:28px 40px;align-items:end">
+    <div style="min-width:0">
+      <div style="font-size:14px;color:#a9a7b8">{{ hero.label }}</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px"><sc-if value="{{ hero.hasCur }}" hint-placeholder-val="{{ true }}"><span style="font:500 22px 'Geist',sans-serif;color:#a9a7b8">{{ hero.cur }}</span></sc-if><span style="font-family:'Geist',sans-serif;font-weight:500;font-size:{{ hero.size }};line-height:.95;letter-spacing:-.045em;color:{{ hero.fg }}">{{ hero.num }}</span></div>
+      <sc-if value="{{ hero.hasSub }}" hint-placeholder-val="{{ true }}"><div style="font-size:15px;color:#d9d7e4;margin-top:14px;max-width:500px;text-wrap:pretty">{{ hero.sub }}</div></sc-if>
+      <div style="display:flex;flex-wrap:wrap;gap:14px 30px;margin-top:22px">
+        <sc-for list="{{ hero.stats }}" as="s" hint-placeholder-count="3"><div><div style="font-size:12.5px;color:#a9a7b8">{{ s.k }}</div><div style="font:500 18px 'Geist',sans-serif;letter-spacing:-.01em;white-space:nowrap">{{ s.v }}</div></div></sc-for>
+      </div>
+    </div>
+    <sc-if value="{{ hero.hasBars }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;gap:{{ hero.gap }};height:230px;min-width:0">
+      <sc-for list="{{ hero.bars }}" as="b" hint-placeholder-count="7">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="align-self:{{ b.ta }};height:26px;box-sizing:border-box;opacity:{{ b.tagO }};background:#fbf9ef;color:#0b0b0c;font-size:12px;font-weight:500;line-height:26px;padding:0 9px;border-radius:9px;white-space:nowrap">{{ b.tag }}</span>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end;gap:3px"><div style="flex:1;height:{{ b.h }};background:{{ b.bg }};border-radius:{{ b.r }};transition:height .4s"></div><sc-if value="{{ b.two }}" hint-placeholder-val="{{ false }}"><div style="flex:1;height:{{ b.h2 }};background:{{ b.bg2 }};border-radius:{{ b.r }};transition:height .4s"></div></sc-if></div>
+          <span style="font-size:12.5px;color:#d9d7e4;height:18px;white-space:nowrap">{{ b.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+  </sc-if>
+  <sc-if value="{{ is.activity }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      <input placeholder="Search name, note or category" value="{{ q }}" onChange="{{ act.onQ }}" style="flex:1;min-width:200px;box-sizing:border-box;height:50px;padding:0 18px;border:none;border-radius:18px;background:#1d1d22;color:#ffffff;font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--accBase)">
+      <button onClick="{{ act.exportCsv }}" style="font:500 14px 'Geist',sans-serif;padding:0 18px;height:50px;border-radius:18px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#ffffff;cursor:pointer">Export CSV</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ act.who }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ act.accts }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ act.cats }}" as="c" hint-placeholder-count="8"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ is.reports }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-wrap:wrap;gap:10px">
+    <button onClick="{{ rep.dlReport }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 20px;height:50px;border-radius:18px;border:none;background:#ffffff;color:#0b0b0c;cursor:pointer">↓ Download report</button>
+    <button onClick="{{ rep.dlCsv }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 18px;height:50px;border-radius:18px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#ffffff;cursor:pointer">Export CSV</button>
+  </div>
+  </sc-if>
+</header>
+<div data-stage="{{ stage }}" style="flex:1;display:flex;flex-direction:column;margin-top:8px">
+<div style="height:84px;flex:none;background:var(--bg);-webkit-mask-image:var(--blob);mask-image:var(--blob);-webkit-mask-size:1200px 84px;mask-size:1200px 84px;-webkit-mask-repeat:repeat-x;mask-repeat:repeat-x"></div>
+<div style="flex:1;background:var(--bg);color:var(--ink);padding:12px clamp(16px,3.5vw,44px) 130px;margin-top:-1px"><div style="max-width:1280px">
+
+<sc-if value="{{ is.home }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:34px">
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:28px 40px;align-items:end">
+    <div style="min-width:0">
+      <div style="font-size:14px;color:var(--mute)">Safe to spend this month</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px"><span style="font:500 24px 'Geist',sans-serif;color:var(--mute)">{{ cur }}</span><span style="font:500 clamp(64px,10vw,124px)/.92 'Geist',sans-serif;letter-spacing:-.05em">{{ home.safeNum }}</span></div>
+      <div style="font-size:15px;margin-top:14px;max-width:460px;text-wrap:pretty">{{ home.perDay }}</div>
+    </div>
+    <div style="min-width:0">
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:13.5px;font-weight:500"><span>Spent {{ home.spent }}</span><span style="color:var(--mute)">of {{ home.limit }}</span></div>
+      <div style="position:relative;height:8px;border-radius:4px;background:rgba(11,11,12,.16);margin:12px 0 10px">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:{{ home.spentW }};background:#0b0b0c;border-radius:4px;transition:width .5s"></div>
+        <div style="position:absolute;left:{{ home.spentW }};top:0;bottom:0;width:{{ home.billsW }};background:repeating-linear-gradient(135deg,#0b0b0c 0 2px,transparent 2px 6px)"></div>
+        <div style="position:absolute;left:{{ home.todayL }};top:-5px;bottom:-5px;width:2px;border-radius:1px;background:#ffffff"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--mute)">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#0b0b0c"></span>spent</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:repeating-linear-gradient(135deg,#0b0b0c 0 2px,transparent 2px 5px)"></span>bills still due {{ home.bills }}</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:2px;height:12px;background:#ffffff"></span>today</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px">
+        <button onClick="{{ qa.income }}" style="width:76px;height:76px;flex:none;border-radius:20px;border:none;background:#ffffff;color:#0b0b0c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-family:inherit"><span style="font-size:24px;line-height:1">↓</span><span style="font-size:11.5px;font-weight:500">Income</span></button>
+        <button onClick="{{ qa.transfer }}" style="width:76px;height:76px;flex:none;border-radius:20px;border:none;background:#ffffff;color:#0b0b0c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-family:inherit"><span style="font-size:24px;line-height:1">↗</span><span style="font-size:11.5px;font-weight:500">Move</span></button>
+        <button onClick="{{ qa.expense }}" style="width:76px;height:76px;flex:none;border-radius:20px;border:none;background:#ffffff;color:#0b0b0c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-family:inherit"><span style="font-size:24px;line-height:1">+</span><span style="font-size:11.5px;font-weight:500">Spend</span></button>
+        <button onClick="{{ go.reports }}" style="flex:1 1 120px;height:76px;border-radius:20px;border:none;background:#0b0b0c;color:#ffffff;font:500 16px 'Geist',sans-serif;cursor:pointer">Reports</button>
+      </div>
+    </div>
+  </section>
+
+  <sc-if value="{{ home.showStart }}" hint-placeholder-val="{{ false }}">
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px">
+    <sc-for list="{{ home.steps }}" as="st" hint-placeholder-count="4">
+      <button onClick="{{ st.go }}" style="display:flex;gap:12px;align-items:flex-start;text-align:left;padding:18px;background:var(--card);border:none;border-radius:24px;font:inherit;color:inherit;cursor:pointer">
+        <span style="width:28px;height:28px;flex:none;border-radius:9px;border:1.5px solid var(--ink);background:{{ st.bg }};color:{{ st.fg }};display:grid;place-items:center;font:600 12.5px 'Geist',sans-serif;box-sizing:border-box">{{ st.mark }}</span>
+        <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ st.t }}</span><span style="font-size:13px;color:var(--mute)">{{ st.s }}</span></span>
+      </button>
+    </sc-for>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ home.hasTips }}" hint-placeholder-val="{{ true }}">
+  <section style="background:#0b0b0c;color:#ffffff;border-radius:28px;padding:6px 26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:0 36px">
+    <sc-for list="{{ home.tips }}" as="t" hint-placeholder-count="3">
+      <div style="padding:18px 0;display:flex;gap:12px;align-items:flex-start"><span style="font:500 12.5px 'Geist',sans-serif;color:var(--accBase);padding-top:2px">{{ t.n }}</span><span style="font-size:14.5px;text-wrap:pretty">{{ t.t }}</span></div>
+    </sc-for>
+  </section>
+  </sc-if>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:30px 40px;align-items:start">
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Coming up</span><button onClick="{{ go.plan }}" style="height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">Forecast →</button></div>
+      <sc-for list="{{ home.upcoming }}" as="e" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px;width:86px;flex:none;color:{{ e.whenColor }}">{{ e.when }}</span><span style="flex:1;min-width:0;font-weight:500">{{ e.name }}</span><span style="font-size:15px;font-weight:500;white-space:nowrap;color:{{ e.color }}">{{ e.amt }}</span></div>
+      </sc-for><sc-if value="{{ e.upcoming }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No bills or paydays in the next 30 days.</div></sc-if>
+    </section>
+
+    <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Transactions</span><button onClick="{{ go.activity }}" style="height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">See all →</button></div>
+      <sc-for list="{{ home.recent }}" as="t" hint-placeholder-count="6">
+        <button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left">
+          <span style="width:44px;height:44px;border-radius:13px;flex:none;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:17px">{{ t.ini }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span><span style="font-size:13px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sub }}</span></span>
+          <span style="font-size:15px;font-weight:500;white-space:nowrap">{{ t.amt }}</span>
+        </button>
+      </sc-for><sc-if value="{{ e.recent }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No entries yet this month.</div></sc-if>
+    </section>
+    </sc-if>
+
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Categories to watch</span><button onClick="{{ go.budget }}" style="height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">Budget →</button></div>
+      <sc-for list="{{ home.watch }}" as="r" hint-placeholder-count="4">
+        <button onClick="{{ r.open }}" style="display:block;width:100%;padding:12px 0 4px;background:none;border:none;font:inherit;color:inherit;cursor:pointer;text-align:left">
+          <span style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ r.name }}</span><span style="font-size:27px;letter-spacing:-.02em;line-height:1;color:{{ r.leftColor }}">{{ r.pct }}</span></span>
+          <span style="display:block;position:relative;height:5px;border-radius:3px;background:var(--track);margin-top:8px"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ r.w }};background:{{ r.bar }};border-radius:3px;transition:width .4s"></span></span>
+          <span style="display:block;font-size:12.5px;color:var(--mute);margin-top:6px">{{ r.detail }}</span>
+        </button>
+      </sc-for><sc-if value="{{ e.watch }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute);text-wrap:pretty">Set category limits in Budget and the busiest ones show here.</div></sc-if>
+    </section>
+
+    <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Savings goals</span><button onClick="{{ go.savings }}" style="height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">Savings →</button></div>
+      <sc-for list="{{ home.goals }}" as="g" hint-placeholder-count="3">
+        <div style="padding:12px 0 4px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ g.name }}</span><span style="font-size:27px;letter-spacing:-.02em;line-height:1">{{ g.pct }}</span></div>
+          <div style="height:5px;border-radius:3px;background:var(--track);margin-top:8px"><div style="height:100%;width:{{ g.w }};background:var(--acc);border-radius:3px"></div></div>
+          <div style="font-size:12.5px;color:var(--mute);margin-top:6px">{{ g.saved }} of {{ g.target }} · {{ g.eta }}</div>
+        </div>
+      </sc-for><sc-if value="{{ e.goals }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No savings pots yet.</div></sc-if>
+    </section>
+    </sc-if>
+
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Accounts</span><button onClick="{{ go.accounts }}" style="height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">All accounts →</button></div>
+      <sc-for list="{{ home.accts }}" as="a" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ a.name }}</span><span style="font-size:13px;color:var(--mute)">{{ a.type }}</span></span><span style="font-size:15px;font-weight:500;white-space:nowrap;color:{{ a.balColor }}">{{ a.bal }}</span></div>
+      </sc-for><sc-if value="{{ e.accts }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No accounts yet.</div></sc-if>
+    </section>
+
+    <sc-if value="{{ us.split }}" hint-placeholder-val="{{ false }}">
+    <section style="background:#0b0b0c;color:#ffffff;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:10px">
+      <span style="font-size:13.5px;color:#a9a7b8">Between you two</span>
+      <div style="font:500 28px/1.1 'Geist',sans-serif;letter-spacing:-.02em">{{ us.line }}</div>
+      <div style="font-size:13.5px;color:#d9d7e4">{{ us.sub }}</div>
+      <button onClick="{{ go.us }}" style="align-self:flex-start;margin-top:6px;font:500 14.5px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:none;background:var(--accBase);color:#0b0b0c;cursor:pointer">Open settle-up</button>
+    </section>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.activity }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="columns:2 380px;column-gap:48px">
+    <sc-for list="{{ act.groups }}" as="g" hint-placeholder-count="4">
+      <div style="break-inside:avoid;padding-bottom:22px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--mute)"><span>{{ g.label }}</span><span>{{ g.total }}</span></div>
+        <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="3">
+          <button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left">
+            <span style="width:44px;height:44px;border-radius:13px;flex:none;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:17px">{{ t.ini }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span><span style="font-size:13px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sub }}</span></span>
+            <span title="{{ t.whoTitle }}" style="width:26px;height:26px;flex:none;border-radius:50%;border:1.5px solid {{ t.whoCol }};display:grid;place-items:center;font:600 11px 'Geist',sans-serif;box-sizing:border-box">{{ t.who }}</span>
+            <span style="font-size:15px;font-weight:500;min-width:88px;text-align:right;white-space:nowrap;color:{{ t.amtColor }}">{{ t.amt }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+  <sc-if value="{{ act.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 0;color:var(--mute)">Nothing here yet. Use “Add entry” to log the first one.</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.budget }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:30px 40px;align-items:start">
+  <div style="grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 20px"><span style="flex:1;min-width:220px;font-size:13px;color:var(--mute);text-wrap:pretty">Pick a category to rename it, change its limit, move money in or delete it. The tick on each bar marks today.</span><button onClick="{{ bud.addCat }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ New category</button></div>
+  <sc-if value="{{ bud.is532 }}" hint-placeholder-val="{{ false }}">
+  <section style="grid-column:1/-1;background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px">
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">50 / 30 / 20 check</span>
+    <sc-for list="{{ bud.bands }}" as="b" hint-placeholder-count="3">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px"><span style="font-weight:500">{{ b.name }} <span style="color:var(--mute)">· {{ b.label }}</span></span><span style="font-weight:500">{{ b.amt }}</span>
+        <span style="grid-column:1/-1;position:relative;height:10px;border-radius:5px;background:var(--soft)"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ b.w }};background:{{ b.color }};border-radius:5px"></span><span style="position:absolute;left:{{ b.t }};top:-4px;bottom:-4px;width:2px;background:var(--ink)"></span></span></div>
+    </sc-for>
+  </section>
+  </sc-if>
+  <sc-for list="{{ bud.groups }}" as="g" hint-placeholder-count="3">
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">{{ g.name }}</span><span style="font-size:13px;color:var(--mute)">{{ g.total }}</span></div>
+      <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="5">
+        <button onClick="{{ r.open }}" style="display:block;width:100%;padding:14px 0 4px;background:none;border:none;font:inherit;color:inherit;cursor:pointer;text-align:left">
+          <span style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ r.name }} <span style="font-size:12px;color:var(--mute)">{{ r.carry }}</span></span><span style="font-size:27px;letter-spacing:-.02em;line-height:1;color:{{ r.leftColor }}">{{ r.pct }}</span></span>
+          <span style="display:block;position:relative;height:5px;border-radius:3px;background:var(--track);margin-top:8px"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ r.w }};background:{{ r.bar }};border-radius:3px;transition:width .4s"></span><span style="position:absolute;left:{{ bud.paceL }};top:-4px;bottom:-4px;width:2px;border-radius:1px;background:var(--ink);opacity:{{ bud.paceO }}"></span></span>
+          <span style="display:block;font-size:12.5px;color:var(--mute);margin-top:6px">{{ r.detail }}</span>
+        </button>
+      </sc-for>
+    </section>
+  </sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.bills }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+  <section style="background:var(--card);border-radius:28px;padding:22px">
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px">
+      <sc-for list="{{ bills.wd }}" as="w" hint-placeholder-count="7"><div style="font-size:12px;color:var(--mute);text-align:center;padding-bottom:4px">{{ w.w }}</div></sc-for>
+      <sc-for list="{{ bills.cells }}" as="c" hint-placeholder-count="35">
+        <div style="aspect-ratio:1;border-radius:12px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};padding:6px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden">
+          <span style="font-size:12.5px;font-weight:500;line-height:1">{{ c.d }}</span>
+          <span style="display:flex;gap:3px;flex-wrap:wrap"><sc-for list="{{ c.dots }}" as="o" hint-placeholder-count="0"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.c }}"></span></sc-for></span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:16px;font-size:12.5px;color:var(--mute)">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--acc)"></span>due</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--soft)"></span>paid</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--bad)"></span>overdue</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;border:1.5px solid var(--ink);box-sizing:border-box"></span>payday</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:var(--ink)"></span>today</span>
+    </div>
+  </section>
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:6px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Bills &amp; subscriptions</span><button onClick="{{ bills.add }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ New bill</button></div>
+    <sc-for list="{{ bills.list }}" as="b" hint-placeholder-count="8">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:var(--ink);color:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05"><span style="font-size:16px;font-weight:600">{{ b.day }}</span><span style="font-size:10px">{{ b.mon }}</span></span>
+        <button onClick="{{ b.edit }}" style="flex:1;min-width:0;display:flex;flex-direction:column;background:none;border:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.name }}</span><span style="font-size:13px;color:{{ b.statusColor }}">{{ b.status }} · {{ b.amt }}</span></button>
+        <button onClick="{{ b.pay }}" style="flex:none;font:500 13.5px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid {{ b.btnBd }};background:{{ b.btnBg }};color:{{ b.btnFg }};cursor:pointer">{{ b.btn }}</button>
+      </div>
+    </sc-for><sc-if value="{{ e.bills }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No bills yet. Add rent, utilities and subscriptions.</div></sc-if>
+  </section>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.accounts }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:26px">
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Your accounts</span><span style="display:flex;gap:8px"><button onClick="{{ acc.transfer }}" style="font:500 14px 'Geist',sans-serif;padding:0 16px;height:46px;border-radius:16px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">Transfer</button><button onClick="{{ acc.add }}" style="font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;white-space:nowrap;flex:none;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">+ New account</button></span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:10px">
+      <sc-for list="{{ acc.cards }}" as="a" hint-placeholder-count="8">
+        <button onClick="{{ a.pick }}" style="display:flex;flex-direction:column;gap:4px;text-align:left;padding:18px;background:{{ a.bg }};color:{{ a.fg }};border:none;border-radius:24px;font:inherit;cursor:pointer;transition:background .2s">
+          <span style="font-size:12.5px;opacity:.64">{{ a.type }}</span>
+          <span style="font-weight:500;font-size:16.5px">{{ a.name }}</span>
+          <span style="font-size:12.5px;opacity:.64">{{ a.meta }}</span>
+          <span style="font:500 30px 'Geist',sans-serif;letter-spacing:-.03em;margin-top:14px;color:{{ a.balColor }}">{{ a.bal }}</span>
+          <sc-if value="{{ a.hasBar }}" hint-placeholder-val="{{ false }}"><span style="display:block;height:5px;border-radius:3px;background:{{ a.track }}"><span style="display:block;height:100%;width:{{ a.barW }};background:{{ a.barC }};border-radius:3px"></span></span></sc-if>
+          <span style="font-size:12.5px;opacity:.64">{{ a.extra }}</span>
+        </button>
+      </sc-for><sc-if value="{{ e.cards }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No accounts yet. Add your current account, cards, cash and savings.</div></sc-if>
+    </div>
+  </section>
+  <sc-if value="{{ acc.d.has }}" hint-placeholder-val="{{ true }}">
+  <section data-stage="dark" style="background:#0b0b0c;color:var(--ink);border-radius:28px;padding:clamp(20px,3vw,32px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:30px 44px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div><div style="font-size:13.5px;color:var(--mute)">{{ acc.d.type }} · {{ acc.d.name }}</div><div style="font:500 clamp(40px,5vw,60px)/1 'Geist',sans-serif;letter-spacing:-.04em;margin-top:6px">{{ acc.d.bal }}</div></div>
+      <div style="display:flex;gap:30px"><div><div style="font-size:12.5px;color:var(--mute)">In this month</div><div style="font:500 18px 'Geist',sans-serif;color:var(--acc)">{{ acc.d.inM }}</div></div><div><div style="font-size:12.5px;color:var(--mute)">Out this month</div><div style="font:500 18px 'Geist',sans-serif">{{ acc.d.outM }}</div></div></div>
+      <div><div style="font-size:12.5px;color:var(--mute)">Balance, last 30 days</div>
+        <div style="display:flex;align-items:flex-end;gap:3px;height:96px;margin-top:10px"><sc-for list="{{ acc.d.days }}" as="b" hint-placeholder-count="30"><div title="{{ b.title }}" style="flex:1;height:{{ b.h }};background:{{ b.c }};border-radius:4px 4px 2px 2px;min-height:3px"></div></sc-for></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><button onClick="{{ acc.d.addTx }}" style="font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">+ Entry</button><button onClick="{{ acc.d.transfer }}" style="font:500 14px 'Geist',sans-serif;padding:0 16px;height:46px;border-radius:16px;border:1px solid var(--chip);background:transparent;color:var(--ink);cursor:pointer">Transfer out</button><button onClick="{{ acc.d.edit }}" style="font:500 14px 'Geist',sans-serif;padding:0 16px;height:46px;border-radius:16px;border:1px solid var(--chip);background:transparent;color:var(--ink);cursor:pointer">Edit</button></div>
+    </div>
+    <div style="min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:4px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Ledger</span><span style="font-size:13px;color:var(--mute)">{{ acc.d.count }}</span></div>
+      <sc-for list="{{ acc.d.rows }}" as="r" hint-placeholder-count="8">
+        <button onClick="{{ r.open }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left">
+          <span style="font-size:13px;width:50px;flex:none;color:var(--mute)">{{ r.date }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span><span style="font-size:12.5px;color:var(--mute)">{{ r.sub }}</span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-weight:500;white-space:nowrap;color:{{ r.amtColor }}">{{ r.amt }}</span><span style="font-size:12px;color:var(--mute)">{{ r.after }}</span></span>
+        </button>
+      </sc-for>
+      <sc-if value="{{ acc.d.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 0;color:var(--mute);font-size:14px">Nothing moved through this account this month.</div></sc-if>
+      <div style="font-size:12.5px;color:var(--mute);padding-top:12px">{{ acc.d.more }}</div>
+    </div>
+  </section>
+  </sc-if>
+  <sc-if value="{{ acc.hasLoans }}" hint-placeholder-val="{{ true }}">
+  <section style="max-width:620px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Loans</span><button onClick="{{ go.goals }}" style="height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">Payoff plan →</button></div>
+    <sc-for list="{{ acc.loans }}" as="r" hint-placeholder-count="2">
+      <button onClick="{{ r.edit }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ r.name }}</span><span style="font-size:13px;color:var(--mute)">{{ r.meta }}</span></span><span style="font-size:15px;font-weight:500">{{ r.bal }}</span></button>
+    </sc-for>
+  </section>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.savings }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:30px">
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Pots</span><button onClick="{{ sav.add }}" style="font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;white-space:nowrap;flex:none;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">+ New pot</button></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:12px">
+      <sc-for list="{{ sav.pots }}" as="g" hint-placeholder-count="4">
+        <div style="background:var(--card);border-radius:26px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="min-width:0"><button onClick="{{ g.edit }}" style="background:none;border:none;padding:0;font:500 19px 'Geist',sans-serif;color:var(--ink);cursor:pointer;text-align:left">{{ g.name }}</button><div style="font-size:12.5px;color:var(--mute)">{{ g.where }}</div></div><div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px"><button onClick="{{ g.edit }}" style="height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font:500 13.5px 'Geist',sans-serif;cursor:pointer">Edit</button><span style="font-size:32px;letter-spacing:-.03em;line-height:1">{{ g.pct }}</span></div></div>
+          <div style="height:5px;border-radius:3px;background:var(--track)"><div style="height:100%;width:{{ g.w }};background:#ffffff;border-radius:3px;transition:width .4s"></div></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;font-size:13.5px"><span>{{ g.saved }} of {{ g.target }}</span><span style="font-weight:500;text-align:right;color:{{ g.statusColor }}">{{ g.status }}</span></div>
+          <div style="font-size:12.5px;color:var(--mute);margin-top:-6px">{{ g.due }} · {{ g.eta }}</div>
+          <div style="display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:6px"><button onClick="{{ g.toggleAuto }}" aria-label="Auto-save" style="width:48px;height:44px;padding:8px 0;border:none;background:none;cursor:pointer;flex:none"><span style="display:block;position:relative;width:48px;height:28px;border-radius:14px;background:{{ g.autoBg }};transition:background .2s"><span style="position:absolute;top:3px;left:{{ g.autoX }};width:22px;height:22px;border-radius:50%;background:#ffffff;transition:left .2s"></span></span></button><span style="font-size:13.5px">{{ g.autoLabel }}</span></div>
+          <div style="display:flex;gap:8px"><button onClick="{{ g.add }}" style="flex:1;font:500 15px 'Geist',sans-serif;height:46px;border-radius:16px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">Deposit</button><button onClick="{{ g.take }}" style="flex:1;font:500 15px 'Geist',sans-serif;height:46px;border-radius:16px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">Withdraw</button></div>
+        </div>
+      </sc-for><sc-if value="{{ e.pots }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No pots yet. Create one for each thing you’re saving toward.</div></sc-if>
+    </div>
+  </section>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+    <section>
+      <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Ways you save</span>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)"><span style="width:48px;height:28px;flex:none;border-radius:14px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:11px;font-weight:600">AUTO</span><div style="flex:1"><div style="font-size:16px;font-weight:500">Payday auto-save</div><div style="font-size:13.5px;color:var(--mute);text-wrap:pretty">{{ sav.autoText }}</div></div></div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:6px 0 14px;border-bottom:1px solid var(--line)"><button onClick="{{ sav.toggleRu }}" aria-label="Round-ups" style="width:48px;height:44px;padding:8px 0;border:none;background:none;cursor:pointer;flex:none"><span style="display:block;position:relative;width:48px;height:28px;border-radius:14px;background:{{ sav.ruBg }};transition:background .2s"><span style="position:absolute;top:3px;left:{{ sav.ruX }};width:22px;height:22px;border-radius:50%;background:#ffffff;transition:left .2s"></span></span></button><div style="flex:1;display:flex;flex-direction:column;gap:10px;padding-top:8px"><div><div style="font-size:16px;font-weight:500">Round-ups</div><div style="font-size:13.5px;color:var(--mute);text-wrap:pretty">{{ sav.ruText }}</div></div><sc-if value="{{ sav.ruCan }}" hint-placeholder-val="{{ false }}"><button onClick="{{ sav.ruMove }}" style="align-self:flex-start;font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">{{ sav.ruBtn }}</button></sc-if></div></div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:6px 0 14px;border-bottom:1px solid var(--line)"><button onClick="{{ sav.toggleSw }}" aria-label="Month-end sweep" style="width:48px;height:44px;padding:8px 0;border:none;background:none;cursor:pointer;flex:none"><span style="display:block;position:relative;width:48px;height:28px;border-radius:14px;background:{{ sav.swBg }};transition:background .2s"><span style="position:absolute;top:3px;left:{{ sav.swX }};width:22px;height:22px;border-radius:50%;background:#ffffff;transition:left .2s"></span></span></button><div style="flex:1;padding-top:8px"><div style="font-size:16px;font-weight:500">Month-end sweep</div><div style="font-size:13.5px;color:var(--mute);text-wrap:pretty">{{ sav.swText }}</div></div></div>
+      <div style="padding-top:14px"><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Extra money goes to</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ sav.sweepPots }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+    </section>
+    <section>
+      <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Recent moves</span>
+      <sc-for list="{{ sav.history }}" as="t" hint-placeholder-count="6">
+        <button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left">
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span><span style="font-size:13px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.when }} · {{ t.sub }}</span></span>
+          <span style="font-size:15px;font-weight:500;white-space:nowrap">{{ t.amt }}</span>
+        </button>
+      </sc-for><sc-if value="{{ e.moves }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">Deposits and withdrawals will show here.</div></sc-if>
+    </section>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.goals }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+  <section style="background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:18px">
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Payoff plan</span>
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ debt.strat }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">Extra payment each month</span><span style="font-size:27px;letter-spacing:-.02em;line-height:1">{{ debt.extraStr }}</span></div>
+      <input type="range" min="0" max="5000" step="100" value="{{ debt.extra }}" onChange="{{ debt.onExtra }}" style="width:100%;height:40px;accent-color:var(--ink)">
+      <div style="font-size:14.5px;text-wrap:pretty">{{ debt.saveNote }}</div>
+    </div>
+  </section>
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:6px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Order of payoff</span><button onClick="{{ debt.addDebt }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ Loan</button></div>
+    <sc-for list="{{ debt.list }}" as="d" hint-placeholder-count="3">
+      <button onClick="{{ d.edit }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:17px;font-weight:600">{{ d.n }}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ d.name }}</span><span style="font-size:13px;color:var(--mute)">{{ d.meta }}</span></span>
+        <span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ d.bal }}</span><span style="font-size:12.5px;color:var(--mute)">{{ d.done }}</span></span>
+      </button>
+    </sc-for><sc-if value="{{ e.debts }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No debts. Add a loan to plan its payoff.</div></sc-if>
+    <div style="font-size:13px;color:var(--mute);padding-top:12px;text-wrap:pretty">Credit card balances from Accounts are included automatically.</div>
+  </section>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.worth }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+  <div style="display:flex;flex-direction:column;gap:30px;min-width:0">
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">What you own</span><span style="font-size:13px;color:var(--mute)">{{ worth.ownTotal }}</span></div>
+      <div style="display:flex;gap:3px;height:16px;margin:14px 0 6px"><sc-for list="{{ worth.segs }}" as="s" hint-placeholder-count="4"><div style="flex-grow:{{ s.v }};flex-basis:0;min-width:6px;background:{{ s.color }};border-radius:5px"></div></sc-for></div>
+      <sc-for list="{{ worth.rows }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="width:14px;height:14px;flex:none;border-radius:5px;background:{{ r.color }}"></span><span style="flex:1;min-width:0;font-size:16px">{{ r.label }}</span><span style="font-size:13px;color:var(--mute)">{{ r.pct }}</span><span style="font-size:15px;font-weight:500;min-width:96px;text-align:right;white-space:nowrap">{{ r.amt }}</span></div></sc-for>
+    </section>
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:6px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">What you owe</span><button onClick="{{ worth.goDebt }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">Payoff plan →</button></div>
+      <sc-for list="{{ worth.owe }}" as="o" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ o.name }}</span><span style="font-size:13px;color:var(--mute)">{{ o.meta }}</span></span><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ o.bal }}</span></div></sc-for>
+      <sc-if value="{{ worth.noOwe }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">Nothing owed.</div></sc-if>
+      <div style="display:flex;justify-content:space-between;gap:10px;padding-top:12px;font-size:15px;font-weight:500"><span>Total owed</span><span>{{ worth.oweTotal }}</span></div>
+    </section>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:30px;min-width:0">
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:6px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Assets</span><button onClick="{{ worth.addAsset }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ Add asset</button></div>
+      <sc-for list="{{ worth.assets }}" as="a" hint-placeholder-count="2"><button onClick="{{ a.edit }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left"><span style="width:44px;height:44px;flex:none;border-radius:13px;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:17px">{{ a.ini }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ a.name }}</span><span style="font-size:13px;color:var(--mute)">{{ a.meta }}</span></span><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ a.val }}</span></button></sc-for>
+      <sc-if value="{{ worth.noAssets }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute);text-wrap:pretty">Add a home, a car, gold or anything else of value that doesn’t sit in an account.</div></sc-if>
+    </section>
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:6px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Investments</span><button onClick="{{ worth.addInv }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ Add investment</button></div>
+      <sc-for list="{{ worth.inv }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.edit }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left"><span style="width:44px;height:44px;flex:none;border-radius:13px;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:17px">{{ a.ini }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ a.name }}</span><span style="font-size:13px;color:var(--mute)">{{ a.meta }}</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ a.val }}</span><span style="font-size:12.5px;color:{{ a.gainColor }};white-space:nowrap">{{ a.gain }}</span></span></button></sc-for>
+      <sc-if value="{{ worth.noInv }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute);text-wrap:pretty">Add a brokerage, fund or long-term plan with what it’s worth today.</div></sc-if>
+    </section>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.reports }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+  <section>
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Where it went</span>
+    <sc-for list="{{ rep.cats }}" as="c" hint-placeholder-count="8">
+      <div style="padding:12px 0 2px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ c.name }} <span style="font-size:12.5px;color:{{ c.deltaColor }}">{{ c.delta }}</span></span><span style="font-size:27px;letter-spacing:-.02em;line-height:1">{{ c.share }}</span></div>
+        <div style="height:5px;border-radius:3px;background:var(--track);margin-top:8px"><div style="height:100%;width:{{ c.w }};background:var(--acc);border-radius:3px"></div></div>
+        <div style="font-size:12.5px;color:var(--mute);margin-top:6px">{{ c.amt }} this month</div>
+      </div>
+    </sc-for><sc-if value="{{ e.cats }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No spending recorded this month.</div></sc-if>
+    <div style="font-size:12.5px;color:var(--mute);margin-top:12px">▲▼ compares with the full previous month.</div>
+  </section>
+  <div style="display:flex;flex-direction:column;gap:30px;min-width:0">
+    <section style="display:flex;flex-direction:column;gap:4px">
+      <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Who spent</span>
+      <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--soft);margin:10px 0 4px"><sc-for list="{{ rep.who }}" as="w" hint-placeholder-count="3"><div style="width:{{ w.w }};background:{{ w.color }}"></div></sc-for></div>
+      <sc-for list="{{ rep.who }}" as="w" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="width:14px;height:14px;border-radius:5px;background:{{ w.color }}"></span><span style="flex:1;font-size:16px">{{ w.label }}</span><span style="font-size:15px;font-weight:500">{{ w.amt }}</span></div></sc-for>
+    </section>
+    <section>
+      <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Most-visited places</span>
+      <div style="margin-top:6px"><sc-for list="{{ rep.merchants }}" as="m" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="flex:1;min-width:0;font-size:16px">{{ m.name }}</span><span style="font-size:13px;color:var(--mute)">{{ m.count }}</span><span style="font-size:15px;font-weight:500;min-width:84px;text-align:right">{{ m.amt }}</span></div></sc-for><sc-if value="{{ e.merch }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No purchases recorded this month.</div></sc-if></div>
+    </section>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.plan }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+  <section>
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">What moves the balance</span>
+    <sc-for list="{{ plan.events }}" as="e" hint-placeholder-count="8">
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px;width:86px;flex:none;color:{{ e.whenColor }}">{{ e.when }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ e.name }}</span><span style="font-size:12.5px;color:var(--mute)">balance {{ e.bal }}</span></span><span style="font-size:15px;font-weight:500;white-space:nowrap;color:{{ e.color }}">{{ e.amt }}</span></div>
+    </sc-for><sc-if value="{{ e.events }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">Nothing scheduled in the next 30 days.</div></sc-if>
+  </section>
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Trips &amp; events</span><button onClick="{{ plan.addEvent }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ New</button></div>
+    <sc-for list="{{ plan.trips }}" as="t" hint-placeholder-count="3">
+      <div style="padding:14px 0 12px;border-bottom:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline"><button onClick="{{ t.edit }}" style="background:none;border:none;padding:0;font:500 16px 'Geist',sans-serif;color:var(--ink);cursor:pointer;text-align:left">{{ t.name }}</button><span style="font-size:13px;color:var(--mute)">{{ t.when }}</span></div>
+        <div style="height:5px;border-radius:3px;background:var(--track);margin-top:10px"><div style="height:100%;width:{{ t.w }};background:{{ t.bar }};border-radius:3px;transition:width .4s"></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px"><span style="font-size:13px;color:var(--mute)">{{ t.detail }}</span><button onClick="{{ t.add }}" style="font:500 13.5px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">Log spend</button></div>
+      </div>
+    </sc-for><sc-if value="{{ e.trips }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No trips or events planned.</div></sc-if>
+  </section>
+  <section style="grid-column:1/-1;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Planned purchases</div><div style="font-size:13px;color:var(--mute)">Big buys wait until you’ve both said yes.</div></div><button onClick="{{ plan.addPlanned }}" style="flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">+ Add</button></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px">
+      <sc-for list="{{ plan.items }}" as="p" hint-placeholder-count="4">
+        <div style="background:var(--card);border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:8px">
+          <button onClick="{{ p.edit }}" style="background:none;border:none;padding:0;font:500 16px 'Geist',sans-serif;color:var(--ink);cursor:pointer;text-align:left">{{ p.name }}</button>
+          <div style="font-size:30px;letter-spacing:-.03em;line-height:1">{{ p.cost }}</div>
+          <div style="font-size:13px;color:var(--mute);text-wrap:pretty;flex:1">{{ p.verdict }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px">
+            <button onClick="{{ p.voteA }}" style="font:500 13.5px 'Geist',sans-serif;padding:0 14px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:{{ p.aBg }};color:{{ p.aFg }};cursor:pointer">{{ p.aLabel }}</button>
+            <button onClick="{{ p.voteB }}" style="font:500 13.5px 'Geist',sans-serif;padding:0 14px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:{{ p.bBg }};color:{{ p.bFg }};cursor:pointer">{{ p.bLabel }}</button>
+            <sc-if value="{{ p.both }}" hint-placeholder-val="{{ false }}"><button onClick="{{ p.buy }}" style="font:500 13.5px 'Geist',sans-serif;padding:0 14px;height:44px;border-radius:22px;border:none;background:var(--acc);color:var(--accInk);cursor:pointer">Mark bought</button></sc-if>
+          </div>
+        </div>
+      </sc-for><sc-if value="{{ e.items }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 0;font-size:14px;color:var(--mute)">No planned purchases yet.</div></sc-if>
+    </div>
+  </section>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.us }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:30px 40px;align-items:start">
+  <sc-if value="{{ us.split }}" hint-placeholder-val="{{ false }}">
+  <section style="grid-column:1/-1;background:#0b0b0c;color:#ffffff;border-radius:28px;padding:clamp(22px,4vw,34px);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between">
+    <div style="min-width:220px;flex:1"><div style="font-size:13.5px;color:#a9a7b8">Settle up · split {{ us.rule }}</div><div style="font:500 clamp(30px,5vw,48px)/1.05 'Geist',sans-serif;letter-spacing:-.03em;margin-top:8px">{{ us.line }}</div><div style="margin-top:8px;font-size:14px;color:#d9d7e4">{{ us.sub }}</div></div>
+    <sc-if value="{{ us.canSettle }}" hint-placeholder-val="{{ true }}"><button onClick="{{ us.settle }}" style="font:500 15px 'Geist',sans-serif;padding:0 24px;height:52px;border-radius:18px;border:none;background:var(--accBase);color:#0b0b0c;cursor:pointer">Mark as settled</button></sc-if>
+  </section>
+  </sc-if>
+  <section style="display:flex;flex-direction:column;gap:4px">
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Who paid for shared things</span>
+    <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--soft);margin:10px 0 4px"><sc-for list="{{ us.paid }}" as="w" hint-placeholder-count="3"><div style="width:{{ w.w }};background:{{ w.color }}"></div></sc-for></div>
+    <sc-for list="{{ us.paid }}" as="w" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><span style="width:14px;height:14px;border-radius:5px;background:{{ w.color }}"></span><span style="flex:1;font-size:16px">{{ w.label }}</span><span style="font-size:15px;font-weight:500">{{ w.amt }}</span></div></sc-for>
+  </section>
+  <section>
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Pocket money</span>
+    <sc-for list="{{ us.allow }}" as="a" hint-placeholder-count="2">
+      <div style="padding:12px 0 2px"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ a.name }}</span><span style="font-size:22px;letter-spacing:-.02em;line-height:1">{{ a.left }}</span></div><div style="height:5px;border-radius:3px;background:var(--track);margin-top:8px"><div style="height:100%;width:{{ a.w }};background:var(--acc);border-radius:3px"></div></div><div style="font-size:12.5px;color:var(--mute);margin-top:6px">{{ a.detail }}</div></div>
+    </sc-for>
+    <div style="font-size:13px;color:var(--mute);margin-top:10px">No-questions-asked money for each of you.</div>
+  </section>
+  <section style="display:flex;flex-direction:column;gap:4px">
+    <span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Income coming in</span>
+    <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--soft);margin:10px 0 4px"><sc-for list="{{ us.contrib }}" as="w" hint-placeholder-count="2"><div style="width:{{ w.w }};background:{{ w.color }}"></div></sc-for></div>
+    <sc-for list="{{ us.contrib }}" as="w" hint-placeholder-count="2"><button onClick="{{ w.edit }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left"><span style="width:14px;height:14px;border-radius:5px;background:{{ w.color }}"></span><span style="flex:1;font-size:16px">{{ w.label }}</span><span style="font-size:15px;font-weight:500">{{ w.amt }}</span></button></sc-for>
+    <div style="font-size:13px;color:var(--mute);margin-top:8px">Pick a name to set pay and payday.</div>
+  </section>
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">Money date</span><span style="font-size:13px;color:var(--mute)">{{ us.checkLabel }}</span></div>
+    <div style="font-size:13px;color:var(--mute);margin:2px 0 10px">Twenty minutes, a coffee, and you’re both on the same page.</div>
+    <div style="background:var(--card);border-radius:24px;padding:4px 18px">
+      <sc-for list="{{ us.checks }}" as="c" hint-placeholder-count="5">
+        <button onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:6px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left"><span style="width:24px;height:24px;flex:none;border-radius:8px;border:1.5px solid var(--ink);background:{{ c.bg }};color:#ffffff;display:grid;place-items:center;font-size:14px;font-weight:600;box-sizing:border-box">{{ c.mark }}</span><span style="text-decoration:{{ c.deco }}">{{ c.t }}</span></button>
+      </sc-for>
+    </div>
+  </section>
+  <div style="grid-column:1/-1"><button onClick="{{ us.reset }}" style="font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">Reset sample data</button></div>
+</div>
+</sc-if>
+</div></div></div>
+</main>
+
+<sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+<nav style="position:fixed;left:12px;right:12px;bottom:12px;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:#17171b;border-radius:32px;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 12px 30px rgba(0,0,0,.35);padding:0 6px">
+  <sc-for list="{{ bottom }}" as="n" hint-placeholder-count="5">
+    <button onClick="{{ n.go }}" style="height:64px;border:none;background:none;color:{{ n.fg }};font:500 12px 'Geist',sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><svg viewBox="0 0 24 24" style="width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="{{ n.icon }}"></path></svg><span>{{ n.label }}</span></button>
+  </sc-for>
+</nav>
+</sc-if>
+<sc-if value="{{ more }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeMore }}" style="position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.55);display:flex;align-items:flex-end">
+  <div data-stage="cream" style="width:100%;background:var(--bg);color:var(--ink);border-radius:30px 30px 0 0;padding:14px 22px 30px;display:flex;flex-direction:column">
+    <sc-for list="{{ moreNav }}" as="n" hint-placeholder-count="6"><button onClick="{{ n.go }}" style="display:flex;align-items:center;justify-content:space-between;height:60px;border:none;border-bottom:1px solid var(--line);background:none;color:var(--ink);font:500 20px 'Geist',sans-serif;letter-spacing:-.01em;cursor:pointer;text-align:left"><span style="display:flex;align-items:center;gap:14px"><svg viewBox="0 0 24 24" style="width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="{{ n.icon }}"></path></svg><span>{{ n.label }}</span></span><span>→</span></button></sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ m.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ m.close }}" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;opacity:{{ m.op }};transition:opacity .22s">
+  <div data-stage="cream" onClick="{{ m.stop }}" style="width:min(480px,100%);height:100%;overflow:auto;box-sizing:border-box;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;transform:{{ m.tf }};transition:transform .28s cubic-bezier(.2,.8,.2,1)">
+    <div style="background:var(--accBase);color:#0b0b0c;padding:18px 18px 0 24px;flex:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="font:500 22px 'Geist',sans-serif;letter-spacing:-.01em">{{ m.title }}</span><button onClick="{{ m.close }}" aria-label="Close" style="width:44px;height:44px;flex:none;border:none;border-radius:15px;background:#0b0b0c;color:#ffffff;font-size:20px;cursor:pointer">×</button></div>
+      <sc-if value="{{ m.showTypes }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;margin-top:16px"><sc-for list="{{ m.types }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.on }}" style="height:44px;padding:0 16px;border-radius:22px;border:1.5px solid #0b0b0c;background:{{ c.bg }};color:{{ c.fg }};font:500 14px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></sc-if>
+      <sc-if value="{{ m.bigAmt }}" hint-placeholder-val="{{ false }}"><label style="display:flex;align-items:baseline;gap:10px;margin-top:18px;padding-right:6px"><span style="font:500 24px 'Geist',sans-serif;color:#3a3566">{{ cur }}</span><input inputmode="decimal" placeholder="0" value="{{ d.amt }}" onChange="{{ on.amt }}" style="flex:1;min-width:0;border:none;background:transparent;color:#0b0b0c;font:500 68px/1 'Geist',sans-serif;letter-spacing:-.045em;outline:none;padding:0"></label></sc-if>
+    </div>
+    <div style="background:var(--accBase);flex:none"><div style="height:56px;background:var(--bg);-webkit-mask-image:var(--blob);mask-image:var(--blob);-webkit-mask-size:800px 56px;mask-size:800px 56px;-webkit-mask-repeat:repeat-x;mask-repeat:repeat-x"></div></div>
+    <div style="flex:1;padding:8px 24px 0;margin-top:-1px;display:flex;flex-direction:column;gap:16px">
+
+    <sc-if value="{{ m.isTx }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <sc-if value="{{ m.hasPotInfo }}" hint-placeholder-val="{{ false }}"><div style="font-size:14.5px;text-wrap:pretty">{{ m.potInfo }}</div></sc-if>
+      <input placeholder="What was it? (optional)" value="{{ d.name }}" onChange="{{ on.name }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)">
+      <sc-if value="{{ m.showCats }}" hint-placeholder-val="{{ true }}">
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Category</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.cats }}" as="c" hint-placeholder-count="12"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      </sc-if>
+      <sc-if value="{{ m.showFrom }}" hint-placeholder-val="{{ true }}">
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">{{ m.acctLabel }}</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.accts }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      </sc-if>
+      <sc-if value="{{ m.showTo }}" hint-placeholder-val="{{ false }}">
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">To</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.tos }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      </sc-if>
+      <sc-if value="{{ m.showWho }}" hint-placeholder-val="{{ true }}">
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">{{ m.whoLabel }}</div><div style="display:flex;gap:6px"><sc-for list="{{ m.who }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.on }}" style="flex:1;height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      </sc-if>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+        <input type="date" value="{{ d.date }}" onChange="{{ on.date }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none">
+        <input placeholder="Note" value="{{ d.note }}" onChange="{{ on.note }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)">
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ m.isBudget }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <sc-if value="{{ m.delStep }}" hint-placeholder-val="{{ false }}"><div style="background:var(--card);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:17px;font-weight:500;letter-spacing:-.01em">Delete this category?</div>
+        <div style="font-size:14px;text-wrap:pretty">{{ m.delInfo }}</div>
+        <sc-if value="{{ m.delUsed }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.moveTo }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div><div style="font-size:12.5px;color:var(--mute);text-wrap:pretty">Uncategorised entries stay in Activity but stop counting toward any budget.</div></div></sc-if>
+        <button onClick="{{ m.cancelDel }}" style="align-self:flex-start;font:500 13.5px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">Keep category</button>
+      </div></sc-if>
+      <div style="font-size:14.5px">{{ m.budInfo }}</div>
+      <sc-if value="{{ m.isCustom }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Name</span><input value="{{ d.name }}" onChange="{{ on.name }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label></sc-if>
+      <sc-if value="{{ m.isCustom }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Group</div><div style="display:flex;gap:6px"><sc-for list="{{ m.catGroups }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="flex:1;height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div></sc-if>
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Monthly limit ({{ cur }})</span><input inputmode="decimal" value="{{ d.limit }}" onChange="{{ on.limit }}" style="box-sizing:border-box;width:100%;height:64px;padding:0 16px;border:none;border-radius:18px;background:var(--card);color:var(--ink);font:500 30px 'Geist',sans-serif;letter-spacing:-.02em;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+      <button onClick="{{ m.useAvg }}" style="align-self:flex-start;font:500 13.5px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">{{ m.avgLabel }}</button>
+      <sc-if value="{{ m.hasCatTx }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:13px;color:var(--mute);margin-bottom:2px">Latest in this category</div><sc-for list="{{ m.catTx }}" as="t" hint-placeholder-count="3"><div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px;color:var(--mute);width:50px;flex:none;padding-top:2px">{{ t.date }}</span><span style="flex:1;min-width:0">{{ t.name }}</span><span style="font-weight:500">{{ t.amt }}</span></div></sc-for></div></sc-if>
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Or move money in from</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.from }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+        <input inputmode="decimal" placeholder="Amount to move" value="{{ d.move }}" onChange="{{ on.move }}" style="margin-top:10px;box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ m.isCat }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Name</span><input placeholder="e.g. Pets" value="{{ d.name }}" onChange="{{ on.name }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Group</div><div style="display:flex;gap:6px"><sc-for list="{{ m.catGroups }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="flex:1;height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Monthly limit ({{ cur }})</span><input inputmode="decimal" placeholder="0" value="{{ d.limit }}" onChange="{{ on.limit }}" style="box-sizing:border-box;width:100%;height:64px;padding:0 16px;border:none;border-radius:18px;background:var(--card);color:var(--ink);font:500 30px 'Geist',sans-serif;letter-spacing:-.02em;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ m.isContrib }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.quick }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="font:500 13.5px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer">{{ c.label }}</button></sc-for></div>
+    </sc-if>
+
+    <sc-if value="{{ m.isItem }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <sc-if value="{{ m.hasName }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Name</span><input value="{{ d.name }}" onChange="{{ on.name }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label></sc-if>
+      <sc-if value="{{ m.isAsset }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Kind</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.akinds }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div></sc-if>
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">{{ m.amtLabel }} ({{ cur }})</span><input inputmode="decimal" value="{{ d.amt }}" onChange="{{ on.amt }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+      <sc-if value="{{ m.hasExtra }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">{{ m.extraLabel }}</span><input value="{{ d.extra }}" onChange="{{ on.extra }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label></sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ m.isPot }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Name</span><input value="{{ d.name }}" onChange="{{ on.name }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Target amount ({{ cur }})</span><input inputmode="decimal" value="{{ d.amt }}" onChange="{{ on.amt }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Auto-save each payday</span><input inputmode="decimal" value="{{ d.extra }}" onChange="{{ on.extra }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Needed by (optional)</span><input type="month" value="{{ d.due }}" onChange="{{ on.due }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none"></label></div>
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Kept in</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.potAccts }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ m.isAcct }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Name</span><input value="{{ d.name }}" onChange="{{ on.name }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label>
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Type</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ m.atypes }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.on }}" style="height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      <div><div style="font-size:13px;color:var(--mute);margin-bottom:8px">Whose is it</div><div style="display:flex;gap:6px"><sc-for list="{{ m.owners }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.on }}" style="flex:1;height:44px;padding:0 15px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Balance now ({{ cur }}), minus if owed</span><input value="{{ d.amt }}" onChange="{{ on.amt }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">Bank or provider</span><input value="{{ d.bank }}" onChange="{{ on.bank }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label></div>
+      <sc-if value="{{ m.hasAcctExtra }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:var(--mute)">{{ m.acctExtraLabel }}</span><input inputmode="decimal" value="{{ d.extra }}" onChange="{{ on.extra }}" style="box-sizing:border-box;width:100%;height:52px;padding:0 16px;border:none;border-radius:16px;background:var(--card);color:var(--ink);font:500 15px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px var(--ink)"></label></sc-if>
+    </div>
+    </sc-if>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px 10px;position:sticky;bottom:0;background:var(--bg);padding:14px 24px 24px;flex:none"><div style="flex-basis:100%;font-size:13.5px;font-weight:500;color:var(--bad)">{{ d.err }}</div>
+      <sc-if value="{{ m.canDel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.del }}" style="font:500 15px 'Geist',sans-serif;padding:0 20px;height:58px;border-radius:20px;border:1.5px solid var(--bad);background:transparent;color:var(--bad);cursor:pointer">{{ m.delLabel }}</button></sc-if>
+      <button onClick="{{ m.save }}" style="flex:1;font:500 17px 'Geist',sans-serif;height:58px;border-radius:20px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer">Save</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;emptyView&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;partnerA&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Bashar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;partnerB&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Eman&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;currency&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;AED&quot;,&quot;د.إ&quot;,&quot;SAR&quot;,&quot;$&quot;,&quot;€&quot;,&quot;£&quot;],&quot;default&quot;:&quot;AED&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;splitMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;One joint pot&quot;,&quot;Split shared costs&quot;],&quot;default&quot;:&quot;One joint pot&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;splitRule&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;50/50&quot;,&quot;By income&quot;],&quot;default&quot;:&quot;50/50&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Household&quot;},&quot;budgetStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Zero-based&quot;,&quot;Category limits&quot;,&quot;50/30/20&quot;],&quot;default&quot;:&quot;Zero-based&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Budgeting&quot;},&quot;rollover&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Budgeting&quot;},&quot;cushion&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5000,&quot;min&quot;:0,&quot;max&quot;:30000,&quot;step&quot;:500,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Budgeting&quot;},&quot;coachTips&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Budgeting&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Paper&quot;,&quot;Night&quot;],&quot;default&quot;:&quot;Paper&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Look&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#b9b0ff&quot;,&quot;#a9c4ff&quot;,&quot;#ffb9a8&quot;,&quot;#d8d3c2&quot;],&quot;default&quot;:&quot;#b9b0ff&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Look&quot;}}">
+const KEY='tandem-budget-v3';
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const pad=n=>String(n).padStart(2,'0');
+const ymOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1);
+const addM=(ym,n)=>{const p=ym.split('-').map(Number);return ymOf(new Date(p[0],p[1]-1+n,1))};
+const dim=ym=>{const p=ym.split('-').map(Number);return new Date(p[0],p[1],0).getDate()};
+const mLabel=(ym,s)=>{const p=ym.split('-').map(Number);return(s?MN[p[1]-1].slice(0,3):MN[p[1]-1])+' '+p[0]};
+const isoD=s=>{const p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+const dLab=d=>WD[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()].slice(0,3);
+const hue=h=>'oklch('+(0.42+h/360*0.4).toFixed(2)+' 0.11 290)';
+const CATS=[
+{id:'housing',name:'Housing',g:'needs',limit:7500,h:255},
+{id:'groceries',name:'Groceries',g:'needs',limit:3000,h:145,n:9,lo:150,hi:450,m:['Hypermarket','Corner grocery','Fruit & veg market','Bakery','Online groceries']},
+{id:'utilities',name:'Utilities',g:'needs',limit:1550,h:215},
+{id:'transport',name:'Transport',g:'needs',limit:1400,h:190,n:7,lo:60,hi:260,m:['Petrol','Road tolls','Parking','Taxi']},
+{id:'insurance',name:'Insurance',g:'needs',limit:850,h:285},
+{id:'health',name:'Health',g:'needs',limit:600,h:170,n:2,lo:60,hi:180,m:['Pharmacy','Clinic visit']},
+{id:'kids',name:'Kids & family',g:'needs',limit:2800,h:55,n:3,lo:60,hi:220,m:['School supplies','Kids’ clothes','Swimming lessons','Toy shop']},
+{id:'debt',name:'Debt payments',g:'needs',limit:3300,h:320},
+{id:'dining',name:'Dining out',g:'wants',limit:1400,h:35,n:8,lo:60,hi:280,m:['Shawarma place','Café','Friday brunch','Delivery order','Sushi night','Karak & snacks']},
+{id:'fun',name:'Entertainment',g:'wants',limit:500,h:350,n:3,lo:60,hi:200,m:['Cinema','Beach day','Desert trip','Bookshop']},
+{id:'shopping',name:'Shopping',g:'wants',limit:1200,h:75,n:4,lo:100,hi:450,m:['Home goods','Clothing','Hardware store','Online order']},
+{id:'subs',name:'Subscriptions',g:'wants',limit:150,h:300},
+{id:'travel',name:'Travel & events',g:'wants',limit:1500,h:105,n:1,lo:300,hi:1400,m:['Flight tickets','Staycation','Visa fees']},
+{id:'gifts',name:'Gifts & giving',g:'wants',limit:500,h:15,n:1,lo:100,hi:400,m:['Eid gifts','Birthday gift','Charity']},
+{id:'allowA',name:'',g:'personal',limit:800,h:35,n:4,lo:40,hi:200,who:'A',m:['Lunch out','Hobby shop','Barber','Games']},
+{id:'allowB',name:'',g:'personal',limit:800,h:275,n:4,lo:40,hi:200,who:'B',m:['Coffee with friends','Yoga class','Books','Skincare']}];
+const BILLS=[[1,'Rent',7500,'housing'],[2,'Nursery fees',2200,'kids'],[3,'Gym membership',250,'health'],[5,'Car insurance',420,'insurance'],[5,'Health cover top-up',380,'insurance'],[8,'Electricity & water',780,'utilities'],[9,'Video streaming',56,'subs',1],[12,'Home internet & TV',389,'utilities'],[14,'Music family plan',33,'subs',1],[18,'Mobile plans',350,'utilities'],[22,'Cloud storage',11,'subs',1],[26,'Car loan',1850,'debt'],[28,'Personal loan',1450,'debt']];
+const TABS=[['home','Today'],['activity','Activity'],['budget','Budget'],['bills','Bills'],['accounts','Accounts'],['worth','Net worth'],['savings','Savings'],['goals','Debt'],['reports','Reports'],['plan','Plan ahead'],['us','Us two']];
+const TYPE={current:['Current account','var(--ink)'],cash:['Cash','var(--mute)'],card:['Credit card','var(--a)'],save:['Savings','var(--acc)'],invest:['Investment','var(--b)']};
+const CHECKS=['Look at the categories that ran over','Confirm next month’s bills','Top up the savings goals','Agree on planned purchases','Pick one thing to celebrate'];
+const EKEY='tandem-budget-empty-v1';
+const AK={property:'Property',vehicle:'Vehicle',gold:'Gold & jewellery',business:'Business',other:'Other'};
+const SEED_ASSETS=[{id:'s1',name:'Family car',kind:'vehicle',value:78000},{id:'s2',name:'Gold & jewellery',kind:'gold',value:36000}],SEED_COST={a6:52000,a7:80000,a8:51500};
+const ICON={home:'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',activity:'M9 6h12M9 12h12M9 18h12M4 6h1M4 12h1M4 18h1',budget:'M12 3a9 9 0 1 0 9 9h-9z M15.5 3.6A9 9 0 0 1 20.4 8.5H15.5z',bills:'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z M4 10h16 M8 3v4 M16 3v4',accounts:'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z M3 10h18 M7 15h3',savings:'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z M4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7 M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5',goals:'M3 7l6 6 4-4 8 8 M21 11v6h-6',reports:'M5 20v-9 M12 20V4 M19 20v-6 M3 20h18',plan:'M3 17l5-5 4 3 8-9 M15 6h5v5',us:'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6 M16 4.3a3.5 3.5 0 0 1 0 6.4 M18 14.3c2 .8 3.5 2.9 3.5 5.7',worth:'M12 3 3 8l9 5 9-5z M3 12.5l9 5 9-5 M3 17l9 5 9-5',more:'M4 7h16M4 12h16M4 17h16'};
+const RCSS="body{margin:0;background:#fbf9ef;color:#0b0b0c;font:15px/1.4 'Geist',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.w{max-width:760px;margin:0 auto;padding:48px 32px}.k{font-size:13px;color:#6b6878}h1{font:500 72px/1 'Geist',sans-serif;letter-spacing:-.045em;margin:8px 0 6px}h1 small{font-size:24px;letter-spacing:0;color:#6b6878}h2{font:500 22px 'Geist',sans-serif;letter-spacing:-.01em;margin:38px 0 6px}.s{display:flex;flex-wrap:wrap;gap:14px 34px;margin-top:24px}.s b{display:block;font:500 18px 'Geist',sans-serif}table{width:100%;border-collapse:collapse}td,th{padding:10px 0;border-bottom:1px solid rgba(11,11,12,.12);text-align:left;font-weight:400;vertical-align:bottom}th{font-size:13px;color:#6b6878}.n{text-align:right;white-space:nowrap;padding-left:18px;font-variant-numeric:tabular-nums}.t{height:5px;border-radius:3px;background:#0b0b0c;margin-top:7px}.f{height:100%;border-radius:3px;background:#b9b0ff}button{float:right;font:500 14px 'Geist',sans-serif;height:44px;padding:0 18px;border-radius:22px;border:none;background:#0b0b0c;color:#fff;cursor:pointer}@media print{.w{padding:0}button{display:none}h2{break-after:avoid}tr{break-inside:avoid}}";
+const blank=()=>{const budgets={};CATS.forEach(c=>budgets[c.id]=0);return{custom:[],assets:[],tx:[],nextId:1,budgets,bills:[],incomes:[{who:'A',amt:0,day:1},{who:'B',amt:0,day:1}],goals:[],debts:[],accounts:[],planned:[],events:[],settled:{},checks:{},selAcct:null,roundUps:false,sweep:false,sweepPot:null,roundSwept:{},strat:'avalanche',extra:0}};
+const ITEM={income:{list:'incomes',t:'pay',amt:'amt',al:'Monthly take-home pay',ex:'day',el:'Payday (day of the month)'},bill:{list:'bills',t:'bill',amt:'amt',al:'Amount each month',ex:'day',el:'Day of the month it’s due'},goal:{list:'goals',t:'goal',amt:'target',al:'Target amount',ex:'monthly',el:'Monthly contribution'},debt:{list:'debts',t:'debt',amt:'balance',al:'Balance owed',ex:'apr',el:'Interest rate (APR %)'},planned:{list:'planned',t:'planned purchase',amt:'cost',al:'Expected cost'},asset:{list:'assets',t:'asset',amt:'value',al:'What it’s worth today'},account:{list:'accounts',t:'account',amt:'balance',al:'Current balance'},event:{list:'events',t:'trip or event',amt:'budget',al:'Total budget',ex:'when',el:'When (e.g. Mar 2027)',text:1}};
+const PERSIST=['tx','nextId','budgets','bills','incomes','goals','debts','accounts','planned','events','settled','checks','tab','strat','extra','selAcct','roundUps','sweep','sweepPot','roundSwept','custom','navMin','assets','catOv','catDel'];
+const seed=today=>{
+  let s=11;const rnd=()=>(s=s*16807%2147483647)/2147483647;
+  const cur=ymOf(today),tx=[];let id=1;
+  const goals=[{id:'g1',name:'Emergency fund',target:100000,saved:62000,monthly:3000,acct:'a4',due:'',auto:true},{id:'g2',name:'Summer trip',target:18000,saved:7500,monthly:1500,acct:'a4',due:addM(cur,7),auto:true},{id:'g3',name:'School fees fund',target:24000,saved:11000,monthly:2000,acct:'a4',due:addM(cur,5),auto:true},{id:'g4',name:'Home down payment',target:300000,saved:106500,monthly:1500,acct:'a5',due:'',auto:true}];
+  const bills=BILLS.map((b,i)=>({id:'b'+i,day:b[0],name:b[1],amt:b[2],cat:b[3],sub:!!b[4],paid:{}}));
+  for(let k=-5;k<=0;k++){
+    const ym=addM(cur,k),dm=dim(ym),last=k===0?today.getDate():dm;
+    const add=(day,name,cat,amt,who,type,billId,acct,x)=>{if(day<=last)tx.push(Object.assign({id:id++,date:ym+'-'+pad(day),name,cat,amt:Math.round(amt),who,type:type||'exp',billId,acct:acct||'a1'},x))};
+    add(1,'Salary','income',21000,'A','inc');add(3,'Salary','income',15500,'B','inc');goals.forEach(g=>add(4,'Auto-save · '+g.name,'transfer',g.monthly,'J','xfer',undefined,'a1',{to:g.acct,pot:g.id}));
+    bills.forEach(b=>{if(b.day<=last){b.paid[ym]=true;add(b.day,b.name,b.cat,b.amt,'J','exp',b.id)}});
+    CATS.forEach(c=>{for(let i=0;i<(c.n||0);i++){const day=1+Math.floor(rnd()*dm),amt=c.lo+rnd()*(c.hi-c.lo),r=rnd(),m=c.m[Math.floor(rnd()*c.m.length)],r2=rnd();add(day,m,c.id,amt,c.who||(r<.4?'A':r<.75?'B':'J'),'exp',undefined,r2<.28?'a3':r2<.36?'a2':'a1')}});
+  }
+  const budgets={};CATS.forEach(c=>budgets[c.id]=c.limit);
+  return{tx,nextId:id,budgets,bills,incomes:[{who:'A',amt:21000,day:1},{who:'B',amt:15500,day:3}],
+    goals,
+    debts:[{id:'d1',name:'Car loan',balance:68000,apr:4.2,min:1850},{id:'d2',name:'Personal loan',balance:41000,apr:7.9,min:1450}],
+    accounts:[{id:'a1',name:'Joint current account',type:'current',who:'J',bank:'Main bank',last4:'4821',balance:24600},{id:'a2',name:'Cash at home',type:'cash',who:'J',balance:1200},{id:'a3',name:'Shared credit card',type:'card',who:'J',bank:'Main bank',last4:'0937',balance:-6400,limit:25000,apr:36},{id:'a4',name:'High-yield saver',type:'save',who:'J',bank:'Online bank',apy:4.25,balance:84000},{id:'a5',name:'Home fixed deposit',type:'save',who:'J',bank:'Main bank',apy:5.1,balance:106500},{id:'a6',name:'Brokerage',type:'invest',who:'J',balance:64000,cost:52000},{id:'a7',name:'Long-term investment plan',type:'invest',who:'A',balance:92000,cost:80000},{id:'a8',name:'Long-term investment plan',type:'invest',who:'B',balance:58000,cost:51500}],
+    planned:[{id:'p1',name:'New sofa',cost:5200,A:true,B:true},{id:'p2',name:'Stand mixer',cost:1600,A:false,B:true},{id:'p3',name:'Anniversary weekend',cost:2400,A:true,B:true},{id:'p4',name:'Laptop upgrade',cost:6000,A:true,B:false}],
+    events:[{id:'e1',name:'Eid break getaway',when:'Mar 2027',budget:9000,spent:3200},{id:'e2',name:'Kids’ birthday party',when:'Jan 2027',budget:2500,spent:600},{id:'e3',name:'Summer family visit',when:'Jul 2027',budget:7500,spent:0}],
+    assets:SEED_ASSETS.map(x=>({...x})),custom:[],settled:{},checks:{},selAcct:'a1',roundUps:true,sweep:false,sweepPot:'g1',roundSwept:{}};
+};
+const simDebt=(debts,extra,strat)=>{
+  const ds=debts.map(d=>({id:d.id,b:d.balance,apr:d.apr,min:d.min}));
+  const order=[...ds].sort(strat==='snowball'?(a,b)=>a.b-b.b:(a,b)=>b.apr-a.apr);
+  let months=0,interest=0;const done={},series=[ds.reduce((a,d)=>a+d.b,0)];
+  while(ds.some(d=>d.b>.01)&&months<720){months++;let pool=extra;
+    ds.forEach(d=>{if(d.b>.01){const i=d.b*d.apr/1200;interest+=i;d.b+=i;const p=Math.min(d.b,d.min);d.b-=p;pool+=d.min-p}else pool+=d.min});
+    for(const d of order){if(pool<=0)break;if(d.b>.01){const p=Math.min(d.b,pool);d.b-=p;pool-=p}}
+    ds.forEach(d=>{if(d.b<=.01&&!done[d.id])done[d.id]=months});series.push(ds.reduce((a,d)=>a+Math.max(0,d.b),0));}
+  return{months,interest,done,series,order:order.map(d=>d.id)};
+};
+class Component extends DCLogic {
+  state=this.init();
+  load(empty){let saved=null;try{saved=JSON.parse(localStorage.getItem(empty?EKEY:KEY))}catch(e){}if(saved&&saved.tx&&!saved.assets){if(empty)saved.assets=[];else{const D=saved;if(!D.assets){D.assets=SEED_ASSETS.map(x=>({...x}));D.accounts=(D.accounts||[]).map(a=>a.type==='invest'&&a.cost==null&&SEED_COST[a.id]?{...a,cost:SEED_COST[a.id]}:a)}}}return saved&&saved.tx?saved:empty?blank():seed(new Date())}
+  init(){
+    const today=new Date(),empty=!!((this.props||{}).emptyView);
+    return Object.assign({tab:'home',strat:'avalanche',extra:1000,custom:[],catOv:{},catDel:[]},this.load(empty),{empty,ym:ymOf(today),modal:null,d:{},q:'',fWho:'all',fCat:'all',fAcct:'all',more:false,wide:window.innerWidth>=960});
+  }
+  sync(){const e=!!this.props.emptyView;if(e===this.state.empty)return false;this.setState(Object.assign({custom:[],catOv:{},catDel:[]},this.load(e),{empty:e,tab:'home',modal:null,d:{},q:'',fWho:'all',fCat:'all',fAcct:'all'}));return true}
+  componentDidMount(){this.onRz=()=>{const w=window.innerWidth>=960;if(w!==this.state.wide)this.setState({wide:w})};window.addEventListener('resize',this.onRz);this.theme();this.sync()}
+  componentWillUnmount(){window.removeEventListener('resize',this.onRz)}
+  componentDidUpdate(){this.theme();const st=this.state;if(st.modal&&!st.shown&&!st.closing)setTimeout(()=>{const z=this.state;if(z.modal&&!z.shown&&!z.closing)this.setState({shown:true})},20);else if(!st.modal&&st.shown)this.setState({shown:false});if(this.sync())return;try{const o={};PERSIST.forEach(k=>o[k]=this.state[k]);localStorage.setItem(this.state.empty?EKEY:KEY,JSON.stringify(o))}catch(e){}}
+  theme(){const P=this.props;document.body.dataset.theme=(P.theme??'Paper')==='Night'?'night':'paper';document.body.style.setProperty('--accBase',P.accent??'#b9b0ff')}
+  num(n){const r=Math.abs(n%1)>.004?n:Math.round(n);const dec=Math.abs(r%1)>.004?2:0;return(r<0?'−':'')+Math.abs(r).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec})}
+  fmt(n){const c=this.props.currency??'AED',s=this.num(n),neg=s[0]==='−';return(neg?'−':'')+c+(c.length>1?' ':'')+(neg?s.slice(1):s)}
+  go(tab){this.setState({tab,more:false});window.scrollTo(0,0)}
+  setD(k,v){this.setState(s=>({d:{...s.d,err:'',[k]:v}}))}
+  close(){this.setState({shown:false,closing:true});clearTimeout(this.ct);this.ct=setTimeout(()=>this.setState(s=>s.closing?{modal:null,d:{},closing:false}:null),230)}
+  mainAcct(s){return(s.accounts.find(a=>a.type==='current')||s.accounts[0]||{}).id}
+  apply(s,t,k){let accounts=s.accounts,goals=s.goals;const adj=(id,v)=>{accounts=accounts.map(a=>a.id===id?{...a,balance:a.balance+v}:a)};
+    if(t.type==='exp')adj(t.acct,-t.amt*k);else if(t.type==='inc')adj(t.acct,t.amt*k);else{adj(t.acct,-t.amt*k);adj(t.to,t.amt*k);if(t.pot)goals=goals.map(g=>g.id===t.pot?{...g,saved:Math.max(0,g.saved+(t.potDir==='out'?-1:1)*t.amt*k)}:g)}
+    return{accounts,goals}}
+  catList(s){const gone=s.catDel||[],ov=s.catOv||{};return CATS.concat(s.custom||[]).filter(c=>!gone.includes(c.id)).map(c=>({...c,...ov[c.id]}))}
+  catOr(id,s){const l=this.catList(s||this.state);return(l.find(c=>c.id===id)||l[0]||{id}).id}
+  openTx(t,pre){const n=new Date();this.setState({modal:'tx',d:t?{...t,amt:String(t.amt),note:t.note||''}:Object.assign({type:'exp',amt:'',name:'',cat:this.catOr('groceries'),who:'J',acct:this.mainAcct(this.state),to:'',date:ymOf(n)+'-'+pad(n.getDate()),note:''},pre)})}
+  saveTx(){const d=this.state.d,amt=parseFloat(d.amt);if(!(amt>0))return this.setD('err','Add an amount first.');
+    const x=d.type==='xfer',inc=d.type==='inc';
+    if(x&&(!d.acct||!d.to||d.acct===d.to))return this.setD('err','Pick two different accounts.');
+    if(!d.acct&&this.state.accounts.length)return this.setD('err','Pick an account.');
+    const cat=x?'transfer':inc?'income':(d.cat==='income'||d.cat==='transfer')?this.catOr('groceries'):d.cat,c=this.catList(this.state).find(z=>z.id===cat);
+    const t={id:d.id,date:d.date||this.state.ym+'-01',name:(d.name||'').trim()||(x?'Transfer':inc?'Income':c&&c.name||'Pocket money'),cat,amt,who:d.who,type:d.type,note:(d.note||'').trim(),billId:d.billId,acct:d.acct,to:x?d.to:undefined,pot:x?d.pot:undefined,potDir:x?d.potDir:undefined};
+    this.setState(s=>{const old=d.id&&s.tx.find(z=>z.id===d.id);let st={accounts:s.accounts,goals:s.goals};if(old)st=this.apply(st,old,-1);st=this.apply(st,t,1);
+      return Object.assign(st,d.id?{tx:s.tx.map(z=>z.id===d.id?t:z)}:{tx:s.tx.concat({...t,id:s.nextId}),nextId:s.nextId+1},{modal:null,d:{}})})}
+  openBudget(id){const S=this.state,cur=ymOf(new Date());let tot=0;for(let k=1;k<=3;k++){const m=addM(cur,-k);tot+=S.tx.filter(t=>t.cat===id&&t.type==='exp'&&t.date.slice(0,7)===m).reduce((a,t)=>a+t.amt,0)}
+    this.setState({modal:'budget',d:{cat:id,name:(this.catList(S).find(c=>c.id===id)||{}).name||'',g:(this.catList(S).find(c=>c.id===id)||{}).g,limit:String(S.budgets[id]||0),from:'',move:'',avg:Math.round(tot/3/10)*10}})}
+  saveBudget(){const d=this.state.d,L=this.catList(this.state),c0=L.find(c=>c.id===d.cat)||{},lock=c0.g==='personal',nm=(d.name||'').trim();
+    if(!lock){if(!nm)return this.setD('err','Give it a name.');if(L.some(c=>c.id!==d.cat&&c.name.toLowerCase()===nm.toLowerCase()))return this.setD('err','You already have a category with that name.')}
+    this.setState(s=>{const b={...s.budgets,[d.cat]:Math.max(0,parseFloat(d.limit)||0)};let mv=parseFloat(d.move)||0;if(d.from&&mv>0){mv=Math.min(mv,b[d.from]||0);b[d.from]-=mv;b[d.cat]+=mv}const ed=!lock&&{name:nm,g:d.g||c0.g};return{budgets:b,custom:(s.custom||[]).map(c=>c.id===d.cat&&ed?{...c,...ed}:c),catOv:ed&&!c0.custom?{...(s.catOv||{}),[d.cat]:ed}:(s.catOv||{}),modal:null,d:{}}})}
+  openCat(){this.setState({modal:'cat',d:{name:'',g:'needs',limit:''}})}
+  saveCat(){const d=this.state.d,name=(d.name||'').trim(),low=name.toLowerCase();if(!name)return this.setD('err','Give it a name.');
+    if(this.catList(this.state).some(c=>c.name.toLowerCase()===low))return this.setD('err','You already have a category with that name.');
+    const id='c'+Date.now();this.setState(s=>({custom:(s.custom||[]).concat({id,name,g:d.g,h:200,custom:true}),budgets:{...s.budgets,[id]:Math.max(0,parseFloat(d.limit)||0)},modal:null,d:{}}))}
+  openContrib(kind,o){this.setState({modal:'contrib',d:{kind,id:o.id,name:o.name,amt:''}})}
+  saveContrib(){const d=this.state.d,amt=parseFloat(d.amt);if(!(amt>0))return this.setD('err','Add an amount first.');const n=new Date();
+    this.setState(s=>{const t={id:s.nextId,date:ymOf(n)+'-'+pad(n.getDate()),name:d.name,cat:this.catOr('travel',s),amt,who:'J',type:'exp',acct:this.mainAcct(s)};return Object.assign(this.apply(s,t,1),{events:s.events.map(e=>e.id===d.id?{...e,spent:e.spent+amt}:e),tx:s.tx.concat(t),nextId:s.nextId+1,modal:null,d:{}})})}
+  openPot(g){const sv=this.state.accounts.filter(a=>a.type==='save');this.setState({modal:'pot',d:g?{id:g.id,name:g.name,amt:String(g.target),extra:String(g.monthly),due:g.due||'',acct:g.acct}:{name:'',amt:'',extra:'',due:'',acct:(sv[0]||{}).id}})}
+  savePot(){const d=this.state.d,name=(d.name||'').trim(),target=parseFloat(d.amt);if(!name)return this.setD('err','Give it a name.');if(!(target>0))return this.setD('err','Add a target amount.');if(!d.acct)return this.setD('err','Add a savings account first, so the pot has a home.');
+    const p={name,target,monthly:parseFloat(d.extra)||0,due:d.due||'',acct:d.acct};
+    this.setState(s=>({goals:d.id?s.goals.map(g=>g.id===d.id?{...g,...p}:g):s.goals.concat({...p,id:'g'+Date.now(),saved:0,auto:p.monthly>0}),modal:null,d:{}}))}
+  openAcct(a,pre){this.setState({modal:'acct',d:a?{id:a.id,name:a.name,atype:a.type,who:a.who,amt:String(a.balance),bank:a.bank||'',extra:String(a.type==='card'?a.limit||'':a.type==='save'?a.apy||'':a.type==='invest'?a.cost||'':'')}:Object.assign({name:'',atype:'current',who:'J',amt:'',bank:'',extra:''},pre)})}
+  saveAcct(){const d=this.state.d,name=(d.name||'').trim(),bal=parseFloat(d.amt);if(!name)return this.setD('err','Give it a name.');if(isNaN(bal))return this.setD('err','Add the balance as it stands today.');
+    const p={name,type:d.atype,who:d.who,balance:bal,bank:(d.bank||'').trim()},ex=parseFloat(d.extra)||0,id=d.id||'a'+Date.now();if(d.atype==='card')p.limit=ex;if(d.atype==='save')p.apy=ex;if(d.atype==='invest')p.cost=ex;
+    this.setState(s=>({accounts:d.id?s.accounts.map(a=>a.id===d.id?{...a,...p}:a):s.accounts.concat({...p,id}),selAcct:id,modal:null,d:{}}))}
+  openIncome(w,name){const x=this.state.incomes.find(i=>i.who===w)||{amt:0,day:1};this.setState({modal:'item',d:{kind:'income',who:w,name,amt:x.amt?String(x.amt):'',extra:String(x.day)}})}
+  openItem(kind,o){const I=ITEM[kind];this.setState({modal:'item',d:{kind,id:o&&o.id,name:o?o.name:'',amt:o?String(o[I.amt]):'',extra:o&&I.ex?String(o[I.ex]):'',akind:o&&o.kind||'property'}})}
+  saveItem(){const d=this.state.d,I=ITEM[d.kind],amt=parseFloat(d.amt),name=(d.name||'').trim();if(!name)return this.setD('err','Give it a name.');if(isNaN(amt))return this.setD('err','Add an amount.');
+    if(d.kind==='income'){const day=Math.min(31,Math.max(1,parseFloat(d.extra)||1));return this.setState(s=>({incomes:(s.incomes.some(x=>x.who===d.who)?s.incomes:s.incomes.concat({who:d.who,amt:0,day:1})).map(x=>x.who===d.who?{...x,amt:Math.max(0,amt),day}:x),modal:null,d:{}}))}
+    const p={name,[I.amt]:amt};if(d.kind==='asset')p.kind=d.akind||'other';if(I.ex)p[I.ex]=I.text?d.extra:(parseFloat(d.extra)||0);
+    const base={bill:{cat:this.catOr('utilities'),sub:false,paid:{},day:Math.min(31,Math.max(1,p.day||1))},goal:{saved:0},debt:{min:Math.max(50,Math.round(amt*.02))},planned:{A:false,B:false},account:{type:'cash',who:'J'},event:{spent:0}}[d.kind];
+    if(d.kind==='bill')p.day=base.day;
+    this.setState(s=>({[I.list]:d.id?s[I.list].map(x=>x.id===d.id?{...x,...p}:x):s[I.list].concat({...base,...p,id:d.kind[0]+Date.now()}),modal:null,d:{}}))}
+  del(){const d=this.state.d,m=this.state.modal;
+    if(m==='tx')this.setState(s=>{const old=s.tx.find(t=>t.id===d.id);return Object.assign(old?this.apply(s,old,-1):{},{tx:s.tx.filter(t=>t.id!==d.id),modal:null,d:{}})});
+    else if(m==='pot')this.setState(s=>({goals:s.goals.filter(g=>g.id!==d.id),modal:null,d:{}}));
+    else if(m==='acct')this.setState(s=>({accounts:s.accounts.filter(a=>a.id!==d.id),selAcct:(s.accounts.find(a=>a.id!==d.id)||{}).id,modal:null,d:{}}));
+    else if(m==='budget'){const used=this.state.tx.some(t=>t.cat===d.cat)||this.state.bills.some(b=>b.cat===d.cat);
+      if(!d.delStep)return this.setState(s=>({d:{...s.d,delStep:true,moveTo:'',err:''}}));
+      if(used&&!d.moveTo)return this.setD('err','Choose where its entries should go.');
+      const to=d.moveTo&&d.moveTo!=='none'?d.moveTo:null;
+      this.setState(s=>{const b={...s.budgets};delete b[d.cat];const mv=x=>x.cat===d.cat&&to?{...x,cat:to}:x,isC=(s.custom||[]).some(c=>c.id===d.cat);
+        return{custom:(s.custom||[]).filter(c=>c.id!==d.cat),catDel:isC?(s.catDel||[]):(s.catDel||[]).concat(d.cat),budgets:b,tx:s.tx.map(mv),bills:s.bills.map(mv),fCat:s.fCat===d.cat?'all':s.fCat,modal:null,d:{}}})}
+    else if(m==='item'){const k=ITEM[d.kind].list;this.setState(s=>({[k]:s[k].filter(x=>x.id!==d.id),modal:null,d:{}}))}}
+  payBill(b,ym){this.setState(s=>{const paid=!!(b.paid&&b.paid[ym]),bills=s.bills.map(x=>x.id===b.id?{...x,paid:{...x.paid,[ym]:!paid}}:x);
+    if(paid){const old=s.tx.find(t=>t.billId===b.id&&t.date.slice(0,7)===ym);return Object.assign(old?this.apply(s,old,-1):{},{bills,tx:s.tx.filter(t=>t!==old)})}
+    const t={id:s.nextId,date:ym+'-'+pad(Math.min(b.day,dim(ym))),name:b.name,cat:b.cat,amt:b.amt,who:'J',type:'exp',billId:b.id,acct:this.mainAcct(s)};
+    return Object.assign(this.apply(s,t,1),{bills,nextId:s.nextId+1,tx:s.tx.concat(t)})})}
+  save(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+  report(kind,R){
+    if(kind==='csv'){const L=[['Twofold report',R.month],['Household',R.names],[],['Spent ('+R.ccy+')',R.spent],['Income ('+R.ccy+')',R.income]].concat(R.stats,[[],['Category','Spent ('+R.ccy+')','Share','Last month ('+R.ccy+')']],R.cats,[[],['Who','Spent ('+R.ccy+')']],R.who,[[],['Place','Visits','Spent ('+R.ccy+')']],R.mer,[[],['Month','Income','Spending','Net']],R.months);
+      return this.save('twofold-report-'+R.ym+'.csv',L.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv')}
+    const e=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'),n=v=>e(R.ccy)+' '+Number(v).toLocaleString('en-US'),max=R.cats.length?R.cats[0][1]:1;
+    const tbl=(head,rows)=>'<table><tr>'+head.map((h,i)=>'<th'+(i?' class="n"':'')+'>'+h+'</th>').join('')+'</tr>'+rows.map(r=>'<tr>'+r.map((c,i)=>'<td'+(i?' class="n"':'')+'>'+c+'</td>').join('')+'</tr>').join('')+'</table>';
+    const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Twofold report · '+e(R.month)+'</title><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet"><style>'+RCSS+'</style></head><body><div class="w"><button onclick="print()">Print or save as PDF</button><div class="k">Twofold · '+e(R.names)+' · '+e(R.month)+'</div><h1><small>'+e(R.ccy)+'</small> '+Number(R.spent).toLocaleString('en-US')+'</h1><div class="k">spent this month, with '+n(R.income)+' coming in</div><div class="s">'+R.stats.map(s=>'<div><span class="k">'+e(s[0])+'</span><b>'+e(s[1])+'</b></div>').join('')+'</div>'
+      +'<h2>Where it went</h2>'+tbl(['Category','Share','Spent','Last month'],R.cats.map(c=>[e(c[0])+'<div class="t"><div class="f" style="width:'+(c[1]/max*100).toFixed(1)+'%"></div></div>',c[2],n(c[1]),n(c[3])]))
+      +'<h2>Who spent</h2>'+tbl(['Who','Spent'],R.who.map(w=>[e(w[0]),n(w[1])]))
+      +'<h2>Most-visited places</h2>'+tbl(['Place','Visits','Spent'],R.mer.map(m=>[e(m[0]),m[1],n(m[2])]))
+      +'<h2>Last six months</h2>'+tbl(['Month','Income','Spending','Net'],R.months.map(m=>[e(m[0]),n(m[1]),n(m[2]),n(m[3])]))
+      +'<p class="k" style="margin-top:36px">Generated '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+'.</p></div></body></html>';
+    this.save('twofold-report-'+R.ym+'.html',html,'text/html')}
+  exportCsv(list){const rows=[['Date','Name','Category','Who','Type','Amount','Note']].concat(list.map(t=>[t.date,t.name,t.cat,t.who,t.type,t.amt,t.note||'']));const csv=rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='twofold-'+this.state.ym+'.csv';a.click()}
+  renderVals(){
+    const S=this.state,P=this.props,A=P.partnerA??'Bashar',B=P.partnerB??'Eman';
+    const f=n=>this.fmt(n),pc=x=>Math.max(0,Math.min(100,(x||0)*100)).toFixed(1)+'%';
+    const split=(P.splitMode??'One joint pot')!=='One joint pot',style=P.budgetStyle??'Zero-based',rollover=P.rollover??false,cushion=P.cushion??5000,tipsOn=P.coachTips??true,clear=false;
+    const today=new Date(),cur=ymOf(today),tDay=today.getDate();
+    const ym=S.ym,isCur=ym===cur,days=dim(ym),day=isCur?tDay:ym<cur?days:0,daysLeft=isCur?days-tDay+1:ym>cur?days:0,pace=day/days;
+    const whoName={A,B,J:'Joint'},whoCol={A:'var(--a)',B:'var(--b)',J:'var(--mute)'};
+    const cats=this.catList(S).map(c=>({...c,name:c.id==='allowA'?A+'’s pocket money':c.id==='allowB'?B+'’s pocket money':c.name,color:hue(c.h)}));
+    const catBy={income:{name:'Income',color:'var(--good)'},transfer:{name:'Transfer',color:'var(--mute)'}};cats.forEach(c=>catBy[c.id]=c);
+    const acctBy={};S.accounts.forEach(a=>acctBy[a.id]=a);const aName=id=>(acctBy[id]||{}).name||'Account';
+    const sum=(a,k)=>a.reduce((s,x)=>s+(k?k(x):x.amt),0);
+    const inM=m=>S.tx.filter(t=>t.date.slice(0,7)===m);
+    const byCat=a=>{const o={};a.forEach(t=>o[t.cat]=(o[t.cat]||0)+t.amt);return o};
+    const desc=(a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id;
+    const chip=(label,on,fn)=>({label,on:fn,bg:on?'var(--ink)':'transparent',fg:on?'var(--bg)':'var(--ink)',bd:on?'var(--ink)':'var(--chip)'});
+    const mtx=inM(ym),exp=mtx.filter(t=>t.type==='exp'),inc=mtx.filter(t=>t.type==='inc');
+    const spent=byCat(exp),pExp=inM(addM(ym,-1)).filter(t=>t.type==='exp'),pSpent=byCat(pExp);
+    const income=sum(S.incomes),goalsMo=sum(S.goals,g=>g.monthly);
+    const rows=cats.map(c=>{const limit=S.budgets[c.id]||0,carry=rollover&&pExp.length?limit-(pSpent[c.id]||0):0,avail=Math.max(0,limit+carry),sp=spent[c.id]||0,left=avail-sp,r=avail>0?sp/avail:sp>0?1.01:0;
+      return{id:c.id,g:c.g,variable:!!c.n||!!c.custom,name:c.name,color:c.color,limit,avail,sp,leftN:left,ratio:r,pct:Math.round(r*100)+'%',left:left<0?f(-left)+' over':f(left)+' left',leftColor:left<0?'var(--bad)':'var(--ink)',w:pc(r),bar:left<0?'var(--bad)':'var(--acc)',detail:f(sp)+' of '+f(avail)+' · '+(left<0?f(-left)+' over':f(left)+' left'),carry:Math.abs(carry)>=1?'rolled '+(carry>0?'+':'')+f(carry):'',open:()=>this.openBudget(c.id)}});
+    const tAvail=sum(rows,r=>r.avail),tSpent=sum(rows,r=>r.sp),tLimit=sum(rows,r=>r.limit);
+    const billsM=S.bills.map(b=>({...b,d:Math.min(b.day,days),isPaid:!!(b.paid&&b.paid[ym])})).sort((a,b)=>a.d-b.d);
+    const unpaid=ym>=cur?sum(billsM.filter(b=>!b.isPaid)):0,safe=tAvail-tSpent-unpaid,leftAssign=income-tLimit-goalsMo;
+    const txRow=t=>{const c=catBy[t.cat]||{name:'Other',color:'var(--mute)'},isInc=t.type==='inc',x=t.type==='xfer';return{ini:((t.name||'?').trim()[0]||'?').toUpperCase(),name:t.name+(isInc?' · '+whoName[t.who]:''),when:dLab(isoD(t.date)).slice(4),sub:x?aName(t.acct)+' → '+aName(t.to):c.name+' · '+aName(t.acct)+(t.note?' · '+t.note:''),color:c.color,who:x?'↔':whoName[t.who][0],whoTitle:x?'Transfer':whoName[t.who],whoCol:x?'var(--line)':whoCol[t.who],amt:(isInc?'+':'')+f(t.amt),amtColor:isInc?'var(--good)':x?'var(--mute)':'var(--ink)',open:()=>this.openTx(t)}};
+    const events=n=>{const out=[];for(let i=0;i<=n;i++){const d=new Date(today.getFullYear(),today.getMonth(),tDay+i),m=ymOf(d),dd=d.getDate(),dm=dim(m);
+      S.bills.forEach(b=>{const bd=Math.min(b.day,dm);if(!(b.paid&&b.paid[m])&&(bd===dd||(i===0&&bd<dd)))out.push({i,d,name:b.name,amt:-b.amt,late:bd<dd})});
+      if(i>0)S.incomes.forEach(x=>{if(x.amt>0&&Math.min(x.day,dm)===dd)out.push({i,d,name:whoName[x.who]+'’s salary',amt:x.amt,inc:true})})}return out};
+    const ev=events(30);
+    const evRow=e=>({when:e.late?'Overdue':e.i===0?'Today':dLab(e.d),whenColor:e.late?'var(--bad)':'var(--mute)',name:e.name,amt:(e.inc?'+':'')+f(e.amt),color:e.inc?'var(--good)':'var(--ink)'});
+    const mBetween=(a,b)=>{const p=a.split('-').map(Number),q=b.split('-').map(Number);return(q[0]-p[0])*12+q[1]-p[1]};
+    const moveToPot=(g,amt,name,extra)=>this.setState(s=>{const t={id:s.nextId,date:cur+'-'+pad(tDay),name,cat:'transfer',amt,who:'J',type:'xfer',acct:this.mainAcct(s),to:g.acct,pot:g.id};return Object.assign(this.apply(s,t,1),{tx:s.tx.concat(t),nextId:s.nextId+1},extra?extra(s):{})});
+    const potVM=g=>{const r=g.target?g.saved/g.target:0,rem=Math.max(0,g.target-g.saved),n=g.monthly>0?Math.ceil(rem/g.monthly):0,a=acctBy[g.acct]||{},left=g.due?Math.max(1,mBetween(cur,g.due)):0,need=left?Math.ceil(rem/left/10)*10:0,done=rem<=0,behind=!done&&left>0&&need>g.monthly;
+      return{name:g.name,saved:f(g.saved),target:f(g.target),w:pc(r),pct:Math.round(r*100)+'%',monthly:f(g.monthly)+'/mo',eta:done?'reached':n?'there by '+mLabel(addM(cur,n),1):'no monthly amount yet',
+        where:(a.name||'No account yet')+(a.apy?' · earning '+a.apy+'% a year':''),due:g.due?'Needed by '+mLabel(g.due,1):'No deadline',
+        status:done?'Reached':behind?'Needs '+f(need-g.monthly)+' more a month':g.due?'On track':n?'Steady':'Paused',statusColor:done?'var(--good)':behind?'var(--warn)':'var(--ink)',
+        autoLabel:g.auto?'Auto-save on · '+f(g.monthly)+' each payday':'Auto-save off',autoBg:g.auto?'var(--ink)':'var(--chip)',autoX:g.auto?'23px':'3px',
+        toggleAuto:()=>this.setState(s=>({goals:s.goals.map(x=>x.id===g.id?{...x,auto:!x.auto}:x)})),
+        add:()=>this.openTx(null,{type:'xfer',to:g.acct,pot:g.id,potDir:'in',name:'Deposit · '+g.name}),
+        take:()=>this.openTx(null,{type:'xfer',acct:g.acct,to:this.mainAcct(S),pot:g.id,potDir:'out',name:'Withdrawal · '+g.name}),edit:()=>this.openPot(g)}};
+    // home
+    const watch=rows.filter(r=>r.variable&&r.avail>0).sort((a,b)=>b.ratio-a.ratio).slice(0,4);
+    const tips=[];
+    const over=rows.filter(r=>r.leftN<0).sort((a,b)=>a.leftN-b.leftN)[0];
+    if(over)tips.push(over.name+' went '+f(-over.leftN)+' past its limit. No stress — move a little from a category with room and you’re square.');
+    const tight=watch.find(r=>r.leftN>=0&&r.ratio>.75);
+    if(tight&&isCur)tips.push(tight.name+' has '+f(tight.leftN)+' left for the next '+daysLeft+' days — about '+f(Math.round(tight.leftN/daysLeft))+' a day keeps it on track.');
+    const diff=sum(pExp.filter(t=>+t.date.slice(8)<=day))-tSpent;
+    if(isCur&&pExp.length)tips.push(diff>=0?'You’ve spent '+f(diff)+' less than at this point last month. Nicely done, you two.':'Spending is '+f(-diff)+' ahead of this point last month — worth a quick look together.');
+    if(leftAssign>0)tips.push(f(leftAssign)+' of income isn’t assigned yet. Sending it to a goal now means it won’t quietly disappear.');
+    const steps=[['Add your accounts','Current, cash, card, savings',S.accounts.length>0,()=>{this.go('accounts');this.openAcct()}],['Set your pay','So the budget has something to divide',income>0,()=>this.go('us')],['Give categories a limit','Tap any category in Budget',tLimit>0,()=>this.go('budget')],['Log your first entry','Or add your regular bills',S.tx.length>0,()=>this.openTx()]];
+    const fresh=!S.tx.length&&!S.accounts.length;
+    const home={showStart:S.empty&&steps.some(x=>!x[2]),steps:steps.map((x,i)=>({t:x[0],s:x[1],go:x[3],mark:x[2]?'✓':i+1,bg:x[2]?'var(--ink)':'transparent',fg:x[2]?'var(--bg)':'var(--ink)'})),safeNum:this.num(Math.round(safe)),perDay:fresh?'A clean slate. Add your accounts and pay, and this becomes your safe-to-spend number.':isCur?(safe>0?'About '+f(Math.round(safe/daysLeft))+' a day for the next '+daysLeft+' days, after every bill is covered.':'Budgets are used up for now. Bills are still covered — a small top-up from a quiet category will do it.'):ym<cur?'This month is closed — here’s how it ended.':'This month hasn’t started yet.',
+      spent:f(tSpent),limit:f(tAvail),spentW:pc(tSpent/tAvail),billsW:pc(Math.max(0,Math.min(unpaid,tAvail-tSpent))/tAvail),todayL:pc(pace),bills:f(unpaid),
+      paceNote:isCur&&tAvail>0?(tSpent/tAvail<=pace+.03?'On pace — spending is moving with the calendar.':'A little ahead of the calendar. Easy to even out this week.'):'',
+      upcoming:ev.slice(0,5).map(evRow),watch,recent:[...mtx].sort(desc).slice(0,6).map(txRow),goals:S.goals.slice(0,3).map(potVM),tips:tips.slice(0,3).map((t,i)=>({n:pad(i+1),t})),hasTips:tipsOn&&!clear&&tips.length>0};
+    // activity
+    const q=S.q.trim().toLowerCase();
+    const flt=mtx.filter(t=>(S.fWho==='all'||t.who===S.fWho)&&(S.fCat==='all'||t.cat===S.fCat)&&(S.fAcct==='all'||t.acct===S.fAcct||t.to===S.fAcct)&&(!q||(t.name+' '+(t.note||'')+' '+((catBy[t.cat]||{}).name||'')).toLowerCase().includes(q))).sort(desc);
+    const groups=[];flt.forEach(t=>{let g=groups[groups.length-1];if(!g||g.date!==t.date)groups.push(g={date:t.date,label:dLab(isoD(t.date)),n:0,items:[]});g.items.push(txRow(t));g.n+=t.type==='inc'?t.amt:t.type==='exp'?-t.amt:0});
+    groups.forEach(g=>g.total=(g.n>0?'+':'')+f(g.n));
+    const act={onQ:e=>this.setState({q:e.target.value}),who:[['all','Everyone'],['A',A],['B',B],['J','Joint']].map(w=>chip(w[1],S.fWho===w[0],()=>this.setState({fWho:w[0]}))),
+      cats:[chip('All categories',S.fCat==='all',()=>this.setState({fCat:'all'}))].concat(cats.map(c=>chip(c.name,S.fCat===c.id,()=>this.setState({fCat:c.id})))),
+      accts:[chip('All accounts',S.fAcct==='all',()=>this.setState({fAcct:'all'}))].concat(S.accounts.filter(a=>a.type!=='invest').map(a=>chip(a.name,S.fAcct===a.id,()=>this.setState({fAcct:a.id})))),groups,empty:!flt.length,count:flt.length+' entries · '+f(sum(flt.filter(t=>t.type==='exp')))+' out',exportCsv:()=>this.exportCsv(flt)};
+    // budget
+    const gSum=g=>sum(rows.filter(r=>g.includes(r.g)),r=>r.limit);
+    const zero=style==='Zero-based';
+    const bud={income:f(income),budgeted:f(tLimit),goals:f(goalsMo),left:f(leftAssign),leftLabel:zero?'Left to assign':'Unbudgeted',leftColor:leftAssign<0?'var(--bad)':zero?(leftAssign===0?'var(--good)':'var(--warn)'):'var(--ink)',
+      note:!income?'Set your monthly pay under Us two, then give every bit of it a job here.':leftAssign<0?'You’ve planned '+f(-leftAssign)+' more than comes in. Trimming one or two categories will bring it back.':zero?(leftAssign===0?'Every bit of income has a job. That’s the whole method.':'Give the remaining '+f(leftAssign)+' a job — a category or a goal — so nothing drifts.'):'',
+      is532:style==='50/30/20',bands:[['Needs',gSum(['needs']),.5,'var(--ink)'],['Wants',gSum(['wants','personal']),.3,'var(--a)'],['Savings',goalsMo,.2,'var(--acc)']].map(b=>({name:b[0],amt:f(b[1]),w:pc(b[1]/income),t:pc(b[2]),color:b[3],label:Math.round(b[1]/(income||1)*100)+'% of income, guide is '+b[2]*100+'%'})),
+      groups:[['needs','Needs'],['wants','Wants'],['personal','Pocket money']].map(g=>{const rs=rows.filter(r=>r.g===g[0]);return{name:g[1],total:f(sum(rs,r=>r.sp))+' of '+f(sum(rs,r=>r.avail)),rows:rs}}),paceL:pc(pace),paceO:isCur?.6:0,addCat:()=>this.openCat()};
+    bud.hasNote=!!bud.note;
+    // bills
+    const first=new Date(+ym.slice(0,4),+ym.slice(5)-1,1).getDay(),cells=[];
+    for(let i=0;i<first;i++)cells.push({d:'',bd:'transparent',bg:'transparent',fg:'var(--mute)',dots:[]});
+    for(let d=1;d<=days;d++){const bs=billsM.filter(b=>b.d===d),due=bs.some(b=>!b.isPaid),late=due&&(ym<cur||(isCur&&d<tDay)),pay=S.incomes.some(x=>x.amt>0&&Math.min(x.day,days)===d),t=isCur&&d===tDay;
+      cells.push({d,dots:bs.map(()=>({c:'currentColor'})),bd:pay?'var(--ink)':'transparent',bg:t?'var(--ink)':late?'var(--bad)':due?'var(--acc)':bs.length?'var(--soft)':'transparent',fg:t?'var(--bg)':late?'#ffffff':'var(--ink)'})}
+    const subsMo=sum(S.bills.filter(b=>b.sub));
+    const bills={total:f(sum(billsM)),paid:f(sum(billsM.filter(b=>b.isPaid))),due:f(sum(billsM.filter(b=>!b.isPaid))),subsYr:f(subsMo*12),cells,wd:WD.map(w=>({w:w[0]})),add:()=>this.openItem('bill'),
+      list:billsM.map(b=>{const st=b.isPaid?'Paid':ym<cur?'Missed':isCur?(b.d<tDay?'Overdue':b.d===tDay?'Due today':'In '+(b.d-tDay)+' days'):'Scheduled',bad=st==='Overdue'||st==='Missed';
+        return{day:b.d,mon:MN[+ym.slice(5)-1].slice(0,3),name:b.name,amt:f(b.amt),status:st,statusColor:bad?'var(--bad)':'var(--mute)',btn:b.isPaid?'Paid':'Pay',btnBg:b.isPaid?'transparent':'var(--btn)',btnFg:b.isPaid?'var(--ink)':'var(--btnInk)',btnBd:b.isPaid?'var(--chip)':'var(--btn)',pay:()=>this.payBill(b,ym),edit:()=>this.openItem('bill',b)}})};
+    // savings
+    const pots=S.goals,savAccts=S.accounts.filter(a=>a.type==='save'),savTotal=sum(savAccts,a=>a.balance),inPots=sum(pots,g=>g.saved),essentials=sum(rows.filter(r=>r.g==='needs'),r=>r.limit),ef=pots[0];
+    const potMoves=S.tx.filter(t=>t.type==='xfer'&&t.pot).sort(desc),netM=sum(potMoves.filter(t=>t.date.slice(0,7)===ym),t=>t.potDir==='out'?-t.amt:t.amt);
+    const pv=pots.map(g=>({s:g.saved,g})),proj=[inPots];let intTot=0;
+    for(let i=1;i<=12;i++){pv.forEach(p=>{const it=p.s*((acctBy[p.g.acct]||{}).apy||0)/1200;intTot+=it;p.s+=it;if(p.g.auto&&p.s<p.g.target)p.s+=Math.min(p.g.monthly,p.g.target-p.s)});proj.push(sum(pv,p=>p.s))}
+    const ru=Math.max(0,Math.round(sum(exp.filter(t=>!t.billId),t=>Math.ceil(t.amt/10)*10-t.amt)-(S.roundSwept[ym]||0))),sp=pots.find(g=>g.id===S.sweepPot)||pots[0],autoPots=pots.filter(g=>g.auto),autoTot=sum(autoPots,g=>g.monthly);
+    const sav={total:this.num(Math.round(inPots)),month:(netM>=0?'+':'')+f(netM)+' moved in during '+mLabel(ym)+'.',
+      stats:[{k:'Moves each payday',v:f(autoTot),s:autoPots.length+' pots on auto-save'},{k:'Emergency cover',v:ef&&essentials?(ef.saved/essentials).toFixed(1)+' months':'—',s:'of essential spending'},{k:'Not in a pot yet',v:f(Math.max(0,savTotal-inPots)),s:'spare in savings accounts'},{k:'In 12 months',v:f(Math.round(proj[12])),s:f(Math.round(intTot))+' of it is interest'}],
+      proj:proj.map((v,i)=>({h:pc(v/(proj[12]||1)),bg:i===0?'var(--a)':'var(--bg)',label:MN[(today.getMonth()+i)%12][0],title:mLabel(addM(cur,i),1)+' · '+f(Math.round(v))})),
+      pots:pots.map(potVM),add:()=>this.openPot(),history:potMoves.slice(0,7).map(txRow),
+      autoText:autoTot>0?'Right after payday, '+f(autoTot)+' moves from '+aName(this.mainAcct(S))+' into '+autoPots.length+' pots. Switch any pot on or off above.':'No pot is on auto-save yet. Switch one on above and it fills itself.',
+      ruBg:S.roundUps?'var(--ink)':'var(--chip)',ruX:S.roundUps?'23px':'3px',toggleRu:()=>this.setState({roundUps:!S.roundUps}),
+      ruText:S.roundUps?(ru>0?f(ru)+' of spare change from '+mLabel(ym)+' is ready to move.':'All round-ups for '+mLabel(ym)+' are already moved.'):'Rounds each purchase up to the next 10 and saves the difference.',
+      ruCan:S.roundUps&&ru>0&&!!sp,ruBtn:sp?'Move '+f(ru)+' to '+sp.name:'',ruMove:()=>moveToPot(sp,ru,'Round-ups · '+sp.name,s=>({roundSwept:{...s.roundSwept,[ym]:(s.roundSwept[ym]||0)+ru}})),
+      swBg:S.sweep?'var(--ink)':'var(--chip)',swX:S.sweep?'23px':'3px',toggleSw:()=>this.setState({sweep:!S.sweep}),
+      swText:S.sweep?'On the last day of the month, whatever is left in safe-to-spend moves to '+(sp?sp.name:'a pot')+'. Today that would be about '+f(Math.max(0,Math.round(safe)))+'.':'Moves whatever is left in safe-to-spend into a pot on the last day of the month.',
+      sweepPots:pots.map(g=>chip(g.name,!!sp&&sp.id===g.id,()=>this.setState({sweepPot:g.id})))};
+    // debt
+    const cardDebts=S.accounts.filter(a=>a.type==='card'&&a.balance<0).map(a=>({id:a.id,name:a.name,balance:-a.balance,apr:a.apr||36,min:Math.max(100,Math.round(-a.balance*.05)),card:a}));
+    const allDebts=S.debts.concat(cardDebts),res=simDebt(allDebts,S.extra,S.strat),base=simDebt(allDebts,0,S.strat),stp=Math.max(1,Math.ceil(res.series.length/30)),dHi=res.series[0]||1;
+    const debt={total:f(sum(allDebts,x=>x.balance)),free:allDebts.length?mLabel(addM(cur,res.months),1):'Debt-free',interest:f(Math.round(res.interest)),addDebt:()=>this.openItem('debt'),
+      strat:[chip('Highest interest first',S.strat==='avalanche',()=>this.setState({strat:'avalanche'})),chip('Smallest balance first',S.strat==='snowball',()=>this.setState({strat:'snowball'}))],
+      extra:S.extra,extraStr:f(S.extra),onExtra:e=>this.setState({extra:+e.target.value}),
+      saveNote:S.extra>0&&base.months>res.months?'That extra '+f(S.extra)+' clears everything '+(base.months-res.months)+' months sooner and keeps '+f(Math.round(base.interest-res.interest))+' of interest in your pocket.':'Slide to see how a little extra each month changes the finish line.',
+      monthly:f(sum(allDebts,x=>x.min)+S.extra)+' a month goes to debt in total. As each one clears, its payment rolls onto the next.',
+      timeline:res.series.filter((v,i)=>i%stp===0).map((v,i)=>({h:pc(Math.max(.02,v/dHi)),title:mLabel(addM(cur,i*stp),1)+' · '+f(Math.round(v))})),
+      list:res.order.map((id,i)=>{const x=allDebts.find(z=>z.id===id);return{n:i+1,name:x.name,bal:f(x.balance),meta:x.apr+'% · '+f(x.min)+'/mo minimum',done:'clear '+mLabel(addM(cur,res.done[id]||0),1),edit:x.card?()=>this.openAcct(x.card):()=>this.openItem('debt',x)}})};
+    // accounts
+    const hold=S.assets||[],holdSum=sum(hold,x=>x.value),assets=sum(S.accounts.filter(a=>a.balance>0),a=>a.balance)+holdSum,liab=sum(S.debts,x=>x.balance)+sum(S.accounts.filter(a=>a.balance<0),a=>-a.balance),net=assets-liab;
+    const hist=[5,4,3,2,1,0].map(k=>S.empty?net:net-k*6400-(k?(k*7%4)*900:0)),hLo=Math.min(...hist)*.94,hHi=Math.max(...hist);
+    const sel=acctBy[S.selAcct]||S.accounts[0],tOf=a=>TYPE[a.type]||TYPE.current;
+    const flow=(t,id)=>t.type==='inc'?(t.acct===id?t.amt:0):t.type==='exp'?(t.acct===id?-t.amt:0):(t.to===id?t.amt:0)-(t.acct===id?t.amt:0);
+    let detail={has:false,rows:[],days:[]};
+    if(sel){const id=sel.id;let run=sel.balance;const led=S.tx.filter(t=>t.acct===id||t.to===id).sort(desc).map(t=>{const v=flow(t,id),after=run;run-=v;return{t,v,after}}),mLed=led.filter(x=>x.t.date.slice(0,7)===ym);
+      const dayBal=[];let b=sel.balance,k=0;for(let i=0;i<30;i++){const dt=new Date(today.getFullYear(),today.getMonth(),tDay-i),iso=ymOf(dt)+'-'+pad(dt.getDate());dayBal.unshift({v:b,title:dLab(dt)});while(k<led.length&&led[k].t.date>=iso){b-=led[k].v;k++}}
+      const mx2=Math.max(1,...dayBal.map(x=>Math.abs(x.v)));
+      detail={has:true,name:sel.name,type:tOf(sel)[0],bal:f(sel.balance),inM:f(sum(mLed.filter(x=>x.v>0),x=>x.v)),outM:f(sum(mLed.filter(x=>x.v<0),x=>-x.v)),count:mLed.length+' in '+mLabel(ym,1),
+        days:dayBal.map((x,i)=>({h:pc(Math.max(.03,Math.abs(x.v)/mx2)),c:i===29?'var(--acc)':'var(--ink)',title:x.title+' · '+f(Math.round(x.v))})),
+        rows:mLed.slice(0,12).map(x=>({date:dLab(isoD(x.t.date)).slice(4),name:x.t.name,sub:x.t.type==='xfer'?aName(x.t.acct)+' → '+aName(x.t.to):(catBy[x.t.cat]||{}).name||'',amt:(x.v>0?'+':'')+f(x.v),amtColor:x.v>0?'var(--good)':'var(--ink)',after:f(Math.round(x.after)),open:()=>this.openTx(x.t)})),
+        empty:!mLed.length,more:mLed.length>12?'Showing the latest 12. Filter Activity by this account for the rest.':'Small figure under each amount is the balance after it.',
+        transfer:()=>this.openTx(null,{type:'xfer',acct:id,to:''}),edit:()=>this.openAcct(sel),addTx:()=>this.openTx(null,{acct:id})}}
+    const acc={net:this.num(net),delta:(net-hist[4]>=0?'+':'')+f(net-hist[4])+' since last month',assets:f(assets),liab:f(liab),assetsW:pc(assets/(assets+liab||1)),add:()=>this.openAcct(),transfer:()=>this.openTx(null,{type:'xfer',acct:sel?sel.id:'',to:''}),d:detail,
+      hist:hist.map((v,i)=>({v:f(v),label:MN[(today.getMonth()-5+i+12)%12].slice(0,3),h:pc(Math.max(.06,(v-hLo)/(hHi-hLo||1))),bg:i===5?'var(--acc)':'var(--soft)'})),
+      mix:[['Cash',['current','cash'],'var(--ink)'],['Savings',['save'],'var(--acc)'],['Investments',['invest'],'var(--b)']].map(x=>({label:x[0],color:x[2],amt:f(sum(S.accounts.filter(a=>x[1].includes(a.type)),a=>a.balance))})),
+      cards:S.accounts.map(a=>{const on=!!sel&&sel.id===a.id,used=a.type==='card'&&a.limit?Math.max(0,-a.balance)/a.limit:0;return{name:a.name,type:tOf(a)[0],band:tOf(a)[1],meta:[a.bank,a.last4?'•• '+a.last4:'',whoName[a.who]||'Joint'].filter(Boolean).join(' · '),bal:f(a.balance),balColor:a.balance<0?(on?'#ff8f85':'#b3352b'):'inherit',bg:on?'#0b0b0c':'#ffffff',fg:on?'#ffffff':'#0b0b0c',track:on?'rgba(255,255,255,.28)':'#0b0b0c',
+        extra:a.type==='card'?(a.limit?Math.round(used*100)+'% of '+f(a.limit)+' limit used':'No limit set'):a.type==='save'?(a.apy?a.apy+'% a year · ':'')+pots.filter(g=>g.acct===a.id).length+' pots':a.type==='invest'?'Balance updated by hand':a.type==='cash'?'Notes and coins':'Everyday spending',hasBar:a.type==='card'&&!!a.limit,barW:pc(used),barC:used>.5?'#ff8f85':'var(--accBase)',pick:()=>this.setState({selAcct:a.id})}}),
+      loans:S.debts.map(x=>({name:x.name,meta:x.apr+'% interest · '+f(x.min)+'/mo',bal:f(-x.balance),edit:()=>this.openItem('debt',x)})),hasLoans:S.debts.length>0};
+    const invA=S.accounts.filter(a=>a.type==='invest'),invCost=invA.filter(a=>a.cost>0),invGain=sum(invCost,a=>a.balance-a.cost),posSum=ts=>sum(S.accounts.filter(a=>ts.includes(a.type)&&a.balance>0),a=>a.balance);
+    const wSeg=[['Cash',posSum(['current','cash']),'var(--ink)'],['Savings',posSum(['save']),'var(--acc)'],['Investments',posSum(['invest']),'var(--accText)'],['Property & other assets',holdSum,'var(--mute)']];
+    const worth={ownTotal:f(assets),oweTotal:f(liab),segs:wSeg.filter(x=>x[1]>0).map(x=>({v:x[1],color:x[2]})),rows:wSeg.map(x=>({label:x[0],color:x[2],amt:f(x[1]),pct:Math.round(x[1]/(assets||1)*100)+'%'})),
+      assets:hold.map(x=>({ini:(AK[x.kind]||'Other')[0],name:x.name,meta:AK[x.kind]||'Other',val:f(x.value),edit:()=>this.openItem('asset',x)})),noAssets:!hold.length,addAsset:()=>this.openItem('asset'),
+      inv:invA.map(a=>{const g=a.cost>0?a.balance-a.cost:null;return{ini:(a.name||'?')[0].toUpperCase(),name:a.name,meta:[whoName[a.who],a.bank].filter(Boolean).join(' · '),val:f(a.balance),gain:g===null?'Add what you put in to see the gain':(g>=0?'+':'')+f(g)+' · '+(g>=0?'+':'−')+Math.abs(Math.round(g/a.cost*100))+'%',gainColor:g===null?'var(--mute)':g>=0?'var(--good)':'var(--bad)',edit:()=>this.openAcct(a)}}),noInv:!invA.length,addInv:()=>this.openAcct(null,{atype:'invest'}),
+      owe:S.accounts.filter(a=>a.balance<0).map(a=>({name:a.name,meta:tOf(a)[0],bal:f(-a.balance)})).concat(S.debts.map(x=>({name:x.name,meta:x.apr+'% interest',bal:f(x.balance)}))),goDebt:()=>this.go('goals')};
+    worth.noOwe=!worth.owe.length;
+    home.accts=S.accounts.filter(a=>a.type!=='invest').slice(0,5).map(a=>({name:a.name,type:tOf(a)[0],dot:tOf(a)[1],bal:f(a.balance),balColor:a.balance<0?'var(--bad)':'var(--ink)'}));
+    // reports
+    const six=[-5,-4,-3,-2,-1,0].map(k=>{const m=addM(ym,k),t=inM(m);return{m,i:sum(t.filter(x=>x.type==='inc')),e:sum(t.filter(x=>x.type==='exp')),kids:sum(t.filter(x=>x.cat==='kids'))}}),mx=Math.max(1,...six.map(x=>Math.max(x.i,x.e)));
+    const varExp=exp.filter(t=>!t.billId),big=[...varExp].sort((a,b)=>b.amt-a.amt)[0],spendDays={};varExp.forEach(t=>spendDays[t.date]=1);
+    const incM=sum(inc)||income,mer={};varExp.forEach(t=>{const o=mer[t.name]||(mer[t.name]={name:t.name,a:0,n:0});o.a+=t.amt;o.n++});
+    const spRows=rows.filter(r=>r.sp>0).sort((a,b)=>b.sp-a.sp),maxSp=spRows.length?spRows[0].sp:1;
+    const rep={months:six.map(x=>({label:MN[+x.m.slice(5)-1].slice(0,3),incH:pc(x.i/mx),expH:pc(x.e/mx),net:(x.i-x.e>=0?'+':'')+this.num(Math.round((x.i-x.e)/100)/10)+'k',netColor:x.i-x.e>=0?'var(--good)':'var(--bad)'})),
+      cats:spRows.map(r=>{const p=pSpent[r.id]||0,d=p?Math.round((r.sp-p)/p*100):null;return{name:r.name,color:r.color,amt:f(r.sp),w:pc(r.sp/maxSp),share:Math.round(r.sp/tSpent*100)+'%',delta:d===null?'new':d===0?'same':(d>0?'▲ ':'▼ ')+Math.abs(d)+'%',deltaColor:d>0?'var(--bad)':d<0?'var(--good)':'var(--mute)'}}),
+      who:['A','B','J'].map(w=>{const v=sum(exp.filter(t=>t.who===w));return{label:whoName[w],amt:f(v),w:pc(v/(tSpent||1)),color:whoCol[w]}}),
+      merchants:Object.values(mer).sort((a,b)=>b.a-a.a).slice(0,6).map(o=>({name:o.name,amt:f(o.a),count:o.n+'×'})),
+      stats:[{k:'Savings rate',v:incM?Math.round((incM-tSpent)/incM*100)+'%':'—',s:'of income kept'},{k:'Daily average',v:f(Math.round(tSpent/Math.max(1,day))),s:'across '+day+' days'},{k:'Largest purchase',v:big?f(big.amt):'—',s:big?big.name:'nothing yet'},{k:'No-spend days',v:String(Math.max(0,day-Object.keys(spendDays).length)),s:'bills don’t count'},{k:'Kids & family',v:f(Math.round(sum(six,x=>x.kids)/6)),s:'monthly average, 6 months'}]};
+    const repData=()=>({ym,month:mLabel(ym),names:A+' & '+B,ccy:P.currency??'AED',spent:Math.round(tSpent),income:Math.round(incM),stats:rep.stats.map(s=>[s.k,s.v]),cats:spRows.map(r=>[r.name,Math.round(r.sp),Math.round(r.sp/(tSpent||1)*100)+'%',Math.round(pSpent[r.id]||0)]),who:['A','B','J'].map(w=>[whoName[w],Math.round(sum(exp.filter(t=>t.who===w)))]),mer:Object.values(mer).sort((a,b)=>b.a-a.a).slice(0,10).map(o=>[o.name,o.n,Math.round(o.a)]),months:six.map(x=>[mLabel(x.m),Math.round(x.i),Math.round(x.e),Math.round(x.i-x.e)])});
+    rep.dlReport=()=>this.report('html',repData());rep.dlCsv=()=>this.report('csv',repData());
+    // plan
+    const cash=sum(S.accounts.filter(a=>a.type==='current'||a.type==='cash'),a=>a.balance),since=new Date(today.getFullYear(),today.getMonth(),tDay-60),sinceIso=ymOf(since)+'-'+pad(since.getDate());
+    const varAvg=sum(S.tx.filter(t=>t.type==='exp'&&!t.billId&&t.date>=sinceIso))/60;
+    let bal=cash;const series=[];for(let i=0;i<=30;i++){ev.filter(e=>e.i===i).forEach(e=>bal+=e.amt);if(i>0)bal-=varAvg;series.push(bal)}
+    const sLo=Math.min(0,...series),sHi=Math.max(cushion,...series)*1.05,minV=Math.min(...series),minI=series.indexOf(minV),dAt=i=>new Date(today.getFullYear(),today.getMonth(),tDay+i),low=minV<cushion;
+    const surplus=Math.max(0,leftAssign);
+    const plan={start:f(cash),end:f(Math.round(series[30])),endLab:dLab(dAt(30)),cushion:f(cushion),cushionB:pc((cushion-sLo)/(sHi-sLo)),
+      bars:series.map((v,i)=>({h:pc((v-sLo)/(sHi-sLo)),c:v<cushion?'var(--bad)':i===0?'var(--ink)':'var(--acc)',title:dLab(dAt(i))+' · '+f(Math.round(v))})),
+      note:!S.accounts.length?'Add an account and your bills, and the next 30 days appear here.':low?'Heads up: the balance dips to '+f(Math.round(minV))+' around '+dLab(dAt(minI))+', below your '+f(cushion)+' cushion. Nudging a purchase past payday keeps things comfortable.':'You stay above your '+f(cushion)+' cushion the whole way. The lowest point is '+f(Math.round(minV))+' on '+dLab(dAt(minI))+'.',noteColor:low&&S.accounts.length?'var(--bad)':'var(--ink)',
+      events:ev.slice(0,8).map(e=>({...evRow(e),bal:f(Math.round(series[e.i]))})),
+      trips:S.events.map(e=>{const l=e.budget-e.spent;return{name:e.name,when:e.when,w:pc(e.spent/(e.budget||1)),bar:l<0?'var(--bad)':'var(--acc)',detail:f(e.spent)+' of '+f(e.budget)+' · '+(l<0?f(-l)+' over':f(l)+' to go'),add:()=>this.openContrib('event',e),edit:()=>this.openItem('event',e)}}),addEvent:()=>this.openItem('event'),addPlanned:()=>this.openItem('planned'),
+      items:S.planned.map(p=>{const n=surplus>0?Math.ceil(p.cost/surplus):0,vote=k=>()=>this.setState(s=>({planned:s.planned.map(x=>x.id===p.id?{...x,[k]:!x[k]}:x)}));
+        return{name:p.name,cost:f(p.cost),both:p.A&&p.B,verdict:safe>=p.cost?'Fits in this month’s safe-to-spend.':n?'Set aside '+f(Math.ceil(p.cost/n))+' a month and it’s yours by '+mLabel(addM(cur,n),1)+'.':'No spare room yet — free up a category first.',
+          aLabel:(p.A?'✓ ':'')+A,bLabel:(p.B?'✓ ':'')+B,aBg:p.A?'var(--a)':'transparent',aFg:p.A?'#0b0b0c':'var(--ink)',bBg:p.B?'var(--b)':'transparent',bFg:p.B?'var(--bg)':'var(--ink)',voteA:vote('A'),voteB:vote('B'),edit:()=>this.openItem('planned',p),
+          buy:()=>this.setState(s=>{const t={id:s.nextId,date:cur+'-'+pad(tDay),name:p.name,cat:this.catOr('shopping',s),amt:p.cost,who:'J',type:'exp',acct:this.mainAcct(s)};return Object.assign(this.apply(s,t,1),{planned:s.planned.filter(x=>x.id!==p.id),nextId:s.nextId+1,tx:s.tx.concat(t)})})}})};
+    // us
+    const shared=exp.filter(t=>t.cat!=='allowA'&&t.cat!=='allowB'),pd={A:0,B:0,J:0};shared.forEach(t=>pd[t.who]+=t.amt);
+    const incA=sum(S.incomes.filter(x=>x.who==='A')),incB=income-incA,rA=(P.splitRule??'50/50')==='By income'?incA/(income||1):.5,owe=pd.A-rA*(pd.A+pd.B)-(S.settled[ym]||0),sq=Math.abs(owe)<1;
+    const us={split,joint:!split,rule:Math.round(rA*100)+' / '+Math.round((1-rA)*100),line:sq?'You’re all square':(owe>0?B+' owes '+A:A+' owes '+B)+' '+f(Math.round(Math.abs(owe))),
+      sub:sq?'Nothing to move between you this month.':A+' covered '+f(pd.A)+' and '+B+' covered '+f(pd.B)+' of shared costs from personal cards.',canSettle:!sq,settle:()=>this.setState(s=>({settled:{...s.settled,[ym]:(s.settled[ym]||0)+owe}})),
+      paid:['A','B','J'].map(w=>({label:whoName[w]+(w==='J'?' account':''),amt:f(pd[w]),w:pc(pd[w]/(pd.A+pd.B+pd.J||1)),color:whoCol[w]})),
+      allow:[['allowA',A,'var(--a)'],['allowB',B,'var(--b)']].map(a=>{const r=rows.find(x=>x.id===a[0]);return{name:a[1],color:a[2],left:r.left,detail:r.detail,w:r.w}}),
+      contrib:[{label:A,amt:f(incA)+' · '+Math.round(incA/(income||1)*100)+'%',w:pc(incA/(income||1)),color:'var(--a)',edit:()=>this.openIncome('A',A)},{label:B,amt:f(incB)+' · '+Math.round(incB/(income||1)*100)+'%',w:pc(incB/(income||1)),color:'var(--b)',edit:()=>this.openIncome('B',B)}],
+      checks:CHECKS.map((t,i)=>{const k=ym+':'+i,on=!!S.checks[k];return{t,mark:on?'✓':'',bg:on?'var(--ink)':'transparent',deco:on?'line-through':'none',toggle:()=>this.setState(s=>({checks:{...s.checks,[k]:!on}}))}}),
+      checkLabel:CHECKS.filter((t,i)=>S.checks[ym+':'+i]).length+' of '+CHECKS.length+' done',reset:()=>this.setState(Object.assign(S.empty?blank():seed(new Date()),{tab:'us',catOv:{},catDel:[]}))};
+    // modal
+    const d=S.d,mo=S.modal,I=mo==='item'?ITEM[d.kind]:null,dc=mo==='budget'?catBy[d.cat]:null,isX=d.type==='xfer',dPot=d.pot?S.goals.find(g=>g.id===d.pot):null,out=d.potDir==='out';
+    const aChip=k=>a=>chip(a.name,d[k]===a.id,()=>this.setD(k,a.id)),pickable=S.accounts.filter(a=>!dPot||a.type==='current'||a.type==='cash');
+    const m={op:S.shown?1:0,tf:S.shown?'translateX(0)':'translateX(100%)',open:!!mo,isTx:mo==='tx',isBudget:mo==='budget',isContrib:mo==='contrib',isItem:mo==='item',isPot:mo==='pot',isAcct:mo==='acct',isCat:mo==='cat',isCustom:!!dc&&dc.g!=='personal',catGroups:[['needs','Needs'],['wants','Wants']].map(g=>chip(g[1],d.g===g[0],()=>this.setD('g',g[0]))),close:()=>this.close(),stop:e=>e.stopPropagation(),del:()=>this.del(),canDel:(!!d.id&&(mo==='tx'||mo==='item'||mo==='pot'||mo==='acct'))||(!!dc&&dc.g!=='personal'),
+      save:()=>mo==='tx'?this.saveTx():mo==='budget'?this.saveBudget():mo==='contrib'?this.saveContrib():mo==='pot'?this.savePot():mo==='acct'?this.saveAcct():mo==='cat'?this.saveCat():this.saveItem(),
+      title:mo==='tx'?(dPot?(out?'Withdraw from ':'Add to ')+dPot.name:d.id?'Edit entry':'New entry'):mo==='budget'?dc.name:mo==='contrib'?'Spend on '+d.name:mo==='pot'?(d.id?'Edit pot':'New savings pot'):mo==='acct'?(d.id?'Edit account':'New account'):mo==='cat'?'New category':I?(d.kind==='income'?d.name+'’s ':d.id?'Edit ':'New ')+I.t:'',
+      showTypes:mo==='tx'&&!dPot,bigAmt:mo==='tx'||mo==='contrib',types:[['exp','Expense'],['inc','Income'],['xfer','Transfer']].map(t=>chip(t[1],d.type===t[0],()=>this.setD('type',t[0]))),showCats:d.type==='exp',showWho:!isX,
+      hasPotInfo:!!dPot,potInfo:dPot?(out?'Comes out of '+dPot.name+' in '+aName(dPot.acct)+'. '+f(dPot.saved)+' is in the pot right now.':'Goes into '+dPot.name+', kept in '+aName(dPot.acct)+'.'):'',
+      showFrom:!(dPot&&out),showTo:isX&&!(dPot&&!out),acctLabel:isX?'From':d.type==='inc'?'Into account':'Paid from',accts:pickable.map(aChip('acct')),tos:pickable.map(aChip('to')),
+      cats:cats.map(c=>chip(c.name,d.cat===c.id,()=>this.setD('cat',c.id))),whoLabel:d.type==='inc'?'Who earned it':'Who spent it',who:['J','A','B'].map(w=>chip(whoName[w],d.who===w,()=>this.setD('who',w))),
+      budInfo:mo==='budget'?'Spent '+f(spent[d.cat]||0)+' so far in '+mLabel(ym)+'.':'',avgLabel:'Use 3-month average · '+f(d.avg||0),useAvg:()=>this.setD('limit',String(d.avg||0)),
+      from:mo==='budget'?rows.filter(r=>r.id!==d.cat&&r.leftN>0).sort((a,b)=>b.leftN-a.leftN).slice(0,6).map(r=>chip(r.name+' · '+f(r.leftN),d.from===r.id,()=>this.setD('from',d.from===r.id?'':r.id))):[],
+      catTx:mo==='budget'?exp.filter(t=>t.cat===d.cat).sort(desc).slice(0,4).map(t=>({name:t.name,date:dLab(isoD(t.date)).slice(4),amt:f(t.amt)})):[],
+      quick:[100,250,500,1000].map(v=>({label:'+'+this.num(v),on:()=>this.setD('amt',String((parseFloat(d.amt)||0)+v))})),
+      hasName:!I||d.kind!=='income',amtLabel:I?I.al:'',extraLabel:I&&I.el||'',hasExtra:!!(I&&I.ex),
+      potAccts:S.accounts.filter(a=>a.type==='save').map(aChip('acct')),atypes:Object.keys(TYPE).map(k=>chip(TYPE[k][0],d.atype===k,()=>this.setD('atype',k))),owners:['J','A','B'].map(w=>chip(whoName[w],d.who===w,()=>this.setD('who',w))),
+      hasAcctExtra:d.atype==='card'||d.atype==='save'||d.atype==='invest',acctExtraLabel:d.atype==='card'?'Credit limit':d.atype==='invest'?'Amount you put in (optional)':'Interest rate (% a year)'};
+    m.isAsset=mo==='item'&&d.kind==='asset';m.akinds=Object.keys(AK).map(k=>chip(AK[k],d.akind===k,()=>this.setD('akind',k)));
+    const dN=mo==='budget'?S.tx.filter(t=>t.cat===d.cat).length:0,dB=mo==='budget'?S.bills.filter(b=>b.cat===d.cat).length:0;
+    Object.assign(m,{delStep:!!d.delStep,delLabel:d.delStep?'Confirm delete':'Delete',delUsed:dN+dB>0,delInfo:dN+dB>0?(dN?dN+(dN===1?' entry':' entries'):'')+(dN&&dB?' and ':'')+(dB?dB+(dB===1?' bill':' bills'):'')+(dN+dB===1?' uses':' use')+' this category. Where should '+(dN+dB===1?'it':'they')+' go?':'Nothing uses this category yet, so it can go straight away.',
+      moveTo:mo==='budget'?cats.filter(c=>c.id!==d.cat).map(c=>chip(c.name,d.moveTo===c.id,()=>this.setD('moveTo',c.id))).concat(chip('Leave uncategorised',d.moveTo==='none',()=>this.setD('moveTo','none'))):[],cancelDel:()=>this.setState(s=>({d:{...s.d,delStep:false,moveTo:'',err:''}}))});
+    m.hasCatTx=m.catTx.length>0;
+    const on={};['amt','name','date','note','limit','move','extra','due','bank'].forEach(k=>on[k]=e=>this.setD(k,e.target.value));
+    const tabs=clear?TABS.filter(t=>['home','activity','budget','bills','accounts','savings'].includes(t[0])):TABS,tab=tabs.some(t=>t[0]===S.tab)?S.tab:'home';
+    const go={};TABS.forEach(t=>go[t[0]]=()=>this.go(t[0]));
+    const is={};TABS.forEach(t=>is[t[0]]=tab===t[0]);
+    const navItem=(t,i)=>{const a=tab===t[0];return{num:pad(i+1),icon:ICON[t[0]],label:t[1],go:go[t[0]],bg:a?'var(--accBase)':'transparent',fg:a?'#0b0b0c':'#ffffff',numFg:a?'#3a3566':'#a9a7b8'}};
+    const moreActive=tabs.slice(4).some(t=>t[0]===tab);
+    const bottom=tabs.slice(0,4).map(t=>{const a=tab===t[0];return{icon:ICON[t[0]],label:t[1],go:go[t[0]],fg:a?'#b9b0ff':'#ffffff',bar:'transparent'}}).concat({icon:ICON.more,label:'More',go:()=>this.setState({more:true}),fg:moreActive?'#b9b0ff':'#ffffff',bar:'transparent'});
+    const kick={home:dLab(today)+' · day '+tDay+' of '+dim(cur),activity:'Every entry, searchable',budget:style+' budget',bills:'Bills & subscriptions',goals:'Payoff plan and timeline',accounts:'Balances and cards',worth:'Everything you own, minus what you owe',savings:'Pots, auto-save and growth',reports:'Trends and breakdowns',plan:'Forecast, trips and big purchases',us:'Your household, together'};
+    const titles={home:'Hi, '+A+' & '+B};TABS.forEach(t=>{if(t[0]!=='home')titles[t[0]]=t[1]});
+    const CRM='#fbf9ef',LAV='var(--accBase)',RED='#ff8f85',hb=(h,bg,label,tag)=>({h,bg,label:label||'',tag:tag||'',tagO:tag?1:0,two:false});
+    const HV={
+      budget:{label:bud.leftLabel+' · '+mLabel(ym),cur:1,num:this.num(leftAssign),fg:leftAssign<0?RED:LAV,sub:bud.note,stats:[['Monthly income',bud.income],['In categories',bud.budgeted],['To goals',bud.goals]]},
+      bills:{label:'Still due · '+mLabel(ym),cur:1,num:this.num(sum(billsM.filter(b=>!b.isPaid))),fg:LAV,sub:bills.paid+' paid so far across '+billsM.length+' bills.',stats:[['This month',bills.total],['Paid',bills.paid],['Subscriptions a year',bills.subsYr]]},
+      accounts:{label:'Across your accounts',cur:1,num:this.num(sum(S.accounts,a=>a.balance)),fg:'#ffffff',sub:'Everyday money, savings and cards. The full picture, with your assets, is under Net worth.',stats:acc.mix.map(x=>[x.label,x.amt])},
+      worth:{label:'Net worth',cur:1,num:acc.net,fg:'#ffffff',sub:acc.delta,stats:[['You own',acc.assets],['You owe',acc.liab],['Investment gain',invCost.length?(invGain>=0?'+':'')+f(invGain):'—']],bars:hist.map((v,i)=>hb(pc(Math.max(.08,(v-hLo)/(hHi-hLo||1))),i===5?LAV:CRM,MN[(today.getMonth()-5+i+12)%12].slice(0,3),i===5?f(v):''))},
+      savings:{label:'Saved across your pots',cur:1,num:sav.total,fg:'#ffffff',sub:sav.month,stats:sav.stats.map(s=>[s.k,s.v]),bars:proj.map((v,i)=>hb(pc(Math.max(.04,v/(proj[12]||1))),i===0?LAV:CRM,MN[(today.getMonth()+i)%12].slice(0,1),i===12?f(Math.round(v)):''))},
+      goals:{label:'Debt-free by',cur:0,num:debt.free,fg:LAV,sub:debt.monthly,stats:[['Owed today',debt.total],['Interest to go',debt.interest]],bars:debt.timeline.map((b,i)=>hb(b.h,i===0?LAV:CRM,'',i===0?debt.total:''))},
+      reports:{label:'Spent in '+mLabel(ym),cur:1,num:this.num(Math.round(tSpent)),fg:'#ffffff',sub:'Lavender is money in, cream is money out, month by month.',stats:rep.stats.map(s=>[s.k,s.v]),bars:six.map(x=>({h:pc(Math.max(.02,x.i/mx)),bg:LAV,h2:pc(Math.max(.02,x.e/mx)),bg2:CRM,two:true,label:MN[+x.m.slice(5)-1].slice(0,3),tag:'',tagO:0}))},
+      plan:{label:'Cash in 30 days',cur:1,num:this.num(Math.round(series[30])),fg:low&&S.accounts.length?RED:'#ffffff',sub:plan.note,stats:[['Today',plan.start],['Lowest point',f(Math.round(minV))],['Your cushion',plan.cushion]],bars:series.map((v,i)=>hb(pc(Math.max(.03,(v-sLo)/(sHi-sLo||1))),v<cushion?RED:i===0?LAV:CRM,i%5===0?String(dAt(i).getDate()):'',i===minI?f(Math.round(v)):''))},
+      us:{label:'Your household',cur:0,num:A+' & '+B,fg:'#ffffff',sub:split?us.sub:'One joint pot. Everything you both add lands in the same budget.',stats:us.contrib.map(c=>[c.label+'’s pay',c.amt])},
+      activity:{label:act.count.split(' · ')[0]+' in '+mLabel(ym),cur:1,num:this.num(Math.round(sum(flt.filter(t=>t.type==='exp')))),fg:'#ffffff',sub:'Money out across everything shown below.'}
+    }[tab];
+    const hBars=HV&&HV.bars||[],hero=HV?{show:true,label:HV.label,hasCur:!!HV.cur,cur:P.currency??'AED',num:HV.num,fg:HV.fg,sub:HV.sub||'',hasSub:!!HV.sub,stats:(HV.stats||[]).map(s=>({k:s[0],v:s[1]})),hasBars:hBars.length>1,bars:hBars.map((b,i)=>({...b,ta:i===0?'flex-start':i===hBars.length-1?'flex-end':'center',r:hBars.length>16?'5px 5px 2px 2px':'12px 12px 5px 5px'})),gap:hBars.length>16?'3px':'8px',size:HV.cur?'clamp(56px,8.5vw,108px)':'clamp(44px,6.5vw,84px)'}:{show:false,stats:[],bars:[]};
+    const stage={home:'lav',accounts:'lav',savings:'lav',us:'lav'}[tab]||'cream';
+    const e={watch:!home.watch.length,upcoming:!home.upcoming.length,recent:!home.recent.length,goals:!home.goals.length,accts:!home.accts.length,pots:!sav.pots.length,moves:!sav.history.length,cards:!acc.cards.length,bills:!bills.list.length,debts:!debt.list.length,events:!plan.events.length,trips:!plan.trips.length,items:!plan.items.length,cats:!rep.cats.length,merch:!rep.merchants.length};
+    return{side:{w:S.navMin?'96px':'236px',open:!S.navMin,labelO:S.navMin?0:1,jc:S.navMin?'center':'space-between',tip:S.navMin?'Expand sidebar':'Collapse sidebar',toggle:()=>this.setState(s=>({navMin:!s.navMin}))},stage,hero,iniA:(A||'?')[0],iniB:(B||'?')[0],qa:{income:()=>this.openTx(null,{type:'inc'}),transfer:()=>this.openTx(null,{type:'xfer'}),expense:()=>this.openTx()},e,wide:S.wide,narrow:!S.wide,more:S.more&&!S.wide,closeMore:()=>this.setState({more:false}),full:!clear,zoom:clear?1.1:1,nav:tabs.map(navItem),moreNav:tabs.slice(4).map((t,i)=>navItem(t,i+4)),bottom,
+      A,B,cur:P.currency??'AED',q:S.q,title:titles[tab],kicker:kick[tab],monthLabel:mLabel(ym),prevMonth:()=>this.setState({ym:addM(ym,-1)}),nextMonth:()=>this.setState({ym:addM(ym,1)}),openAdd:()=>this.openTx(),
+      is,go,home,act,bud,bills,sav,debt,acc,worth,rep,plan,us,m,d,on};
+  }
+}
+</script>
+</body>
+</html>
