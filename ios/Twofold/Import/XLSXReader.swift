@@ -86,7 +86,8 @@ struct ZipArchive {
     /// Raw DEFLATE → bytes of a known size.
     static func inflate(_ src: Data, size: Int) -> Data? {
         if size == 0 { return Data() }
-        if src.isEmpty { return nil }
+        // A statement sheet is never this big; refuse rather than reserve huge memory.
+        if src.isEmpty || size < 0 || size > 200_000_000 { return nil }
         var out = Data(count: size)
         let written = out.withUnsafeMutableBytes { (dst: UnsafeMutableRawBufferPointer) -> Int in
             src.withUnsafeBytes { (s: UnsafeRawBufferPointer) -> Int in
