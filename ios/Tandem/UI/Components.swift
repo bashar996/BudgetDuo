@@ -1,5 +1,11 @@
 import SwiftUI
 
+extension EnvironmentValues {
+    /// On wide screens the detail pane runs under the trailing safe area (the camera
+    /// strip in landscape) so its colours reach the edge; text is pushed in by this much.
+    @Entry var screenTrailingInset: CGFloat = 0
+}
+
 /// Black header, stepped edge, then a coloured sheet running to the bottom.
 struct Screen<Header: View, Content: View>: View {
     var color: Color
@@ -7,16 +13,20 @@ struct Screen<Header: View, Content: View>: View {
     var contentPadding: CGFloat = 20
     @ViewBuilder var header: Header
     @ViewBuilder var content: Content
+    @Environment(\.screenTrailingInset) private var trailingInset
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 header.frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.trailing, trailingInset)
                 BlobEdge(fill: color, mirrored: mirrored)
                 VStack(alignment: .leading, spacing: 0) { content }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, contentPadding)
-                    .padding(.bottom, 130)
+                    .padding(.trailing, trailingInset)
+                    // The system tab bar insets scroll content itself; this is just breathing room.
+                    .padding(.bottom, 40)
                     .frame(minHeight: 520, alignment: .top)
                     .background(color)
                     .foregroundStyle(Palette.black)
@@ -24,7 +34,8 @@ struct Screen<Header: View, Content: View>: View {
         }
         .scrollIndicators(.hidden)
         // Black above, the sheet colour below, so overscroll never shows a seam.
-        .background(VStack(spacing: 0) { Palette.black; color })
+        // Runs under the safe areas so short screens don't end in a black band.
+        .background(VStack(spacing: 0) { Palette.black; color }.ignoresSafeArea())
         .foregroundStyle(Palette.white)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -48,7 +59,9 @@ struct BigAmount: View {
     }
 }
 
-/// Back arrow + centred title used on pushed screens.
+/// Back arrow + centred title used on pushed screens. Without a back arrow
+/// (the wide-screen detail pane, sheets) it's just the title, aligned with the
+/// content below instead of centred between two empty slots.
 struct NavRow: View {
     var title: String
     var showBack = true
@@ -56,17 +69,23 @@ struct NavRow: View {
     @Environment(Router.self) private var router
 
     var body: some View {
-        HStack {
-            Button { router.back(dismiss) } label: {
-                Text("←").font(.geist(24)).frame(width: 44, height: 44)
+        if showBack {
+            HStack {
+                Button { router.back(dismiss) } label: {
+                    Text("←").font(.geist(24)).frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Back")
+                Text(title).font(.geist(19, .medium)).frame(maxWidth: .infinity)
+                Color.clear.frame(width: 44, height: 44)
             }
-            .accessibilityLabel("Back")
-            .opacity(showBack ? 1 : 0).disabled(!showBack)
-            Text(title).font(.geist(19, .medium)).frame(maxWidth: .infinity)
-            Color.clear.frame(width: 44, height: 44)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+        } else {
+            Text(title).font(.geist(19, .medium))
+                .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
     }
 }
 

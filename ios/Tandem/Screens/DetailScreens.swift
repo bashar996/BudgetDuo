@@ -24,7 +24,7 @@ struct AccountsView: View {
                         .padding(.bottom, 12)
                 }
                 ForEach(L.accounts) { a in
-                    Button { router.open(.activity(account: a.id)) } label: {
+                    Button { router.drill(.activity(account: a.id)) } label: {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(a.type.label).font(.geist(12.5)).foregroundStyle(Palette.gray)
