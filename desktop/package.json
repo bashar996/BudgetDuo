@@ -1,0 +1,57 @@
+{
+  "name": "twofold",
+  "productName": "Twofold",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared budgeting for two",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "app": "npm run build && electron .",
+    "build": "tsc --noEmit && vite build",
+    "dist": "npm run build && electron-builder --mac",
+    "typecheck": "tsc --noEmit"
+  },
+  "build": {
+    "appId": "app.twofold.desktop",
+    "productName": "Twofold",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null
+    },
+    "dmg": {
+      "title": "Twofold"
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
+    "firebase": "^11.10.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.6"
+  },
+  "author": "Twofold"
+}

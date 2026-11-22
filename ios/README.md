@@ -79,7 +79,6 @@ Repeat for the second phone (or share via TestFlight if you have the paid accoun
 ```
 ios/
   project.yml            XcodeGen spec (Firebase via Swift Package Manager)
-  firestore.rules        security rules: only the two members can read/write
   Twofold/
     App/TwofoldApp.swift  entry point, sign-in / household gate
     Model/               Codable models, category catalog, date & money helpers,

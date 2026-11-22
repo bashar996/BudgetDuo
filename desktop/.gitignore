@@ -1,0 +1,5 @@
+node_modules/
+dist/
+release/
+# Your Firebase web config (see README)
+src/firebase.config.json

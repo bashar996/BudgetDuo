@@ -1,0 +1,25 @@
+/* Global tokens from design/Tandem Budget.dc.html (body, stages, night theme). */
+@font-face { font-family: 'Geist'; src: url('./fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+html, body, #root { height: 100%; }
+body{margin:0;background:#0b0b0c;font-family:'Geist',system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;--accBase:#b9b0ff;--blob:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 84' preserveAspectRatio='none'%3E%3Cpath fill-rule='evenodd' d='M0,84 L0,40 L84,40 Q96,40 96,52 L96,56 Q96,68 108,68 L170,68 Q182,68 182,56 L182,46 Q182,34 194,34 L306,34 Q318,34 318,46 L318,48 Q318,60 330,60 L392,60 Q404,60 404,48 L404,36 Q404,24 416,24 L536,24 Q548,24 548,36 L548,40 Q548,52 560,52 L640,52 Q652,52 652,40 L652,38 Q652,26 664,26 L778,26 Q790,26 790,38 L790,58 Q790,70 802,70 L860,70 Q872,70 872,58 L872,42 Q872,30 884,30 L998,30 Q1010,30 1010,42 L1010,54 Q1010,66 1022,66 L1084,66 Q1096,66 1096,54 L1096,52 Q1096,40 1108,40 L1200,40 L1200,84 Z M443,46 h52 a11,11 0 0 1 0,22 h-52 a11,11 0 0 1 0,-22 Z M704,50 h36 a10,10 0 0 1 0,20 h-36 a10,10 0 0 1 0,-20 Z'/%3E%3Crect x='112' y='26' width='56' height='20' rx='10'/%3E%3Crect x='802' y='30' width='58' height='20' rx='10'/%3E%3C/svg%3E")}
+body,[data-stage=cream]{--bg:#fbf9ef;--card:#ffffff;--ink:#0b0b0c;--mute:#6b6878;--line:rgba(11,11,12,.12);--chip:rgba(11,11,12,.3);--soft:#efecde;--acc:var(--accBase);--accInk:#0b0b0c;--accText:#4b40a8;--a:var(--accBase);--b:#0b0b0c;--good:#4b40a8;--warn:#9a4a3a;--bad:#c23b30;--track:#0b0b0c;--btn:#0b0b0c;--btnInk:#ffffff}
+[data-stage=lav]{--bg:var(--accBase);--card:rgba(255,255,255,.5);--mute:#3a3566;--line:rgba(11,11,12,.16);--chip:rgba(11,11,12,.4);--soft:rgba(255,255,255,.5);--acc:#ffffff;--accText:#0b0b0c;--a:#ffffff;--good:#0b0b0c;--warn:#7a2418;--bad:#a3261b}
+[data-stage=dark]{--bg:#0b0b0c;--card:#1d1d22;--ink:#ffffff;--mute:#a9a7b8;--line:rgba(255,255,255,.14);--chip:rgba(255,255,255,.3);--soft:#1d1d22;--acc:var(--accBase);--accText:var(--accBase);--a:var(--accBase);--b:#fbf9ef;--good:var(--accBase);--warn:#e0a08f;--bad:#ff8f85;--track:rgba(255,255,255,.22);--btn:var(--accBase);--btnInk:#0b0b0c}
+body[data-theme=night] [data-stage=cream]{--bg:#17171b;--card:#222227;--ink:#fbf9ef;--mute:#a9a7b8;--line:rgba(255,255,255,.12);--chip:rgba(255,255,255,.3);--soft:#26262c;--accText:var(--accBase);--b:#fbf9ef;--good:var(--accBase);--warn:#e0a08f;--bad:#ff8f85;--track:rgba(255,255,255,.2);--btn:var(--accBase);--btnInk:#0b0b0c}
+a{color:var(--accText)}a:hover{color:var(--ink)}
+input::placeholder{color:var(--mute)}
+button{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accBase);outline-offset:2px}
+/* Hover states the design gives as style-hover. */
+.h-island:hover{background:#26262c !important;color:#ffffff !important}
+.h-dark:hover{background:#2a2a30 !important}
+.h-row:hover{background:rgba(11,11,12,.04) !important}
+[data-stage=lav] .h-row:hover{background:rgba(255,255,255,.25) !important}
+body[data-theme=night] [data-stage=cream] .h-row:hover{background:rgba(255,255,255,.04) !important}
+.h-focus:focus{box-shadow:0 0 0 2px var(--accBase)}
+.noscroll{scrollbar-width:none}
+.noscroll::-webkit-scrollbar{display:none}
+/* Electron: let the black header drag the window. */
+.drag{-webkit-app-region:drag}
+.drag button,.drag input,.drag a,.drag select{-webkit-app-region:no-drag}
+.h-focus-ink:focus{box-shadow:0 0 0 2px var(--ink)}
