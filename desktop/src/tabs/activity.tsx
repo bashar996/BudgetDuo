@@ -4,7 +4,8 @@ import { dLab, isoD, mLabel } from '../lib/dates'
 import { download, sum, toCsv } from '../lib/money'
 import type { Ledger } from '../data/ledger'
 import type { Tx, Who } from '../data/types'
-import { useUI, type TabDef, type ViewState } from '../shell/ui'
+import { useUI, type Panel, type TabDef, type ViewState } from '../shell/ui'
+import { EntryRow } from '../shell/entry'
 
 /** One entry as a list row (the design's txRow). */
 export function txRow(L: Ledger, t: Tx) {
@@ -74,12 +75,12 @@ function Header({ L }: { L: Ledger }) {
   )
 }
 
-/** One entry row. Today reuses it for recent entries, without the who badge. */
-export function TxButton({ L, t, badge = true }: { L: Ledger; t: Tx; badge?: boolean }) {
-  const { open } = useUI()
+/** One entry row (click to edit, hover or right-click to delete). Today reuses it for recent
+ *  entries without the who badge; a loan's payments pass `back` to return to the loan. */
+export function TxButton({ L, t, badge = true, back }: { L: Ledger; t: Tx; badge?: boolean; back?: Panel }) {
   const r = txRow(L, t)
   return (
-    <button className="h-row" onClick={() => open({ kind: 'tx', tx: t })} style={css('display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left')}>
+    <EntryRow t={t} back={back}>
       <span style={css('width:44px;height:44px;border-radius:13px;flex:none;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:17px')}>{r.ini}</span>
       <span style={css('flex:1;min-width:0;display:flex;flex-direction:column')}>
         <span style={css('font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{r.name}</span>
@@ -93,7 +94,7 @@ export function TxButton({ L, t, badge = true }: { L: Ledger; t: Tx; badge?: boo
       ) : (
         <span style={css('font-size:15px;font-weight:500;white-space:nowrap')}>{r.amt}</span>
       )}
-    </button>
+    </EntryRow>
   )
 }
 

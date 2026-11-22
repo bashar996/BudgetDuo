@@ -3,6 +3,8 @@ import { createContext, useContext } from 'react'
 import { DELETE, inc, type Backend, type Col, type Op } from './backend'
 import type { Account, Asset, Bill, Data, Debt, Goal, Household, Planned, Trip, Tx, Who } from './types'
 import { allCategories, catOr, LOCKED } from './catalog'
+import { installmentOf, isSimple, loanState } from './loans'
+import { loanPayments } from './ledger'
 import { dim, isoOf, pad } from '../lib/dates'
 
 type Draft<T extends { id: string }> = Omit<T, 'id'> & { id?: string }
@@ -23,6 +25,22 @@ export function makeActions(be: Backend, getData: () => Data | null) {
   const commit = (...ops: Op[]) => be.commit(ops)
   /** The category id, or the first remaining one if the household deleted it. */
   const cat = (id: string) => { const D = getData(); return D ? catOr(allCategories(D.household), id) : id }
+  /** Same pick as the ledger's mainAcct: the first current account, else the first account. */
+  const mainAcct = (D: Data) => (D.accounts.find((a) => a.type === 'current') ?? D.accounts[0])?.id ?? ''
+  /** The account a loan's payments come out of (falls back to `acct`, then the main account). */
+  const loanAcct = (D: Data, debtId: string | null | undefined, acct?: string) => {
+    const l = debtId ? D.debts.find((x) => x.id === debtId) : undefined
+    return l?.acct && D.accounts.some((a) => a.id === l.acct) ? l.acct : acct || mainAcct(D)
+  }
+  /** The entry for paying a bill in a month. Its ID is fixed per bill and month. */
+  const billTx = (b: Bill, ym: string, acct: string): Tx => {
+    const D = getData()
+    return {
+      id: 'bill-' + b.id + '-' + ym, date: ym + '-' + pad(Math.min(b.day, dim(ym))), name: b.name, cat: b.cat, amt: b.amt, who: 'J', type: 'exp', billId: b.id,
+      acct: b.debtId && D ? loanAcct(D, b.debtId, acct) : acct,
+      ...(b.debtId ? { debtId: b.debtId, debtPart: 'installment' as const } : {}),
+    }
+  }
 
   return {
     // Entries
@@ -41,7 +59,7 @@ export function makeActions(be: Backend, getData: () => Data | null) {
       const txId = 'bill-' + b.id + '-' + ym
       const ops: Op[] = [{ kind: 'patch', col: 'bills', id: b.id, fields: { ['paid.' + ym]: !paid } }]
       if (paid) ops.push({ kind: 'del', col: 'tx', id: txId })
-      else ops.push(put('tx', { id: txId, date: ym + '-' + pad(Math.min(b.day, dim(ym))), name: b.name, cat: b.cat, amt: b.amt, who: 'J' as Who, type: 'exp' as const, billId: b.id, acct }))
+      else ops.push(put('tx', { ...billTx(b, ym, acct) }))
       commit(...ops)
     },
     saveBill(b: Draft<Bill>) { commit(put('bills', { ...b, paid: b.paid ?? {} }, false)) },
@@ -122,8 +140,6 @@ export function makeActions(be: Backend, getData: () => Data | null) {
     saveAsset(a: Draft<Asset>) { const op = put('assets', a); commit(op); return op.id },
     deleteAsset(id: string) { commit({ kind: 'del', col: 'assets', id }) },
 
-    saveDebt(d: Draft<Debt>) { commit(put('debts', d)) },
-    deleteDebt(id: string) { commit({ kind: 'del', col: 'debts', id }) },
     setStrategy(s: 'avalanche' | 'snowball') { commit(hh({ strat: s })) },
     setExtra(v: number) { commit(hh({ extra: Math.max(0, v) })) },
 
@@ -146,6 +162,74 @@ export function makeActions(be: Backend, getData: () => Data | null) {
         put('tx', { date: isoOf(new Date()), name: t.name, cat: cat('travel'), amt, who: 'J' as Who, type: 'exp' as const, acct }),
         { kind: 'patch', col: 'events', id: t.id, fields: { spent: inc(amt) } },
       )
+    },
+
+    // MARK: Round 6: loans, card payments, undo
+
+    /**
+     * Saves a loan. Also writes the legacy fields the debt plan and older builds read
+     * (apr = rate, min = installment, balance = amount borrowed for scheduled loans), and
+     * creates, updates or removes its bill ("Show installments in Bills").
+     */
+    saveLoan(l: Draft<Debt>, inBills: boolean) {
+      const D = getData()!
+      const id = l.id || be.newId('debts')
+      // Whole numbers stay integers (the iPhone reads them as Int).
+      const int = (v: number | null | undefined) => (v == null ? v : Math.round(v))
+      const doc = { ...l, id, termMonths: int(l.termMonths), paidBefore: int(l.paidBefore) } as Debt
+      const simple = isSimple(doc), inst = installmentOf(doc)
+      const old = l.billId ? D.bills.find((b) => b.id === l.billId) : undefined
+      const ops: Op[] = []
+      let billId: string | null = null
+      if (inBills && !simple) {
+        billId = old?.id ?? be.newId('bills')
+        ops.push(put('bills', {
+          id: billId, name: l.name, amt: Math.round(inst * 100) / 100, day: Number(l.firstDue!.slice(8, 10)) || 1,
+          cat: cat('debt'), sub: false, paid: old?.paid ?? {}, debtId: id,
+        }, false))
+      } else if (old) ops.push({ kind: 'del', col: 'bills', id: old.id })
+      ops.unshift(put('debts', { ...doc, billId, apr: l.rate ?? l.apr ?? 0, min: inst, balance: simple ? l.balance : l.principal! }))
+      commit(...ops)
+      return id
+    },
+    /** Deletes a loan and its bill. Its payments stay in Activity as ordinary expenses. */
+    deleteLoan(l: Debt) {
+      const D = getData()
+      const ops: Op[] = [{ kind: 'del', col: 'debts', id: l.id }]
+      D?.bills.forEach((b) => { if (b.id === l.billId || b.debtId === l.id) ops.push({ kind: 'del', col: 'bills', id: b.id }) })
+      commit(...ops)
+    },
+    /**
+     * Pays a loan: an expense from its account (or the main one), dated today. An installment on a
+     * loan with a bill pays that bill for the month it's due instead, so Bills stays in step.
+     * Returns the entry, so it can be undone.
+     */
+    payLoan(l: Debt, part: 'installment' | 'extra', amt: number): Tx | null {
+      const D = getData()
+      if (!D || !(amt > 0)) return null
+      const today = isoOf(new Date())
+      const bill = part === 'installment' ? D.bills.find((b) => b.debtId === l.id && (!l.billId || b.id === l.billId)) : undefined
+      if (bill) {
+        const ym = (loanState(l, loanPayments(D.tx, l.id), today).nextDue ?? today).slice(0, 7)
+        if (!bill.paid?.[ym]) {
+          const t = billTx(bill, ym, mainAcct(D))
+          commit({ kind: 'patch', col: 'bills', id: bill.id, fields: { ['paid.' + ym]: true } }, put('tx', { ...t }))
+          return t
+        }
+      }
+      const t: Tx = {
+        id: be.newId('tx'), createdAt: new Date(), date: today, name: l.name + (part === 'extra' ? ' · extra payment' : ' · installment'),
+        cat: cat('debt'), amt: Math.round(amt * 100) / 100, who: 'J', type: 'exp', acct: loanAcct(D, l.id), debtId: l.id, debtPart: part,
+      }
+      commit(put('tx', { ...t }))
+      return t
+    },
+    /** Puts a deleted entry back with the same ID and fields (and marks its bill paid again). */
+    restoreTx(t: Tx) {
+      const ops: Op[] = [put('tx', { ...t })]
+      if (t.billId && getData()?.bills.some((b) => b.id === t.billId))
+        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + t.date.slice(0, 7)]: true } })
+      commit(...ops)
     },
   }
 }

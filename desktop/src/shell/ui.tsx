@@ -19,13 +19,18 @@ export interface ViewState {
   selAcct: string | null
 }
 
-/** Which side panel is open. Each slides in from the right. */
+/** Which side panel is open. Each slides in from the right. `back` is the panel that
+ *  comes back when this one closes (an entry opened from a loan returns to the loan). */
 export type Panel =
-  | { kind: 'tx'; tx?: Tx; pre?: Partial<Tx> }
+  | { kind: 'tx'; tx?: Tx; pre?: Partial<Tx>; back?: Panel }
   | { kind: 'budget'; cat: string }
   | { kind: 'cat' }
   | { kind: 'contrib'; trip: Trip }
-  | { kind: 'item'; item: 'income' | 'bill' | 'debt' | 'planned' | 'event'; who?: Who; id?: string }
+  | { kind: 'item'; item: 'income' | 'bill' | 'planned' | 'event'; who?: Who; id?: string }
+  /** A loan: summary, schedule, payments (the wide panel). */
+  | { kind: 'loan'; id: string }
+  /** New / edit loan. */
+  | { kind: 'loanForm'; id?: string; back?: Panel }
   | { kind: 'pot'; goal?: Goal }
   /** `preset` picks the type for a new account ("+ Add investment"). */
   | { kind: 'acct'; acct?: Account; preset?: AccountType }
@@ -41,8 +46,18 @@ export interface UI {
   setView(patch: Partial<ViewState>): void
   panel: Panel | null
   open(p: Panel): void
+  /** Closes the panel, or goes back to the one it was opened from. */
   close(): void
+  /** Closes the panel and anything it was opened from. */
+  closeAll(): void
+  /** A note at the bottom for ~5 s, with Undo when `undo` is given. */
+  toast(text: string, undo?: () => void): void
+  /** Right-click menu at the pointer. */
+  menu(m: MenuSpec | null): void
 }
+
+export interface MenuItem { label: string; run(): void; bad?: boolean }
+export interface MenuSpec { x: number; y: number; items: MenuItem[] }
 
 export const UICtx = createContext<UI | null>(null)
 export const useUI = () => useContext(UICtx)!

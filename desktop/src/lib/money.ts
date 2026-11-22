@@ -1,6 +1,7 @@
 /** 12,345 · −12,345 · 12.50 (true minus sign, decimals only when needed) */
 export function num(n: number): string {
-  const r = Math.abs(n % 1) > 0.004 ? n : Math.round(n)
+  // Round to cents first, so float noise (25799.9999…) doesn't show as "25,800.00".
+  const r = Math.round(n * 100) / 100
   const dec = Math.abs(r % 1) > 0.004 ? 2 : 0
   return (r < 0 ? '−' : '') + Math.abs(r).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }

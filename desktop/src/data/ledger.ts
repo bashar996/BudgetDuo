@@ -2,7 +2,8 @@
 // Mirrors renderVals() in design/Tandem Budget.dc.html, with balances and pot
 // totals worked out from entries (like the iPhone app's Ledger.swift).
 import { allCategories, catOr as firstOr, type Category } from './catalog'
-import type { Account, Bill, Data, Goal, Tx, Who } from './types'
+import type { Account, Bill, Data, Debt, Goal, Tx, Who } from './types'
+import { cardState, loanState, type CardState, type LoanPayment, type LoanState } from './loans'
 import { addDays, addM, dim, isoOf, ymOf } from '../lib/dates'
 import { fmt, num, sum } from '../lib/money'
 
@@ -25,6 +26,15 @@ export interface Row {
 
 export interface BillRow extends Bill { d: number; isPaid: boolean }
 export interface DebtLine { id: string; name: string; balance: number; apr: number; min: number; card?: Account; loan?: boolean }
+/** A loan with everything worked out today, its payment entries and its bill. */
+export interface LoanLine { doc: Debt; st: LoanState; payments: Tx[]; bill?: Bill }
+/** A credit card with its balance and card maths. */
+export interface CardLine { acct: Account & { balance: number }; cs: CardState }
+
+/** A loan's payments for loanState(): every entry with its debtId. */
+export function loanPayments(tx: Tx[], id: string): LoanPayment[] {
+  return tx.filter((t) => t.debtId === id).map((t) => ({ date: t.date, amt: t.amt, part: t.debtPart ?? 'installment' }))
+}
 export interface DebtPlan { months: number; interest: number; done: Record<string, number>; series: number[]; order: string[] }
 export interface CashEvent { i: number; d: Date; name: string; amt: number; late?: boolean; inc?: boolean }
 
@@ -125,7 +135,21 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   })
   const tAvail = sum(rows, (r) => r.avail), tSpent = sum(rows, (r) => r.sp), tLimit = sum(rows, (r) => r.limit)
 
-  const billsM: BillRow[] = data.bills.map((b) => ({ ...b, d: Math.min(b.day, days), isPaid: !!b.paid?.[ym] })).sort((a, b) => a.d - b.d)
+  // Loans and cards (loans.ts): outstanding balances are worked out, never read from `balance`.
+  const todayIso = isoOf(today)
+  const loans: LoanLine[] = data.debts.map((d) => ({
+    doc: d,
+    st: loanState(d, loanPayments(data.tx, d.id), todayIso),
+    payments: data.tx.filter((t) => t.debtId === d.id).sort(desc),
+    bill: data.bills.find((b) => b.debtId === d.id && (!d.billId || b.id === d.billId)),
+  }))
+  const loanBy: Record<string, LoanLine> = {}
+  loans.forEach((l) => (loanBy[l.doc.id] = l))
+  const cards: CardLine[] = accounts.filter((a) => a.type === 'card').map((a) => ({ acct: a, cs: cardState(a, a.balance, todayIso) }))
+
+  /** A paid-off loan's bill stops coming due (months it was paid still show). */
+  const ended = (b: Bill) => !!b.debtId && !!loanBy[b.debtId] && loanBy[b.debtId].st.balance <= 0.005
+  const billsM: BillRow[] = data.bills.filter((b) => !ended(b) || b.paid?.[ym]).map((b) => ({ ...b, d: Math.min(b.day, days), isPaid: !!b.paid?.[ym] })).sort((a, b) => a.d - b.d)
   const unpaid = ym >= curYm ? sum(billsM.filter((b) => !b.isPaid), (b) => b.amt) : 0
   const safe = tAvail - tSpent - unpaid
   const leftAssign = income - tLimit - goalsMo
@@ -135,7 +159,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const holdSum = sum(holdings, (x) => x.value)
   const posSum = (types: string[]) => sum(accounts.filter((a) => types.includes(a.type) && a.balance > 0), (a) => a.balance)
   const assets = sum(accounts.filter((a) => a.balance > 0), (a) => a.balance) + holdSum
-  const liab = sum(data.debts, (x) => x.balance) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
+  const liab = sum(loans, (l) => l.st.balance) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
   /** What you own, in four groups (order and colours from the design). */
   const ownGroups: { label: string; v: number; color: string }[] = [
     { label: 'Cash', v: posSum(['current', 'cash', 'card']), color: 'var(--ink)' },
@@ -148,11 +172,12 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const withCost = investments.filter((a) => a.gain !== null)
   const invGain = withCost.length ? sum(withCost, (a) => a.gain!) : null
 
-  // Debt: loans plus cards in the red.
-  const allDebts: DebtLine[] = (data.debts.map((d) => ({ ...d, loan: true })) as DebtLine[]).concat(
-    accounts.filter((a) => a.type === 'card' && a.balance < 0).map((a) => ({
-      id: a.id, name: a.name, balance: -a.balance, apr: a.apr || 36, min: Math.max(100, Math.round(-a.balance * 0.05)), card: data.accounts.find((x) => x.id === a.id),
-    })))
+  // Debt plan: loans still owing (at their effective rate and installment) plus cards in the red.
+  const allDebts: DebtLine[] = loans.filter((l) => l.st.balance > 0.005).map((l): DebtLine => ({
+    id: l.doc.id, name: l.doc.name, balance: l.st.balance, apr: l.st.effectiveRate, min: l.st.installment, loan: true,
+  })).concat(cards.filter((c) => c.cs.owed > 0).map((c) => ({
+    id: c.acct.id, name: c.acct.name, balance: c.cs.owed, apr: c.cs.apr, min: c.cs.minDue, card: data.accounts.find((x) => x.id === c.acct.id),
+  })))
   const strat = H.strat ?? 'avalanche', extra = H.extra ?? 0
   const debtPlan = simDebt(allDebts, extra, strat)
 
@@ -162,6 +187,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
     for (let i = 0; i <= n; i++) {
       const d = addDays(today, i), m = ymOf(d), dd = d.getDate(), dm = dim(m)
       data.bills.forEach((b) => {
+        if (ended(b)) return
         const bd = Math.min(b.day, dm)
         if (!b.paid?.[m] && (bd === dd || (i === 0 && bd < dd))) out.push({ i, d, name: b.name, amt: -b.amt, late: bd < dd })
       })
@@ -175,7 +201,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const forecast = () => {
     const cash = sum(accounts.filter((a) => a.type === 'current' || a.type === 'cash'), (a) => a.balance)
     const since = isoOf(addDays(today, -60))
-    const varAvg = sum(data.tx.filter((t) => t.type === 'exp' && !t.billId && t.date >= since), (t) => t.amt) / 60
+    const varAvg = sum(data.tx.filter((t) => t.type === 'exp' && !t.billId && !t.debtId && t.date >= since), (t) => t.amt) / 60
     const ev = events(30)
     let b = cash
     const series: number[] = []
@@ -184,7 +210,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   }
 
   // Round-ups: each everyday purchase this month rounded up to the next 10.
-  const roundUps = Math.max(0, Math.round(sum(inM(curYm).filter((t) => t.type === 'exp' && !t.billId), (t) => Math.ceil(t.amt / 10) * 10 - t.amt) - (H.roundSwept?.[curYm] || 0)))
+  const roundUps = Math.max(0, Math.round(sum(inM(curYm).filter((t) => t.type === 'exp' && !t.billId && !t.debtId), (t) => Math.ceil(t.amt / 10) * 10 - t.amt) - (H.roundSwept?.[curYm] || 0)))
   const roundUpPot = goals.find((g) => g.id === H.roundUpPot) ?? goals[0]
 
   return {
@@ -194,6 +220,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
     cats, catBy, catOf, catOr, inM, byCat, desc,
     mtx, exp, inc, spent, pExp, pSpent, income, goalsMo,
     rows, tAvail, tSpent, tLimit, billsM, unpaid, safe, leftAssign,
+    todayIso, loans, loanBy, cards,
     assets, liab, holdings, holdSum, ownGroups, investments, invGain, allDebts, strat, extra, debtPlan,
     events, forecast, roundUps, roundUpPot,
   }
