@@ -19,23 +19,13 @@ sign-in** as the iPhone app, so everything you add on one shows on the other.
 1. Firebase console → your project → ⚙ **Project settings** → **Your apps** → **Add app** → the
    **web** icon `</>`.
 2. Nickname: `Twofold Mac`. Leave "Firebase Hosting" unticked. **Register app**.
-3. Firebase shows a `firebaseConfig = { … }` block. Copy the values into a new file
-   `desktop/src/firebase.config.json`, in this shape (see `firebase.config.example.json`):
-
-   ```json
-   {
-     "apiKey": "…",
-     "authDomain": "….firebaseapp.com",
-     "projectId": "…",
-     "storageBucket": "…",
-     "messagingSenderId": "…",
-     "appId": "…"
-   }
-   ```
-
-   Keys need double quotes in JSON. The file is git-ignored.
+3. Firebase shows a `firebaseConfig = { … }` block. Keep it handy: the first time you open
+   Twofold it asks you to paste that block in. It's remembered on that Mac.
 
 Email/password sign-in and the Firestore rules are the ones you already set up for the iPhone.
+
+(Optional, instead of pasting: save the values as `desktop/src/firebase.config.json`, shaped like
+`firebase.config.example.json`, before building. That file is git-ignored.)
 
 ### 2. Build the app on your Mac
 

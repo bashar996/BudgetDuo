@@ -14,12 +14,31 @@ import type { Backend, Col, Op } from './backend'
 import type { Data, Household, Who } from './types'
 
 const found = import.meta.glob('../firebase.config.json', { eager: true, import: 'default' }) as Record<string, Record<string, string>>
-export const firebaseConfig = Object.values(found)[0] as Record<string, string> | undefined
+const fromFile = Object.values(found)[0] as Record<string, string> | undefined
+const STORE_KEY = 'twofold:firebaseConfig'
+
+/** Pulls the settings out of whatever was pasted: Firebase's JS snippet or JSON. */
+export function parseConfig(text: string): Record<string, string> | null {
+  const out: Record<string, string> = {}
+  const re = /["'“”]?(apiKey|authDomain|projectId|storageBucket|messagingSenderId|appId|measurementId)["'“”]?\s*:\s*["'“”‘’]([^"'“”‘’]+)["'“”‘’]/g
+  for (const m of text.matchAll(re)) out[m[1]] = m[2].trim()
+  return out.apiKey && out.projectId && out.appId ? out : null
+}
+
+function fromPaste(): Record<string, string> | undefined {
+  try { const s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : undefined } catch { return undefined }
+}
+
+/** Settings from src/firebase.config.json, or pasted into the app once (kept on this Mac). */
+export const firebaseConfig = fromFile ?? fromPaste()
+
+export function saveConfig(c: Record<string, string>) { localStorage.setItem(STORE_KEY, JSON.stringify(c)) }
+export function forgetConfig() { localStorage.removeItem(STORE_KEY) }
 
 let app: FirebaseApp | undefined, auth: Auth | undefined, db: Firestore | undefined
 
 export function fb() {
-  if (!firebaseConfig) throw new Error('Missing src/firebase.config.json')
+  if (!firebaseConfig) throw new Error('Firebase settings are missing')
   if (!app) {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
