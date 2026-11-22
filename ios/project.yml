@@ -1,4 +1,4 @@
-name: Twofold
+name: Tandem
 options:
   bundleIdPrefix: app.tandem
   deploymentTarget:
@@ -14,11 +14,11 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
-  Twofold:
+  Tandem:
     type: application
     platform: iOS
     sources:
-      - path: Twofold
+      - path: Tandem
     dependencies:
       - package: Firebase
         product: FirebaseAuth
@@ -26,16 +26,15 @@ targets:
         product: FirebaseFirestore
     settings:
       base:
-        # Must match the iOS app registered in Firebase.
         PRODUCT_BUNDLE_IDENTIFIER: app.tandem.budget
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Set your own team in Xcode (Signing & Capabilities) or here:
         # DEVELOPMENT_TEAM: ABCDE12345
     info:
-      path: Twofold/Info.plist
+      path: Tandem/Info.plist
       properties:
-        CFBundleDisplayName: Twofold
+        CFBundleDisplayName: Tandem
         UILaunchScreen: {}
         UIAppFonts:
           - Geist-Regular.ttf

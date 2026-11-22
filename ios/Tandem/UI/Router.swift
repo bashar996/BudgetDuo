@@ -1,7 +1,24 @@
 import SwiftUI
 import Observation
 
-enum Tab: String, CaseIterable { case home = "Home", budget = "Budget", savings = "Savings", more = "More" }
+/// The app's tabs. (Not called `Tab`, which is SwiftUI's tab type.)
+/// Declared in tab-bar order.
+enum AppTab: String, CaseIterable {
+    case home = "Home", budget = "Budget"
+    /// Not a real destination: picking it opens the add-entry keypad.
+    case add = "Add"
+    case savings = "Savings", more = "More"
+
+    var symbol: String {
+        switch self {
+        case .home: return "house"
+        case .budget: return "chart.pie"
+        case .savings: return "banknote"
+        case .more: return "ellipsis"
+        case .add: return "plus"
+        }
+    }
+}
 
 enum Route: Hashable {
     case activity(account: String?)
@@ -60,22 +77,39 @@ enum FormSheet: Identifiable {
 @MainActor
 @Observable
 final class Router {
-    var tab: Tab = .home
-    var path: [Route] = []
+    var tab: AppTab = .home
+    /// Each tab has its own navigation stack.
+    var paths: [AppTab: [Route]] = [:]
+    /// The stack of the selected tab.
+    var path: [Route] {
+        get { paths[tab] ?? [] }
+        set { paths[tab] = newValue }
+    }
     /// Unfolded / wide screens show detail screens in a right-hand pane.
     var isWide = false
     var detail: Route = .reports
+    /// Screens pushed inside the right-hand pane, on top of `detail`.
+    var detailPath: [Route] = []
     var entry: EntryDraft?
     var form: FormSheet?
 
-    func select(_ t: Tab) { tab = t; path = [] }
+    func select(_ t: AppTab) { tab = t; paths = [:] }
 
+    /// Opens a top-level detail screen: the right-hand pane on wide screens.
     func open(_ r: Route) {
-        if isWide { detail = r } else { path.append(r) }
+        if isWide { detail = r; detailPath = [] } else { path.append(r) }
+    }
+
+    /// Goes one level deeper from a detail screen (e.g. an account's activity
+    /// from Accounts), so the pane keeps a way back.
+    func drill(_ r: Route) {
+        if isWide { detailPath.append(r) } else { path.append(r) }
     }
 
     func back(_ dismiss: DismissAction) {
-        if !path.isEmpty { path.removeLast() } else { dismiss() }
+        if !path.isEmpty { path.removeLast() }
+        else if !detailPath.isEmpty { detailPath.removeLast() }
+        else { dismiss() }
     }
 
     func add(_ store: HouseholdStore, _ L: Ledger, configure: (inout EntryDraft) -> Void = { _ in }) {
