@@ -26,6 +26,8 @@ enum Palette {
     static let tile = Color(hex: 0xebe8da)
     static let overFill = Color(hex: 0xd0453a)
     static let overText = Color(hex: 0xb3352b)
+    /// Overdue bills, Delete buttons, losses on cream
+    static let bad = Color(hex: 0xc23b30)
     /// Negative figures on black (forecast dips)
     static let badOnBlack = Color(hex: 0xff8f85)
     /// Links and positive values on cream

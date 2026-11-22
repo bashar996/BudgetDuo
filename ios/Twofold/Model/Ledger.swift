@@ -60,6 +60,8 @@ struct Ledger {
     let debts: [Debt]
     let planned: [Planned]
     let trips: [Trip]
+    /// Homes, cars, gold … valued by hand (edited in the Mac app).
+    let assets: [Asset]
     let today: Date
 
     let ym: String
@@ -74,7 +76,7 @@ struct Ledger {
     let rows: [BudgetRow]
 
     init(household: Household, tx: [Tx], accounts: [Account], bills: [Bill], goals: [Goal],
-         debts: [Debt] = [], planned: [Planned] = [], trips: [Trip] = [], today: Date = Date()) {
+         debts: [Debt] = [], planned: [Planned] = [], trips: [Trip] = [], assets: [Asset] = [], today: Date = Date()) {
         self.household = household
         self.tx = tx
         self.accounts = accounts
@@ -83,6 +85,7 @@ struct Ledger {
         self.debts = debts
         self.planned = planned
         self.trips = trips
+        self.assets = assets
         self.today = today
         ym = DateKit.ym(today)
         todayDay = DateKit.day(today)
@@ -114,7 +117,7 @@ struct Ledger {
         spentByCat = sp
 
         let names = (a: household.nameA, b: household.nameB)
-        rows = Catalog.all(custom: household.custom).map { c in
+        rows = Catalog.effective(household).map { c in
             let name = c.id == "allowA" ? names.a + "’s pocket money" : c.id == "allowB" ? names.b + "’s pocket money" : c.name
             return BudgetRow(id: c.id, group: c.group, name: name, limit: household.budgets[c.id] ?? 0, spent: sp[c.id] ?? 0)
         }
@@ -143,6 +146,18 @@ struct Ledger {
     var monthName: String { DateKit.monthName(ym) }
     var monthShort: String { DateKit.monthName(ym, short: true) }
     var daysLeft: Int { daysInMonth - todayDay + 1 }
+
+    /// `preferred` if the household still has that category, otherwise the first
+    /// one it has (used for defaults such as Groceries on a new entry).
+    func catOr(_ preferred: String) -> String {
+        if rows.contains(where: { $0.id == preferred }) { return preferred }
+        return (rows.first(where: { $0.group != .personal }) ?? rows.first)?.id ?? preferred
+    }
+
+    /// How many entries and bills use a category (all months).
+    func usage(of cat: String) -> (entries: Int, bills: Int) {
+        (tx.filter { $0.cat == cat }.count, bills.filter { $0.cat == cat }.count)
+    }
 
     /// The everyday account new entries default to.
     var mainAccountId: String? { (accounts.first { $0.type == .current } ?? accounts.first)?.id }
@@ -188,11 +203,34 @@ struct Ledger {
     // MARK: Accounts & pots
 
     func balance(_ a: Account) -> Double { balances[a.id] ?? a.opening }
-    var assets: Double { accounts.map(balance).filter { $0 > 0 }.reduce(0, +) }
+    /// Sum of every account balance (cards count negative).
+    var accountsTotal: Double { accounts.map(balance).reduce(0, +) }
+    var assetsTotal: Double { assets.reduce(0) { $0 + $1.value } }
+    /// Accounts in the black plus assets.
+    var own: Double { accounts.map(balance).filter { $0 > 0 }.reduce(0, +) + assetsTotal }
+    /// Loans plus accounts in the red.
     var liabilities: Double {
         accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + debts.reduce(0) { $0 + $1.balance }
     }
-    var netWorth: Double { assets - liabilities }
+    var netWorth: Double { own - liabilities }
+
+    private func positive(_ types: [AccountType]) -> Double {
+        accounts.filter { types.contains($0.type) }.map(balance).filter { $0 > 0 }.reduce(0, +)
+    }
+
+    /// What you own in four groups, in display order: Cash, Savings, Investments, Property & other assets.
+    var ownGroups: [(label: String, value: Double)] {
+        [("Cash", positive([.current, .cash, .card])), ("Savings", positive([.save])),
+         ("Investments", positive([.invest])), ("Property & other assets", assetsTotal)]
+    }
+
+    var investments: [Account] { accounts.filter { $0.type == .invest } }
+
+    /// Balance minus what was put in; nil when no amount put in is recorded.
+    func gain(_ a: Account) -> Double? {
+        guard a.type == .invest, let c = a.cost, c > 0 else { return nil }
+        return balance(a) - c
+    }
 
     func saved(_ g: Goal) -> Double { potSaved[g.id] ?? g.startSaved }
     var inPots: Double { goals.map(saved).reduce(0, +) }

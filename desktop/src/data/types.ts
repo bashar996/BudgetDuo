@@ -7,6 +7,7 @@ export type AccountType = 'current' | 'cash' | 'card' | 'save' | 'invest'
 
 export interface Income { who: Who; amt: number; day: number }
 export interface CustomCategory { id: string; name: string; g: 'needs' | 'wants' }
+export type AssetKind = 'property' | 'vehicle' | 'gold' | 'business' | 'other'
 
 /** households/{code} */
 export interface Household {
@@ -21,6 +22,10 @@ export interface Household {
   roundSwept: Record<string, number>
   roundUpPot?: string | null
   custom?: CustomCategory[]
+  /** Renamed / moved built-in categories. */
+  catOv?: Record<string, { name: string; g: 'needs' | 'wants' }>
+  /** Built-in categories the household removed. */
+  catDel?: string[]
   strat?: 'avalanche' | 'snowball'
   extra?: number
   // Settings from the web design, shared by both of you:
@@ -66,8 +71,13 @@ export interface Account {
   limit?: number | null
   apy?: number | null
   apr?: number | null
+  /** Investments only: the amount put in; gain = balance − cost. */
+  cost?: number | null
   createdAt?: Date | null
 }
+
+/** households/{code}/assets/{id}: things owned outside an account, valued by hand. */
+export interface Asset { id: string; name: string; kind: AssetKind; value: number; createdAt?: Date | null }
 
 /** households/{code}/bills/{id} */
 export interface Bill { id: string; day: number; name: string; amt: number; cat: string; sub: boolean; paid: Record<string, boolean> }
@@ -98,4 +108,5 @@ export interface Data {
   debts: Debt[]
   planned: Planned[]
   trips: Trip[]
+  assets: Asset[]
 }

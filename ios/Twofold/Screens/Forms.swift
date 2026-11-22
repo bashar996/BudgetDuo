@@ -120,11 +120,11 @@ struct FormHost: View {
         switch form {
         case .account(let a): AccountForm(editing: a)
         case .bill(let b): BillForm(editing: b)
-        case .pot(let g): PotForm(editing: g)
+        case .pot(let g): PotSheet(editing: g)
         case .pay(let w): PayForm(who: w)
         case .budget(let c): BudgetSheet(cat: c)
         case .settings: NavigationStack { SettingsView(showBack: false) }
-        case .newCategory: NewCategoryForm()
+        case .newCategory: BudgetSheet(cat: nil)
         case .debt(let d): DebtForm(editing: d)
         case .planned(let p): PlannedForm(editing: p)
         case .trip(let t): TripForm(editing: t)
@@ -132,83 +132,247 @@ struct FormHost: View {
     }
 }
 
-// MARK: Budget limit (bottom sheet from the design)
+// MARK: Bottom sheets that fit their content (category, pot)
 
+private struct SheetHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// Cream bottom sheet with 30pt top corners, as tall as what's in it. The system
+/// caps the height at the large detent; anything taller scrolls as a whole.
+struct FitSheet<Content: View>: View {
+    @ViewBuilder var content: Content
+    @State private var height: CGFloat = 420
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) { content }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20).padding(.top, 26).padding(.bottom, 34)
+                .background(GeometryReader { g in Color.clear.preference(key: SheetHeightKey.self, value: g.size.height) })
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.interactively)
+        .onPreferenceChange(SheetHeightKey.self) { h in if h > 0 { height = h } }
+        .foregroundStyle(Palette.black)
+        .presentationDetents([.height(height)])
+        .presentationBackground(Palette.cream)
+        .presentationCornerRadius(30)
+        .presentationDragIndicator(.visible)
+    }
+}
+
+/// White 52pt input with a 2pt black ring while typing.
+struct SheetField: View {
+    var placeholder: String
+    @Binding var text: String
+    var size: CGFloat = 17
+    var keyboard: UIKeyboardType = .default
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        TextField("", text: $text, prompt: Text(placeholder).foregroundColor(Palette.gray))
+            .font(.geist(size, .medium))
+            .keyboardType(keyboard)
+            .focused($focused)
+            .padding(.horizontal, 16).frame(height: 52)
+            .background(Palette.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.black.opacity(focused ? 1 : 0), lineWidth: 2))
+            .foregroundStyle(Palette.black)
+    }
+}
+
+private func sheetLabel(_ text: String) -> some View {
+    Text(text).font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 12).padding(.bottom, 6)
+}
+
+private func sheetError(_ text: String, center: Bool = false) -> some View {
+    Text(text).font(.geist(13, .semibold)).foregroundStyle(Palette.overText)
+        .multilineTextAlignment(center ? .center : .leading)
+        .frame(maxWidth: .infinity, minHeight: 18, alignment: center ? .center : .leading)
+}
+
+// MARK: Category (bottom sheet from the design)
+
+/// Tap a category on Budget (or "+ New category"): name, Needs / Wants, monthly
+/// limit. Pocket money only has the limit. Delete swaps the sheet's content for
+/// the "where should its entries go?" step.
 @MainActor
 struct BudgetSheet: View {
-    var cat: String
+    /// nil: a new category.
+    var cat: String?
     @Environment(HouseholdStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var error = ""
-    @State private var confirmDelete = false
+    @State private var group = "needs"
     @State private var limit: Double = 0
-    @State private var text = ""
+    @State private var text = "0"
+    @State private var error = ""
+    @State private var deleting = false
+    /// "" nothing picked yet, "none" leave uncategorised, otherwise a category id.
+    @State private var moveTo = ""
     @State private var loaded = false
     @FocusState private var typing: Bool
 
     var body: some View {
         if let L = store.ledger() {
-            let avg = L.average(of: cat)
-            let custom = L.isCustom(cat)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Monthly limit").font(.geist(13)).foregroundStyle(Palette.gray)
-                if custom {
-                    HStack(spacing: 8) {
-                        CreamField(placeholder: "Name", text: $name)
-                        Button("Delete") { confirmDelete = true }
-                            .font(.geist(14, .medium)).foregroundStyle(Palette.overText).frame(minWidth: 64, minHeight: 44)
-                    }
-                    .padding(.top, 6)
-                    if !error.isEmpty { Text(error).font(.geist(13, .semibold)).foregroundStyle(Palette.overText).padding(.top, 6) }
+            FitSheet {
+                if deleting, let id = cat {
+                    deleteStep(L, id)
                 } else {
-                    Text(L.categoryName(cat)).font(.geist(24, .medium)).tracking(em: -0.01, size: 24)
+                    form(L)
                 }
-                HStack {
-                    stepButton("−", "Less") { set(limit - 50) }
-                    Spacer()
-                    VStack(spacing: 0) {
-                        Text(L.money.currency).font(.geist(13)).foregroundStyle(Palette.gray)
-                        TextField("0", text: $text)
-                            .font(.geist(52, .medium)).tracking(em: -0.04, size: 52)
-                            .multilineTextAlignment(.center).keyboardType(.numberPad).focused($typing)
-                            .onChange(of: text) { _, v in if typing { limit = max(0, parseAmount(v) ?? 0) } }
-                    }
-                    Spacer()
-                    stepButton("+", "More") { set(limit + 50) }
-                }
-                .padding(.top, 20).padding(.bottom, 14)
-                Text("Spent \(L.money.f(L.spentByCat[cat] ?? 0)) so far this month").font(.geist(13.5)).foregroundStyle(Palette.gray)
-                    .frame(maxWidth: .infinity)
-                HStack(spacing: 8) {
-                    BlockButton(title: "3-month avg · \(L.money.num(avg))", fill: Palette.black, outline: true, height: 54) { set(avg) }
-                    BlockButton(title: "Save", height: 54) {
-                        if custom {
-                            let n = name.trimmingCharacters(in: .whitespaces)
-                            if n.isEmpty { error = "Give it a name"; return }
-                            if L.rows.contains(where: { $0.id != cat && $0.name.lowercased() == n.lowercased() }) {
-                                error = "You already have a category with that name."; return
-                            }
-                            if n != L.categoryName(cat) { store.renameCategory(cat, to: n) }
-                        }
-                        store.setBudget(cat, limit); dismiss()
-                    }
-                }
-                .padding(.top, 18)
             }
-            .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
-            .foregroundStyle(Palette.black)
-            .presentationDetents([.height(custom ? 440 : 380)])
-            .confirmationDialog("Delete this category?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) { store.deleteCategory(cat); dismiss() }
-            } message: {
-                Text("Its limit goes too. Entries keep their amounts and show as “Other”.")
-            }
-            .presentationBackground(Palette.cream)
-            .presentationCornerRadius(30)
-            .presentationDragIndicator(.visible)
-            .onAppear { if !loaded { set(L.household.budgets[cat] ?? 0); name = L.categoryName(cat); loaded = true } }
+            .onAppear { load(L) }
         }
+    }
+
+    private var isPocketMoney: Bool { cat.map(Catalog.isPocketMoney) ?? false }
+
+    private func form(_ L: Ledger) -> some View {
+        let id = cat ?? ""
+        let isNew = cat == nil
+        let lock = isPocketMoney
+        let avg = isNew ? 0 : L.average(of: id)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(isNew ? "New category" : lock ? "Monthly limit" : "Edit category").font(.geist(13)).foregroundStyle(Palette.gray)
+            if lock {
+                Text(L.categoryName(id)).font(.geist(24, .medium)).tracking(em: -0.01, size: 24)
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    SheetField(placeholder: "Category name", text: $name, size: 18)
+                    HStack(spacing: 6) {
+                        groupChip("Needs", "needs")
+                        groupChip("Wants", "wants")
+                    }
+                    Text("Monthly limit").font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6)
+                }
+                .padding(.top, 8)
+            }
+            HStack {
+                stepButton("−", "Less") { set(limit - 50) }
+                Spacer()
+                VStack(spacing: 0) {
+                    Text(L.money.currency).font(.geist(13)).foregroundStyle(Palette.gray)
+                    TextField("0", text: $text)
+                        .font(.geist(52, .medium)).tracking(em: -0.04, size: 52)
+                        .multilineTextAlignment(.center).keyboardType(.numberPad).focused($typing)
+                        .onChange(of: text) { _, v in if typing { limit = max(0, parseAmount(v) ?? 0) } }
+                        .accessibilityLabel("Monthly limit")
+                }
+                Spacer()
+                stepButton("+", "More") { set(limit + 50) }
+            }
+            .padding(.top, 14).padding(.bottom, 12)
+            Text(isNew ? "What you plan to spend on it each month" : "Spent \(L.money.f(L.spentByCat[id] ?? 0)) so far this month")
+                .font(.geist(13.5)).foregroundStyle(Palette.gray).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            sheetError(error, center: true).padding(.top, 6)
+            HStack(spacing: 8) {
+                BlockButton(title: "3-month avg · \(L.money.num(avg))", fill: Palette.black, outline: true, height: 54) { set(avg) }
+                BlockButton(title: "Save", height: 54) { save(L) }
+            }
+            .padding(.top, 6)
+            if !isNew && !lock {
+                Button { deleting = true; moveTo = ""; error = "" } label: {
+                    Text("Delete category").font(.geist(14, .medium)).foregroundStyle(Palette.overText)
+                        .frame(maxWidth: .infinity).frame(height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    private func deleteStep(_ L: Ledger, _ id: String) -> some View {
+        let use = L.usage(of: id)
+        let used = use.entries + use.bills > 0
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Delete category").font(.geist(13)).foregroundStyle(Palette.gray)
+            Text("Delete \(name.isEmpty ? L.categoryName(id) : name)?").font(.geist(24, .medium)).tracking(em: -0.01, size: 24)
+            Text(usageText(entries: use.entries, bills: use.bills)).font(.geist(14.5)).padding(.top, 10)
+                .fixedSize(horizontal: false, vertical: true)
+            if used {
+                // "Leave uncategorised" first so it's always in view; every chip shows at once.
+                FlowLayout(spacing: 6) {
+                    CreamChip(label: "Leave uncategorised", on: moveTo == "none") { moveTo = "none"; error = "" }
+                    ForEach(L.rows.filter { $0.id != id }) { r in
+                        CreamChip(label: r.name, on: moveTo == r.id) { moveTo = r.id; error = "" }
+                    }
+                }
+                .padding(.top, 14)
+                Text("Uncategorised entries stay in Activity but stop counting toward any budget.")
+                    .font(.geist(12.5)).foregroundStyle(Palette.gray).padding(.top, 10)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            sheetError(error).padding(.top, 10)
+            HStack(spacing: 8) {
+                BlockButton(title: "Keep it", fill: Palette.black, outline: true, height: 54) { deleting = false; moveTo = ""; error = "" }
+                BlockButton(title: "Delete", fill: Palette.bad, height: 54) {
+                    if used && moveTo.isEmpty { error = "Choose where its entries should go."; return }
+                    store.deleteCategory(id, moveTo: moveTo.isEmpty || moveTo == "none" ? nil : moveTo)
+                    dismiss()
+                }
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private func usageText(entries: Int, bills: Int) -> String {
+        let n = entries + bills
+        if n == 0 { return "Nothing uses this category yet, so it can go straight away." }
+        var parts: [String] = []
+        if entries > 0 { parts.append("\(entries) " + (entries == 1 ? "entry" : "entries")) }
+        if bills > 0 { parts.append("\(bills) " + (bills == 1 ? "bill" : "bills")) }
+        let verb = n == 1 ? "uses" : "use"
+        let them = n == 1 ? "it" : "they"
+        return "\(parts.joined(separator: " and ")) \(verb) this category. Where should \(them) go?"
+    }
+
+    private func groupChip(_ label: String, _ value: String) -> some View {
+        let on = group == value
+        return Button { group = value; error = "" } label: {
+            Text(label).font(.geist(13.5, .medium)).frame(maxWidth: .infinity).frame(height: 44)
+                .foregroundStyle(on ? Palette.white : Palette.black)
+                .background(on ? Palette.black : .clear, in: Capsule())
+                .overlay(Capsule().strokeBorder(Palette.black.opacity(on ? 1 : 0.3), lineWidth: 1))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    private func load(_ L: Ledger) {
+        guard !loaded else { return }
+        loaded = true
+        if let id = cat {
+            set(L.household.budgets[id] ?? 0)
+            let row = L.rows.first { $0.id == id }
+            name = row?.name ?? ""
+            group = (row?.group ?? .needs) == .wants ? "wants" : "needs"
+        } else {
+            set(0)
+        }
+    }
+
+    private func save(_ L: Ledger) {
+        let n = name.trimmingCharacters(in: .whitespaces)
+        if !isPocketMoney {
+            if n.isEmpty { error = "Give it a name."; return }
+            if L.rows.contains(where: { $0.id != cat && $0.name.lowercased() == n.lowercased() }) {
+                error = "You already have a category with that name."; return
+            }
+        }
+        if let id = cat {
+            if !isPocketMoney, let row = L.rows.first(where: { $0.id == id }), row.name != n || row.group.rawValue != group {
+                store.updateCategory(id, name: n, group: group)
+            }
+            store.setBudget(id, limit)
+        } else {
+            store.addCategory(name: n, group: group, limit: limit)
+        }
+        dismiss()
     }
 
     private func set(_ v: Double) {
@@ -270,6 +434,7 @@ struct AccountForm: View {
     @State private var limit = ""
     @State private var apy = ""
     @State private var cardApr = ""
+    @State private var cost = ""
 
     var body: some View {
         let L = store.ledger()
@@ -295,6 +460,12 @@ struct AccountForm: View {
                 FormLabel("Interest rate (APR %)").padding(.top, 16)
                 CreamField(placeholder: "36 if left empty", text: $cardApr, keyboard: .decimalPad)
             }
+            if type == .invest {
+                FormLabel("Amount you put in (optional)").padding(.top, 16)
+                CreamField(placeholder: "Optional", text: $cost, keyboard: .decimalPad)
+                Text("Net worth shows the gain: what it’s worth now minus what you put in.")
+                    .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6)
+            }
             if type == .save || type == .invest {
                 FormLabel("Interest a year (%)").padding(.top, 16)
                 CreamField(placeholder: "Optional", text: $apy, keyboard: .decimalPad)
@@ -313,7 +484,7 @@ struct AccountForm: View {
         name = a.name; type = a.type; who = a.who; bank = a.bank ?? ""; last4 = a.last4 ?? ""
         let b = L.balance(a)
         balance = fmt(a.type == .card ? -b : b)
-        limit = a.limit.map(fmt) ?? ""; apy = a.apy.map(fmt) ?? ""; cardApr = a.apr.map(fmt) ?? ""
+        limit = a.limit.map(fmt) ?? ""; apy = a.apy.map(fmt) ?? ""; cardApr = a.apr.map(fmt) ?? ""; cost = a.cost.map(fmt) ?? ""
     }
 
     private func save() {
@@ -326,7 +497,9 @@ struct AccountForm: View {
                            bank: bank.isEmpty ? nil : bank, last4: last4.isEmpty ? nil : String(last4.suffix(4)),
                            opening: opening, limit: type == .card ? parseAmount(limit) : nil,
                            apy: (type == .save || type == .invest) ? parseAmount(apy) : nil,
-                           apr: type == .card ? parseAmount(cardApr) : nil, createdAt: editing?.createdAt))
+                           apr: type == .card ? parseAmount(cardApr) : nil,
+                           cost: type == .invest ? parseAmount(cost).flatMap { $0 > 0 ? $0 : nil } : nil,
+                           createdAt: editing?.createdAt))
     }
 }
 
@@ -339,7 +512,7 @@ struct BillForm: View {
     @State private var name = ""
     @State private var amt = ""
     @State private var day = 1
-    @State private var cat = "housing"
+    @State private var cat = ""
     @State private var sub = false
 
     var body: some View {
@@ -362,8 +535,12 @@ struct BillForm: View {
         }
         .presentationDetents([.large])
         .onAppear {
-            guard let b = editing else { return }
-            name = b.name; amt = fmt(b.amt); day = b.day; cat = b.cat; sub = b.sub
+            if let b = editing {
+                name = b.name; amt = fmt(b.amt); day = b.day; cat = b.cat; sub = b.sub
+            } else if cat.isEmpty {
+                // Utilities, or the first category left if it was deleted.
+                cat = L?.catOr("utilities") ?? "utilities"
+            }
         }
     }
 
@@ -373,94 +550,125 @@ struct BillForm: View {
     }
 }
 
-// MARK: Pot
+// MARK: Pot (bottom sheet from the design)
 
 @MainActor
-struct PotForm: View {
+struct PotSheet: View {
     var editing: Goal?
     @Environment(HouseholdStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var target = ""
-    @State private var saved = ""
     @State private var monthly = ""
     @State private var acct = ""
     @State private var roundUps = false
+    @State private var error = ""
+    @State private var deleting = false
+    @State private var loaded = false
 
     var body: some View {
-        let L = store.ledger()
-        let accts = (L?.accounts ?? []).filter { $0.type == .save }
-        let choices = accts.isEmpty ? (L?.accounts ?? []) : accts
-        FormSheetFrame(kicker: editing == nil ? "New pot" : "Edit pot", title: name.isEmpty ? "Pot" : name,
-                       canSave: !name.trimmingCharacters(in: .whitespaces).isEmpty && (parseAmount(target) ?? 0) > 0 && !acct.isEmpty,
-                       onSave: save, onDelete: editing == nil ? nil : { store.deleteGoal(editing!.id) },
-                       deleteMessage: "The money stays in its account; only the pot goes.") {
-            FormLabel("Name")
-            CreamField(placeholder: "e.g. Emergency fund", text: $name)
-            FormLabel("Target (\(L?.money.currency ?? ""))").padding(.top, 16)
-            CreamField(placeholder: "0", text: $target, keyboard: .decimalPad)
-            FormLabel("Already saved").padding(.top, 16)
-            CreamField(placeholder: "0", text: $saved, keyboard: .decimalPad)
-            FormLabel("Monthly contribution").padding(.top, 16)
-            CreamField(placeholder: "0", text: $monthly, keyboard: .decimalPad)
-            FormLabel("Lives in").padding(.top, 16)
-            FlowLayout(spacing: 6) {
-                ForEach(choices) { a in CreamChip(label: a.name, on: acct == a.id) { acct = a.id } }
+        if let L = store.ledger() {
+            FitSheet {
+                if deleting, let g = editing {
+                    deleteStep(L, g)
+                } else {
+                    form(L)
+                }
             }
-            if choices.isEmpty { Text("Add an account first.").font(.geist(13)).foregroundStyle(Palette.gray) }
+            .onAppear { load(L) }
+        }
+    }
+
+    private func form(_ L: Ledger) -> some View {
+        let savings = L.accounts.filter { $0.type == .save }
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(editing == nil ? "New savings pot" : "Edit pot").font(.geist(24, .medium)).tracking(em: -0.01, size: 24)
+            sheetLabel("Name")
+            SheetField(placeholder: "e.g. New car", text: $name)
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 0) {
+                    sheetLabel("Target (\(L.money.currency))")
+                    SheetField(placeholder: "0", text: $target, keyboard: .decimalPad)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    sheetLabel("Auto-save each payday").lineLimit(1).minimumScaleFactor(0.8)
+                    SheetField(placeholder: "0", text: $monthly, keyboard: .decimalPad)
+                }
+            }
+            sheetLabel("Kept in")
+            if savings.isEmpty {
+                Text("No savings account yet. Add one under More → Accounts so the pot has a home.")
+                    .font(.geist(13.5)).foregroundStyle(Palette.gray).fixedSize(horizontal: false, vertical: true)
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(savings) { a in CreamChip(label: a.name, on: acct == a.id) { acct = a.id; error = "" } }
+                }
+            }
             Toggle(isOn: $roundUps) { Text("Round-ups go to this pot").font(.geist(15)) }
-                .tint(Palette.black).padding(.top, 16)
-        }
-        .presentationDetents([.large])
-        .onAppear {
-            if acct.isEmpty { acct = choices.first?.id ?? "" }
-            if let g = editing, let L {
-                name = g.name; target = fmt(g.target); saved = fmt(L.saved(g)); monthly = g.monthly > 0 ? fmt(g.monthly) : ""; acct = g.acct
-                roundUps = L.household.roundUpPot == g.id
+                .tint(Palette.black).padding(.top, 14)
+            sheetError(error).padding(.top, 10)
+            BlockButton(title: "Save", height: 54) { save(L) }.padding(.top, 6)
+            if editing != nil {
+                Button { deleting = true; error = "" } label: {
+                    Text("Delete pot").font(.geist(14, .medium)).foregroundStyle(Palette.overText)
+                        .frame(maxWidth: .infinity).frame(height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
             }
         }
     }
 
-    private func save() {
-        let entered = parseAmount(saved) ?? 0
-        var start = entered
-        if let g = editing, let L = store.ledger() { start = g.startSaved + (entered - L.saved(g)) }
-        let g = Goal(id: editing?.id ?? "", name: name.trimmingCharacters(in: .whitespaces), target: parseAmount(target) ?? 0,
-                     startSaved: start, monthly: parseAmount(monthly) ?? 0, acct: acct, due: editing?.due, createdAt: editing?.createdAt)
-        let id = store.save(g)
-        if roundUps { store.setRoundUpPot(id) }
-        else if store.household?.roundUpPot == id { store.setRoundUpPot(nil) }
+    private func deleteStep(_ L: Ledger, _ g: Goal) -> some View {
+        let saved = L.saved(g)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Delete pot").font(.geist(13)).foregroundStyle(Palette.gray)
+            Text("Delete \(g.name)?").font(.geist(24, .medium)).tracking(em: -0.01, size: 24)
+            Text(saved > 0
+                 ? "\(L.money.f(saved)) is set aside in this pot. The money stays in \(L.accountName(g.acct)); it just stops being earmarked."
+                 : "Nothing is saved in this pot yet, so it can go straight away.")
+                .font(.geist(14.5)).padding(.top, 10).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                BlockButton(title: "Keep it", fill: Palette.black, outline: true, height: 54) { deleting = false }
+                BlockButton(title: "Delete", fill: Palette.bad, height: 54) {
+                    store.deleteGoal(g.id)
+                    if L.household.roundUpPot == g.id { store.setRoundUpPot(nil) }
+                    dismiss()
+                }
+            }
+            .padding(.top, 20)
+        }
     }
-}
 
-// MARK: New category
+    private func load(_ L: Ledger) {
+        guard !loaded else { return }
+        loaded = true
+        if let g = editing {
+            name = g.name; target = fmt(g.target); monthly = g.monthly > 0 ? fmt(g.monthly) : ""; acct = g.acct
+            roundUps = L.household.roundUpPot == g.id
+        } else {
+            acct = L.accounts.first { $0.type == .save }?.id ?? ""
+        }
+    }
 
-@MainActor
-struct NewCategoryForm: View {
-    @Environment(HouseholdStore.self) private var store
-    @State private var name = ""
-    @State private var group = "needs"
-    @State private var limit = ""
-
-    var body: some View {
-        let L = store.ledger()
+    private func save(_ L: Ledger) {
         let n = name.trimmingCharacters(in: .whitespaces)
-        let duplicate = L?.rows.contains { $0.name.lowercased() == n.lowercased() } ?? false
-        FormSheetFrame(kicker: "Budget", title: "New category", canSave: !n.isEmpty && !duplicate,
-                       onSave: { store.addCategory(name: n, group: group, limit: parseAmount(limit) ?? 0) }) {
-            FormLabel("Name")
-            CreamField(placeholder: "e.g. Pets", text: $name)
-            if duplicate {
-                Text("You already have a category with that name.").font(.geist(13, .semibold)).foregroundStyle(Palette.overText).padding(.top, 6)
-            }
-            FormLabel("Group").padding(.top, 16)
-            HStack(spacing: 6) {
-                CreamChip(label: "Needs", on: group == "needs") { group = "needs" }
-                CreamChip(label: "Wants", on: group == "wants") { group = "wants" }
-            }
-            FormLabel("Monthly limit (\(L?.money.currency ?? ""))").padding(.top, 16)
-            CreamField(placeholder: "0", text: $limit, keyboard: .decimalPad)
+        if n.isEmpty { error = "Give it a name"; return }
+        guard let t = parseAmount(target), t > 0 else { error = "Add a target amount"; return }
+        guard !acct.isEmpty else { error = "Add a savings account first"; return }
+        let m = max(0, parseAmount(monthly) ?? 0)
+        // Auto-save is on for a new pot with a payday amount; 0 turns it off.
+        let auto: Bool = m > 0 ? (editing.map { ($0.auto ?? false) || $0.monthly == 0 } ?? true) : false
+        // New pots start at 0; an edited pot keeps what's in it.
+        let g = Goal(id: editing?.id ?? "", name: n, target: t, startSaved: editing?.startSaved ?? 0, monthly: m,
+                     acct: acct, due: editing?.due, auto: auto, createdAt: editing?.createdAt)
+        let id = store.save(g)
+        if roundUps {
+            if L.household.roundUpPot != id { store.setRoundUpPot(id) }
+        } else if L.household.roundUpPot == id {
+            store.setRoundUpPot(nil)
         }
-        .presentationDetents([.medium, .large])
+        dismiss()
     }
 }
 

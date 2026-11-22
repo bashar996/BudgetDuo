@@ -4,13 +4,15 @@ The native SwiftUI version of the Twofold design (previously "Tandem"):
 one shared budget for two people, synced between both phones.
 
 - **Screens:** Home (safe to spend, quick actions, bills coming up, transactions), Budget
-  (left to assign, category limits, your own categories), Savings (pots, deposit/withdraw,
-  round-ups), More → Activity, Bills, Accounts, Debt (payoff plan), Reports (with a CSV download),
-  Plan ahead (30-day cash forecast, planned purchases, trips), Us two, Settings; plus the
-  full-screen keypad for adding entries and the bottom sheet for category limits.
+  (left to assign, category limits; rename, regroup, add and delete categories), Savings (pots
+  with Edit / New pot sheets, deposit/withdraw, round-ups), More → Activity, Bills (with this
+  month's calendar), Accounts, Net worth (read-only), Debt (payoff plan), Reports (with a CSV
+  download), Plan ahead (30-day cash forecast, planned purchases, trips), Us two, Settings; plus
+  the full-screen keypad for adding entries and the category / pot bottom sheets.
 - **Look:** black, lavender and cream with the stepped blob edges, Geist type, floating tab bar.
 - **Wide screens** (an unfolded foldable): budget and tabs on the left, the detail on the right;
   the keypad screen uses both halves (all categories in a grid on the left, chips and keypad on the right).
+  Bills opened from the left pane puts the calendar on the left and the list on the right.
 - **Empty start:** the Home screen shows "Start here" steps (accounts → pay → limits → first entry)
   that tick off as you go.
 
@@ -101,18 +103,24 @@ households/{code}/goals/{id}     pots: target, starting amount, monthly, account
 households/{code}/debts/{id}     loans: balance, APR, minimum
 households/{code}/planned/{id}   planned purchases with each partner's vote
 households/{code}/events/{id}    trips and events: budget, spent
+households/{code}/assets/{id}    home, car, gold …: name, kind, value (edited on the Mac; missing = none)
 ```
 
-The household document also holds your own categories (`custom`) and the debt
-plan settings (`strat`, `extra`).
+The household document also holds your own categories (`custom`), renamed or regrouped
+built-in categories (`catOv`: id → name and group), removed built-ins (`catDel`) and the debt
+plan settings (`strat`, `extra`). Investment accounts may carry `cost`, the amount put in,
+so Net worth can show the gain. Deleting a category can move its entries and bills to another
+one (written in batches of at most 450); otherwise they show as "Other" and count towards no budget.
 
 ## Differences from the design
 
-- The design creates categories, pots, loans, planned purchases and trips on the web
-  only. There's no web app yet, so the phone can create and edit all of them.
+- The design creates loans, planned purchases and trips on the web only; the phone can
+  create and edit them too. Assets are added and edited in the Mac app only (Net worth on the
+  phone is read-only, as designed); an investment's amount put in can be set on either.
+- The pot sheet keeps a "Round-ups go to this pot" switch, which isn't in the design.
 - The bundle ID stays `app.tandem.budget` because that's what is registered in Firebase;
   nobody sees it.
 
-## Not built yet
+## Other apps
 
-The desktop/web app.
+The Mac app lives in [`desktop/`](../desktop) and shares the same Firestore data.

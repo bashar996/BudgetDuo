@@ -18,6 +18,8 @@ final class HouseholdStore {
     private(set) var debts: [Debt] = []
     private(set) var planned: [Planned] = []
     private(set) var trips: [Trip] = []
+    /// Homes, cars, gold … (added in the Mac app; a missing collection is just empty).
+    private(set) var assets: [Asset] = []
     /// True while something saved on this phone hasn't reached the server yet.
     private(set) var syncing = false
     private(set) var missing = false
@@ -57,6 +59,7 @@ final class HouseholdStore {
         watch("debts", into: \.debts, sort: { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) })
         watch("planned", into: \.planned, sort: { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) })
         watch("events", into: \.trips, sort: { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) })
+        watch("assets", into: \.assets, sort: { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) })
     }
 
     private func watch<T: Decodable>(_ name: String, into path: ReferenceWritableKeyPath<HouseholdStore, [T]>, sort: @escaping (T, T) -> Bool) {
@@ -82,7 +85,7 @@ final class HouseholdStore {
     func ledger(today: Date = Date()) -> Ledger? {
         guard let household else { return nil }
         return Ledger(household: household, tx: tx, accounts: accounts, bills: bills, goals: goals,
-                      debts: debts, planned: planned, trips: trips, today: today)
+                      debts: debts, planned: planned, trips: trips, assets: assets, today: today)
     }
 
     // MARK: Writes
@@ -207,12 +210,19 @@ final class HouseholdStore {
 
     func deleteGoal(_ id: String) { col("goals").document(id).delete(completion: report) }
 
-    // MARK: Custom categories
+    // MARK: Categories
+    // Your own categories live in `custom` and are rewritten directly; built-ins
+    // are renamed / moved with `catOv` and removed with `catDel`. Pocket money is fixed.
+
+    private func customData(_ list: [CustomCategory]) -> [[String: String]] {
+        list.map { ["id": $0.id, "name": $0.name, "g": $0.g] }
+    }
 
     private func writeCustom(_ list: [CustomCategory]) {
-        let data = list.map { ["id": $0.id, "name": $0.name, "g": $0.g] }
-        root.updateData(["custom": data], completion: report)
+        root.updateData(["custom": customData(list)], completion: report)
     }
+
+    private func isCustom(_ id: String) -> Bool { household?.custom?.contains { $0.id == id } ?? false }
 
     func addCategory(name: String, group: String, limit: Double) {
         let id = "c" + String(UUID().uuidString.prefix(8)).lowercased()
@@ -220,15 +230,46 @@ final class HouseholdStore {
         if limit > 0 { setBudget(id, limit) }
     }
 
-    func renameCategory(_ id: String, to name: String) {
-        writeCustom((household?.custom ?? []).map { $0.id == id ? CustomCategory(id: id, name: name, g: $0.g) : $0 })
+    /// Renames a category and/or moves it between Needs and Wants.
+    func updateCategory(_ id: String, name: String, group: String) {
+        guard !Catalog.isPocketMoney(id) else { return }
+        if isCustom(id) {
+            writeCustom((household?.custom ?? []).map { $0.id == id ? CustomCategory(id: id, name: name, g: group) : $0 })
+        } else {
+            root.updateData(["catOv.\(id)": ["name": name, "g": group]], completion: report)
+        }
     }
 
-    /// Removes the category and its limit. Its entries keep their amounts and show as "Other".
-    func deleteCategory(_ id: String) {
-        let list = (household?.custom ?? []).filter { $0.id != id }
-        root.updateData(["custom": list.map { ["id": $0.id, "name": $0.name, "g": $0.g] },
-                         "budgets.\(id)": FieldValue.delete()], completion: report)
+    /// Removes a category and its limit. With a `target`, every entry and bill that
+    /// used it moves there; without one they keep the old id and show as "Other"
+    /// (outside every budget total). Batches stay under Firestore's 500-write limit.
+    func deleteCategory(_ id: String, moveTo target: String?) {
+        guard !Catalog.isPocketMoney(id) else { return }
+        var fields: [AnyHashable: Any] = ["budgets.\(id)": FieldValue.delete()]
+        if isCustom(id) {
+            fields["custom"] = customData((household?.custom ?? []).filter { $0.id != id })
+        } else {
+            fields["catDel"] = FieldValue.arrayUnion([id])
+            fields["catOv.\(id)"] = FieldValue.delete()
+        }
+        var refs: [DocumentReference] = []
+        if let target, target != id {
+            refs = tx.filter { $0.cat == id && !$0.id.isEmpty }.map { col("tx").document($0.id) }
+                + bills.filter { $0.cat == id && !$0.id.isEmpty }.map { col("bills").document($0.id) }
+        }
+        var batch = db.batch()
+        batch.updateData(fields, forDocument: root)
+        var count = 1
+        for ref in refs {
+            if count >= 450 {
+                batch.commit(completion: report)
+                batch = db.batch()
+                count = 0
+            }
+            batch.updateData(["cat": target ?? id], forDocument: ref)
+            count += 1
+        }
+        batch.commit(completion: report)
     }
 
     // MARK: Debt plan

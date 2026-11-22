@@ -57,6 +57,10 @@ struct Household: Codable, Equatable {
     var strat: String?
     /// Extra paid towards debt each month, on top of the minimums.
     var extra: Double?
+    /// Renamed or regrouped built-in categories: built-in id → new name and group.
+    var catOv: [String: CategoryOverride]?
+    /// Built-in categories the household removed.
+    var catDel: [String]?
 
     static func new(uid: String, nameA: String, nameB: String, currency: String) -> Household {
         Household(nameA: nameA, nameB: nameB, currency: currency, members: [uid], memberWho: [uid: Who.a.rawValue],
@@ -102,6 +106,8 @@ struct Account: Codable, Identifiable, Equatable {
     var apy: Double?
     /// Card interest rate (APR %); used by the debt plan.
     var apr: Double?
+    /// Investments only: the amount put in. Gain = balance − cost.
+    var cost: Double?
     var createdAt: Date?
 }
 
@@ -127,6 +133,8 @@ struct Goal: Codable, Identifiable, Equatable {
     var monthly: Double
     var acct: String
     var due: String?
+    /// Auto-save each payday is switched on (shown on the Mac).
+    var auto: Bool?
     var createdAt: Date?
 }
 
@@ -135,6 +143,34 @@ struct CustomCategory: Codable, Equatable, Identifiable {
     var name: String
     /// "needs" or "wants"
     var g: String
+}
+
+/// A new name and group for a built-in category (`household.catOv`).
+struct CategoryOverride: Codable, Equatable {
+    var name: String
+    /// "needs" or "wants"
+    var g: String
+}
+
+/// Something owned outside an account, valued by hand: `households/{code}/assets/{id}`.
+/// Edited in the Mac app; the phone only shows them.
+struct Asset: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+    /// "property", "vehicle", "gold", "business" or "other"
+    var kind: String
+    var value: Double
+    var createdAt: Date?
+
+    var kindLabel: String {
+        switch kind {
+        case "property": return "Property"
+        case "vehicle": return "Vehicle"
+        case "gold": return "Gold & jewellery"
+        case "business": return "Business"
+        default: return "Other"
+        }
+    }
 }
 
 /// A loan: `households/{code}/debts/{id}`

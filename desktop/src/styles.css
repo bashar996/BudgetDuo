@@ -19,7 +19,9 @@ body[data-theme=night] [data-stage=cream] .h-row:hover{background:rgba(255,255,2
 .h-focus:focus{box-shadow:0 0 0 2px var(--accBase)}
 .noscroll{scrollbar-width:none}
 .noscroll::-webkit-scrollbar{display:none}
-/* Electron: let the black header drag the window. */
+/* Electron: a thin strip at the top drags the window. Anything that sits over it
+   (side panels, dialogs) must be no-drag, or macOS swallows its clicks. */
 .drag{-webkit-app-region:drag}
-.drag button,.drag input,.drag a,.drag select{-webkit-app-region:no-drag}
+.drag button,.drag input,.drag a,.drag select,.drag textarea{-webkit-app-region:no-drag}
+.nodrag,.nodrag *{-webkit-app-region:no-drag}
 .h-focus-ink:focus{box-shadow:0 0 0 2px var(--ink)}

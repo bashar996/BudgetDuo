@@ -22,7 +22,7 @@ enum AppTab: String, CaseIterable {
 
 enum Route: Hashable {
     case activity(account: String?)
-    case bills, accounts, debt, reports, plan, us, settings
+    case bills, accounts, worth, debt, reports, plan, us, settings
 }
 
 /// What's being typed in the add-entry screen.
@@ -92,13 +92,23 @@ final class Router {
     var detailPath: [Route] = []
     var entry: EntryDraft?
     var form: FormSheet?
+    /// Bills: the day picked on the calendar (the list shows only that day's bills).
+    var billDay: Int?
+    /// Wide screens: Bills was opened from the left pane, so the left pane shows the
+    /// calendar on its own and the right pane the hero and list.
+    var billsSplit = false
 
-    func select(_ t: AppTab) { tab = t; paths = [:] }
+    func select(_ t: AppTab) { tab = t; paths = [:]; billsSplit = false; billDay = nil }
 
     /// Opens a top-level detail screen: the right-hand pane on wide screens.
     func open(_ r: Route) {
+        if r == .bills { billDay = nil }
+        billsSplit = isWide && r == .bills
         if isWide { detail = r; detailPath = [] } else { path.append(r) }
     }
+
+    /// Leaves the wide-screen bills calendar: the left pane goes back to its tab.
+    func closeBillsSplit() { billsSplit = false }
 
     /// Goes one level deeper from a detail screen (e.g. an account's activity
     /// from Accounts), so the pane keeps a way back.
@@ -114,6 +124,7 @@ final class Router {
 
     func add(_ store: HouseholdStore, _ L: Ledger, configure: (inout EntryDraft) -> Void = { _ in }) {
         var d = EntryDraft(who: store.me, acct: L.mainAccountId ?? "")
+        d.cat = L.catOr("groceries")
         configure(&d)
         entry = d
     }

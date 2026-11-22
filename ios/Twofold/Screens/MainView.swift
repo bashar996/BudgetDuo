@@ -17,6 +17,9 @@ struct MainView: View {
                     if let L = store.ledger() { router.add(store, L) }
                 } else if t != router.tab {
                     router.select(t)
+                } else {
+                    // Tapping the current tab also leaves the wide-screen bills calendar.
+                    router.closeBillsSplit()
                 }
             }
         )) {
@@ -79,7 +82,10 @@ private struct TabRoot: View {
     }
 
     private var stack: some View {
-        NavigationStack(path: Binding(get: { router.paths[tab] ?? [] }, set: { router.paths[tab] = $0 })) {
+        // Unfolded, Bills opened from this pane: the calendar covers the pane
+        // (the tab stays underneath, so Back returns to where it was).
+        let billsCalendar = router.isWide && router.billsSplit && router.tab == tab && router.detail == .bills
+        return NavigationStack(path: Binding(get: { router.paths[tab] ?? [] }, set: { router.paths[tab] = $0 })) {
             Group {
                 switch tab {
                 case .home: HomeView()
@@ -90,6 +96,10 @@ private struct TabRoot: View {
                 }
             }
             .navigationDestination(for: Route.self) { RouteView(route: $0) }
+        }
+        .accessibilityHidden(billsCalendar)
+        .overlay {
+            if billsCalendar { BillCalendarScreen() }
         }
     }
 
@@ -114,6 +124,7 @@ struct RouteView: View {
     var body: some View {
         switch route {
         case .accounts: AccountsView(showBack: showBack)
+        case .worth: NetWorthView(showBack: showBack)
         case .bills: BillsView(showBack: showBack)
         case .reports: ReportsView(showBack: showBack)
         case .debt: DebtView(showBack: showBack)

@@ -49,7 +49,7 @@ export function Shell() {
   return (
     <UICtx.Provider value={ui}>
       <div style={css('height:100vh;display:flex;background:#0b0b0c;color:#0b0b0c;font-size:15px;line-height:1.4')}>
-        <aside className="drag" style={sx('flex:none;height:100vh;box-sizing:border-box;padding:14px;transition:width .28s cubic-bezier(.2,.8,.2,1)', { width: navMin ? 96 : 236 })}>
+        <aside style={sx('flex:none;height:100vh;box-sizing:border-box;padding:14px;transition:width .28s cubic-bezier(.2,.8,.2,1)', { width: navMin ? 96 : 236 })}>
           <div style={css('height:100%;box-sizing:border-box;background:#17171b;border-radius:28px;box-shadow:0 0 0 1px rgba(255,255,255,.08);padding:14px 10px;color:#ffffff;display:flex;flex-direction:column;gap:14px;overflow:hidden')}>
             {/* Room for the macOS traffic lights. */}
             <div style={css('height:22px;flex:none')} />
@@ -78,7 +78,7 @@ export function Shell() {
         </aside>
 
         <main id="main" style={css('flex:1;min-width:0;display:flex;flex-direction:column;overflow-y:auto;height:100vh')}>
-          <header className="drag" data-stage="dark" style={css('padding:clamp(20px,3vw,32px) clamp(16px,3.5vw,44px) 0;color:#ffffff;display:flex;flex-direction:column;gap:clamp(22px,3vw,34px)')}>
+          <header data-stage="dark" style={css('padding:clamp(20px,3vw,32px) clamp(16px,3.5vw,44px) 0;color:#ffffff;display:flex;flex-direction:column;gap:clamp(22px,3vw,34px)')}>
             <div style={css('display:flex;flex-wrap:wrap;align-items:center;gap:12px 14px')}>
               <div style={css('display:flex;flex:none')}>
                 <span style={css('width:46px;height:46px;border-radius:15px;background:var(--accBase);color:#0b0b0c;display:grid;place-items:center;font-weight:600;font-size:19px')}>{(A || '?')[0]}</span>
@@ -107,6 +107,8 @@ export function Shell() {
           </div>
         </main>
       </div>
+      {/* Drag the window by its top edge (macOS hidden title bar). */}
+      <div className="drag" aria-hidden="true" style={css('position:fixed;top:0;left:0;right:0;height:28px;z-index:40')} />
       <PanelHost L={L} />
     </UICtx.Provider>
   )

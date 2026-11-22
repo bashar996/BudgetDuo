@@ -122,7 +122,7 @@ export const leaveHousehold = (uid: string) => setDoc(doc(fb().db, 'users', uid)
 
 const COLS: [Col, keyof Data][] = [
   ['tx', 'tx'], ['accounts', 'accounts'], ['bills', 'bills'], ['goals', 'goals'],
-  ['debts', 'debts'], ['planned', 'planned'], ['events', 'trips'],
+  ['debts', 'debts'], ['planned', 'planned'], ['events', 'trips'], ['assets', 'assets'],
 ]
 
 /** Firestore Timestamps → Dates, document ID → id. */
@@ -142,7 +142,7 @@ export function watchHousehold(hid: string, cb: (l: Live) => void) {
   let missing = false, error: string | undefined
   const emit = () => {
     const ready = state.household && COLS.every(([, k]) => state[k])
-    cb({ data: ready ? (state as Data) : null, missing, syncing: Object.values(pending).some(Boolean), error })
+    cb({ data: ready ? ({ ...state } as Data) : null, missing, syncing: Object.values(pending).some(Boolean), error })
   }
   const unsubs = [
     onSnapshot(root, { includeMetadataChanges: true }, (s) => {
@@ -156,7 +156,11 @@ export function watchHousehold(hid: string, cb: (l: Live) => void) {
       ;(state as any)[key] = s.docs.map((d) => clean(d.id, d.data()))
       pending[col] = s.metadata.hasPendingWrites
       emit()
-    }, (e) => { error = e.message; emit() })),
+    }, (e) => {
+      // Assets are new: a household without them (or an older rules file) just has none.
+      if (col === 'assets') { state.assets = state.assets ?? []; emit(); return }
+      error = e.message; emit()
+    })),
   ]
   return () => unsubs.forEach((u) => u())
 }

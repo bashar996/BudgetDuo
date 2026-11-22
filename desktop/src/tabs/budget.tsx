@@ -34,7 +34,7 @@ function Body({ L }: { L: Ledger }) {
   return (
     <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:30px 40px;align-items:start')}>
       <div style={css('grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 20px')}>
-        <span style={css('flex:1;min-width:220px;font-size:13px;color:var(--mute);text-wrap:pretty')}>Pick a category to change its limit or move money in. The tick on each bar marks today.</span>
+        <span style={css('flex:1;min-width:220px;font-size:13px;color:var(--mute);text-wrap:pretty')}>Pick a category to rename it, change its limit, move money in or delete it. The tick on each bar marks today.</span>
         <button onClick={() => ui.open({ kind: 'cat' })} style={css("flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padding:0 16px;height:44px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer")}>+ New category</button>
       </div>
 
