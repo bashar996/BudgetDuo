@@ -400,6 +400,16 @@ struct ActivityView: View {
     @State private var cat: String?
     @State private var month = DateKit.ym(Date())
     @State private var seeded = false
+    /// Statement import: the file picker, then the import flow for the picked file.
+    @State private var picking = false
+    @State private var job: ImportJob?
+
+    /// CSV, Excel and PDF (types the system doesn't know are left out).
+    private static let statementTypes: [UTType] = {
+        let types: [UTType?] = [.commaSeparatedText, .tabSeparatedText, .plainText, .pdf,
+                                UTType(filenameExtension: "xlsx"), UTType(filenameExtension: "xls")]
+        return types.compactMap { $0 }
+    }()
 
     var body: some View {
         if let L = store.ledger() {
@@ -420,6 +430,15 @@ struct ActivityView: View {
                             TextField("", text: $query, prompt: Text("Search name, note or category").foregroundColor(Palette.mute))
                                 .font(.geist(15, .medium)).padding(.horizontal, 16).frame(height: 46)
                                 .background(Palette.field, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            Button { picking = true } label: {
+                                Text("Import").font(.geist(14, .medium)).padding(.horizontal, 14).frame(height: 46)
+                                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.3), lineWidth: 1))
+                                    .foregroundStyle(Palette.white)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Import statement")
+                            .accessibilityHint("Adds entries from a bank statement: CSV, Excel or PDF")
                             ShareLink(item: ReportFile(name: "twofold-\(month).csv", text: L.activityCSV(list)),
                                       preview: SharePreview("Twofold entries · \(DateKit.monthLabel(month))")) {
                                 Text("Export").font(.geist(14, .medium)).padding(.horizontal, 14).frame(height: 46)
@@ -469,6 +488,41 @@ struct ActivityView: View {
                 }
             }
             .onAppear { if !seeded { acct = account; seeded = true } }
+            .fileImporter(isPresented: $picking, allowedContentTypes: ActivityView.statementTypes) { picked($0) }
+            .fullScreenCover(item: $job) { j in
+                ImportFlowView(job: j) { acctId, ym in
+                    // Show what was just imported: that account, the latest month in the file.
+                    acct = acctId
+                    month = min(ym, L.ym)
+                    seeded = true
+                }
+            }
+        }
+    }
+
+    /// Reads the picked file (inside its security scope) and opens the import flow.
+    private func picked(_ result: Result<URL, Error>) {
+        switch result {
+        case .failure(let e):
+            if (e as? CocoaError)?.code != .userCancelled { store.error = e.localizedDescription }
+        case .success(let url):
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                guard data.count <= StmtFile.maxBytes else {
+                    store.error = "That file is too big for a statement (over 40 MB)."
+                    return
+                }
+                let next = ImportJob(name: url.lastPathComponent, data: data, account: acct ?? account)
+                // Let the file picker finish closing before the import screen opens.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(350))
+                    job = next
+                }
+            } catch {
+                store.error = "That file couldn’t be opened (\(error.localizedDescription))."
+            }
         }
     }
 
@@ -501,6 +555,12 @@ struct ActivityView: View {
                     .accessibilityLabel("Edit \(a.name)")
             }
             .padding(.top, 12)
+            BlockButton(title: "Import statement", fill: Palette.black, outline: true, height: 46, radius: 16) {
+                acct = a.id
+                picking = true
+            }
+            .accessibilityHint("Adds entries to \(a.name) from a CSV, Excel or PDF statement")
+            .padding(.top, 8)
         }
         .padding(16)
         .background(Palette.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))

@@ -8,7 +8,7 @@ one shared budget for two people, synced between both phones.
   rollover; rename, regroup, add and delete categories, move money in from another one), Savings
   (pots with Edit / New pot sheets, auto-save switch, deposit/withdraw, round-ups, month-end
   sweep, where extra money goes, recent moves), More → Activity (search, who / account / category
-  filters, CSV export), Bills (with this month's calendar), Accounts, Net worth (add and edit
+  filters, CSV export, statement import), Bills (with this month's calendar), Accounts, Net worth (add and edit
   assets and investments), Debt (payoff plan, loans with their full schedule and payments, credit
   cards with minimums and payoff), Reports (with a CSV download), Plan ahead (30-day cash forecast
   against your cushion, planned purchases with both votes and Mark bought, trips with Log spend),
@@ -101,6 +101,8 @@ ios/
     App/TwofoldApp.swift  entry point, sign-in / household gate
     Model/               Codable models, category catalog, date & money helpers,
                          Ledger (every derived number: safe to spend, balances, …)
+    Import/              statement import, pure Swift: CSV, .xlsx (small ZIP reader + inflate), PDF text,
+                         columns, dates, amounts, names, categories, duplicates (same rules as the Mac)
     Sync/                Session (auth, create/join household), HouseholdStore (live data + writes)
     UI/                  palette, Geist fonts, blob edge, shared components, router
     Screens/             Home, Budget, Pots, More, details, add entry, forms
@@ -112,7 +114,8 @@ ios/
 ```
 users/{uid}                      { householdId }
 households/{code}                names, currency, members, budgets, incomes, checks, round-ups
-households/{code}/tx/{id}        entries (expense / income / transfer, pot moves; loan payments carry debtId, debtPart)
+households/{code}/tx/{id}        entries (expense / income / transfer, pot moves; loan payments carry debtId, debtPart;
+                                 imported ones carry importId and source "import")
 households/{code}/accounts/{id}  opening balance + details (cards: limit, apr, statementDay, dueDay, minPct, minFloor)
 households/{code}/bills/{id}     day, amount, category, paid months (a loan's bill carries debtId)
 households/{code}/goals/{id}     pots: target, starting amount, monthly, account
@@ -144,6 +147,34 @@ that restores the same entry id.
 
 Deleting a category can move its entries and bills to another
 one (written in batches of at most 450); otherwise they show as "Other" and count towards no budget.
+
+## Statement import
+
+Activity → **Import** (or **Import statement** on an account's card) opens the Files picker for a
+CSV, Excel (.xlsx) or PDF statement, then a full-screen flow: which account it's for → the PDF's
+password if it has one → the columns (picked automatically, changeable, with a preview and a
+"money out is negative / positive" choice when the file doesn't say) → the review list (tick, date,
+name, amount, category, who, status; filters All / New / Duplicates / Needs category; set a category
+for everything ticked) → **Import n entries**, with Undo for 8 s. Activity then shows that account.
+
+- The rules are a port of the Mac's `desktop/src/import/` (same header words, date and amount
+  formats, name clean-up, keyword categories, bill / loan / transfer / card-payment / refund
+  handling). Money out on a card is an expense on the card; a payment to the card is offered as a
+  transfer from the current account.
+- Each entry gets `importId` = `"imp_"` + lowercase hex of the first 8 bytes of SHA-256 of
+  `"{accountId}|{yyyy-MM-dd}|{amount, 2 decimals, - for money out}|{description, upper case, single spaces, trimmed}|{n}"`
+  (n counts identical lines earlier in the file, from 0), the same on the Mac, so a statement
+  imported on one device shows as "Already imported" on the other. Likely duplicates (same amount
+  within 3 days on the same account, plus same date, a similar name, a bill payment or the same
+  category) are unticked.
+- A bill match uses the bill's fixed entry id (`bill-{billId}-{ym}`) and marks the bill paid; a loan
+  installment match carries `debtId`. Writes go in batches of at most 450. Undo deletes exactly
+  those entries and marks unpaid the bills the import marked paid.
+- The column mapping and sign choice are remembered per account and file layout on this phone
+  (UserDefaults `twofold.importMap.{accountId}`).
+- Not supported: old binary .xls (save as .xlsx or CSV; HTML tables named .xls do work), scanned
+  PDFs without text, password-protected spreadsheets. PDF reading is best effort (PDFKit's page
+  text), so check the review list.
 
 ## Differences from the design
 

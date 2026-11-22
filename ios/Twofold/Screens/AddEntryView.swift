@@ -302,7 +302,8 @@ struct AddEntryView: View {
         let t = Tx(id: d.txId, date: DateKit.iso(d.date), name: name, cat: cat, amt: amt, who: d.who, type: d.type,
                    note: d.note, billId: d.billId, acct: d.acct, to: isX ? d.to : nil, pot: isX ? d.pot : nil,
                    potDir: isX ? d.potDir : nil, createdAt: existing?.createdAt,
-                   debtId: d.type == .expense ? d.debtId : nil, debtPart: d.type == .expense ? d.debtPart : nil)
+                   debtId: d.type == .expense ? d.debtId : nil, debtPart: d.type == .expense ? d.debtPart : nil,
+                   importId: existing?.importId, source: existing?.source)
         store.save(t)
         dismiss()
     }

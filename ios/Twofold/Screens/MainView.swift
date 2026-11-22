@@ -169,8 +169,9 @@ private struct ErrorToast: View {
     }
 }
 
-/// "Deleted {name} · Undo" for about 5 seconds after an entry is deleted;
-/// Undo puts it back with the same id.
+/// "Deleted {name} · Undo" for about 5 seconds after an entry is deleted (Undo puts it
+/// back with the same id), and "Imported {n} entries · Undo" for about 8 seconds after a
+/// statement import (Undo deletes exactly those entries).
 @MainActor
 private struct UndoToast: View {
     @Environment(HouseholdStore.self) private var store
@@ -178,38 +179,52 @@ private struct UndoToast: View {
 
     var body: some View {
         Group {
-            if let t = router.undo {
-                HStack(spacing: 8) {
-                    Text("Deleted \(t.name) ·").font(.geist(14, .medium)).lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button {
-                        store.restore(t)
-                        router.undo = nil
-                    } label: {
-                        Text("Undo").font(.geist(14, .semibold)).foregroundStyle(Palette.lavender)
-                            .padding(.horizontal, 12).frame(minHeight: 44).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Undo delete")
+            if let u = router.importUndo {
+                toast("Imported \(u.count) \(u.count == 1 ? "entry" : "entries") ·", label: "Undo import", key: u.id.uuidString, seconds: 8) {
+                    store.undoImport(u)
+                    router.importUndo = nil
+                } expire: {
+                    if router.importUndo?.id == u.id { router.importUndo = nil }
                 }
-                .padding(.leading, 16).padding(.trailing, 4)
-                .background(Palette.black, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.14), lineWidth: 1))
-                .foregroundStyle(Palette.white)
-                .padding(.horizontal, 14)
-                // Clear of the tab bar; unfolded, in the right pane and clear of the rail and its Back.
-                .frame(maxWidth: router.isWide ? CGFloat(440) : CGFloat.infinity)
-                .padding(.trailing, router.isWide ? max(0, 76 - router.railInset) : 0)
-                .frame(maxWidth: .infinity, alignment: router.isWide ? .trailing : .center)
-                .padding(.bottom, router.isWide ? 18 : 58)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .task(id: t.id) {
-                    do { try await Task.sleep(for: .seconds(5)) } catch { return }
+            } else if let t = router.undo {
+                toast("Deleted \(t.name) ·", label: "Undo delete", key: t.id, seconds: 5) {
+                    store.restore(t)
+                    router.undo = nil
+                } expire: {
                     if router.undo?.id == t.id { router.undo = nil }
                 }
             }
         }
-        .animation(.snappy(duration: 0.25), value: router.undo?.id)
+        .animation(.snappy(duration: 0.25), value: (router.importUndo?.id.uuidString ?? "") + "|" + (router.undo?.id ?? ""))
+    }
+
+    private func toast(_ text: String, label: String, key: String, seconds: Double,
+                       undo: @escaping () -> Void, expire: @escaping () -> Void) -> some View {
+        HStack(spacing: 8) {
+            Text(text).font(.geist(14, .medium)).lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: undo) {
+                Text("Undo").font(.geist(14, .semibold)).foregroundStyle(Palette.lavender)
+                    .padding(.horizontal, 12).frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
+        }
+        .padding(.leading, 16).padding(.trailing, 4)
+        .background(Palette.black, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.14), lineWidth: 1))
+        .foregroundStyle(Palette.white)
+        .padding(.horizontal, 14)
+        // Clear of the tab bar; unfolded, in the right pane and clear of the rail and its Back.
+        .frame(maxWidth: router.isWide ? CGFloat(440) : CGFloat.infinity)
+        .padding(.trailing, router.isWide ? max(0, 76 - router.railInset) : 0)
+        .frame(maxWidth: .infinity, alignment: router.isWide ? .trailing : .center)
+        .padding(.bottom, router.isWide ? 18 : 58)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .task(id: key) {
+            do { try await Task.sleep(for: .seconds(seconds)) } catch { return }
+            expire()
+        }
     }
 }
 

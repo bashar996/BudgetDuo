@@ -114,6 +114,11 @@ struct Tx: Codable, Identifiable, Equatable {
     var debtId: String?
     /// "installment" or "extra" (missing = installment).
     var debtPart: String?
+    /// Statement import: stable ID of the statement line ("imp_…", the same on the Mac),
+    /// so a statement imported on either device isn't imported again.
+    var importId: String?
+    /// "import" for entries that came from a statement.
+    var source: String?
 
     var month: String { String(date.prefix(7)) }
 }

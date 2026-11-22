@@ -142,6 +142,59 @@ final class HouseholdStore {
         batch.commit(completion: report)
     }
 
+    // MARK: Statement import
+
+    /// Writes imported entries in batches of at most 450 writes (an entry and the bill it
+    /// pays always share a batch). A bill match uses its fixed entry id and marks the bill
+    /// paid for that month. Returns what Undo needs.
+    @discardableResult
+    func importEntries(_ entries: [ImportEntry]) -> ImportUndo {
+        var ids: [String] = []
+        var marked: [BillMonth] = []
+        var batch = db.batch()
+        var count = 0
+        for e in entries {
+            let paysBill = e.bill.map { b in bills.contains { $0.id == b.id } } ?? false
+            if count + (paysBill ? 2 : 1) > 450 {
+                batch.commit(completion: report)
+                batch = db.batch()
+                count = 0
+            }
+            var t = e.tx
+            let ref = t.id.isEmpty ? col("tx").document() : col("tx").document(t.id)
+            t.id = ref.documentID
+            if t.createdAt == nil { t.createdAt = Date() }
+            let current = batch
+            write { try current.setData(from: t, forDocument: ref) }
+            count += 1
+            ids.append(t.id)
+            if paysBill, let b = e.bill {
+                batch.updateData(["paid.\(b.ym)": true], forDocument: col("bills").document(b.id))
+                marked.append(b)
+                count += 1
+            }
+        }
+        if count > 0 { batch.commit(completion: report) }
+        return ImportUndo(txIds: ids, bills: marked)
+    }
+
+    /// Undo for an import: deletes exactly those entries and marks unpaid the bills it marked paid.
+    func undoImport(_ u: ImportUndo) {
+        var batch = db.batch()
+        var count = 0
+        for id in u.txIds where !id.isEmpty {
+            if count >= 450 { batch.commit(completion: report); batch = db.batch(); count = 0 }
+            batch.deleteDocument(col("tx").document(id))
+            count += 1
+        }
+        for b in u.bills where bills.contains(where: { $0.id == b.id }) {
+            if count >= 450 { batch.commit(completion: report); batch = db.batch(); count = 0 }
+            batch.updateData(["paid.\(b.ym)": false], forDocument: col("bills").document(b.id))
+            count += 1
+        }
+        if count > 0 { batch.commit(completion: report) }
+    }
+
     /// `id` if that account still exists.
     private func existingAccount(_ id: String?) -> String? {
         guard let id, accounts.contains(where: { $0.id == id }) else { return nil }

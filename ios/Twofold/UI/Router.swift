@@ -154,6 +154,8 @@ final class Router {
     var form: FormSheet?
     /// The entry just deleted, while its Undo toast shows.
     var undo: Tx?
+    /// The statement import just written, while its Undo toast shows.
+    var importUndo: ImportUndo?
     /// Bills: the day picked on the calendar (the list shows only that day's bills).
     var billDay: Int?
     /// Wide screens: Bills was opened from the left pane, so the left pane shows the
@@ -302,6 +304,13 @@ final class Router {
     /// Deletes an entry and offers Undo for a few seconds.
     func delete(_ t: Tx, _ store: HouseholdStore) {
         store.deleteEntry(t)
+        importUndo = nil
         undo = t
+    }
+
+    /// After a statement import: offers Undo for those entries.
+    func imported(_ u: ImportUndo) {
+        undo = nil
+        importUndo = u
     }
 }
