@@ -2,7 +2,7 @@
 // Firestore (real use) and an in-memory household (the ?demo preview).
 import type { Data, Household } from './types'
 
-export type Col = 'tx' | 'accounts' | 'bills' | 'goals' | 'debts' | 'planned' | 'events'
+export type Col = 'tx' | 'accounts' | 'bills' | 'goals' | 'debts' | 'planned' | 'events' | 'assets'
 export const DELETE = { __op: 'delete' } as const
 export const inc = (by: number) => ({ __op: 'inc', by }) as const
 
@@ -19,7 +19,7 @@ export interface Backend {
 
 /** Maps a collection to the key it lives under in Data. */
 export const dataKey: Record<Col, keyof Omit<Data, 'household'>> = {
-  tx: 'tx', accounts: 'accounts', bills: 'bills', goals: 'goals', debts: 'debts', planned: 'planned', events: 'trips',
+  tx: 'tx', accounts: 'accounts', bills: 'bills', goals: 'goals', debts: 'debts', planned: 'planned', events: 'trips', assets: 'assets',
 }
 
 function setPath(obj: Record<string, any>, path: string, v: unknown) {

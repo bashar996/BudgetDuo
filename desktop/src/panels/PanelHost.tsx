@@ -1,6 +1,7 @@
 import type { Ledger } from '../data/ledger'
 import { useUI } from '../shell/ui'
 import { AcctPanel } from './AcctPanel'
+import { AssetPanel } from './AssetPanel'
 import { BudgetPanel } from './BudgetPanel'
 import { CatPanel } from './CatPanel'
 import { ContribPanel } from './ContribPanel'
@@ -20,7 +21,8 @@ export function PanelHost({ L }: { L: Ledger }) {
     case 'contrib': return <ContribPanel key={'c' + p.trip.id} L={L} trip={p.trip} />
     case 'item': return <ItemPanel key={p.item + (p.id ?? '') + (p.who ?? '')} L={L} kind={p.item} who={p.who} id={p.id} />
     case 'pot': return <PotPanel key={'p' + (p.goal?.id ?? '')} L={L} goal={p.goal} />
-    case 'acct': return <AcctPanel key={'a' + (p.acct?.id ?? '')} L={L} acct={p.acct} />
+    case 'acct': return <AcctPanel key={'a' + (p.acct?.id ?? '') + (p.preset ?? '')} L={L} acct={p.acct} preset={p.preset} />
+    case 'asset': return <AssetPanel key={'as' + (p.id ?? '')} L={L} id={p.id} />
     case 'settings': return <SettingsPanel L={L} />
   }
 }

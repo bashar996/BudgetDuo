@@ -1,5 +1,5 @@
-// Accounts (lavender): net worth over six months, account tiles, the picked account's
-// ledger and 30-day balance, and loans.
+// Accounts (lavender): total across accounts, account tiles, the picked account's
+// ledger and 30-day balance, and loans. Net worth lives in tabs/worth.tsx.
 // Design: Tandem Budget.dc.html, template `is.accounts` and `acc` in renderVals().
 import type { TabDef, HeroBar } from '../shell/ui'
 import { useUI } from '../shell/ui'
@@ -12,20 +12,6 @@ import { pc, sum } from '../lib/money'
 
 const LAV = 'var(--accBase)', CRM = '#fbf9ef'
 const tOf = (type: string) => ACCOUNT_TYPES[type] ?? ACCOUNT_TYPES.current
-
-/** Net worth at the end of each of the last six months (the last one is now):
- *  today's balances minus everything entered after that month ended. Loans are
- *  kept at today's balance since they are not moved by entries. */
-function netHist(L: Ledger) {
-  const net = L.assets - L.liab
-  const eff = (t: Tx) =>
-    (L.acctBy[t.acct] ? (t.type === 'inc' ? t.amt : -t.amt) : 0) + (t.type === 'xfer' && t.to && L.acctBy[t.to] ? t.amt : 0)
-  return [5, 4, 3, 2, 1, 0].map((k) => {
-    if (!k) return net
-    const m = addM(L.curYm, -k), end = m + '-' + pad(dim(m))
-    return net - sum(L.data.tx.filter((t) => t.date > end), eff)
-  })
-}
 
 const flow = (t: Tx, id: string) =>
   t.type === 'inc' ? (t.acct === id ? t.amt : 0) : t.type === 'exp' ? (t.acct === id ? -t.amt : 0) : (t.to === id ? t.amt : 0) - (t.acct === id ? t.amt : 0)
@@ -175,30 +161,18 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
 export const accountsTab: TabDef = {
   id: 'accounts',
   stage: 'lav',
-  kicker: () => 'Balances, cards and net worth',
+  kicker: () => 'Balances and cards',
+  // Net worth (with assets and history) has its own tab now.
   hero: (L) => {
     const { f } = L
-    const net = L.assets - L.liab
-    const hist = netHist(L)
-    const lo = Math.min(...hist), hLo = lo - Math.abs(lo) * 0.06, hHi = Math.max(...hist)
-    const m0 = L.today.getMonth()
     const mix: [string, string[]][] = [['Cash', ['current', 'cash']], ['Savings', ['save']], ['Investments', ['invest']]]
-    const bars: HeroBar[] = hist.map((v, i) => ({
-      h: pc(Math.max(0.08, (v - hLo) / (hHi - hLo || 1))),
-      bg: i === 5 ? LAV : CRM,
-      label: MN[(m0 - 5 + i + 12) % 12].slice(0, 3),
-      tag: i === 5 ? f(v) : '',
-      title: f(Math.round(v)),
-    }))
     return {
-      label: 'Net worth',
+      label: 'Across your accounts',
       cur: true,
-      num: L.num(net),
+      num: L.num(sum(L.accounts, (a) => a.balance)),
       fg: '#ffffff',
-      sub: (net - hist[4] >= 0 ? '+' : '') + f(net - hist[4]) + ' since last month',
-      stats: ([['You own', f(L.assets)], ['You owe', f(L.liab)]] as [string, string][]).concat(
-        mix.map(([label, types]) => [label, f(sum(L.accounts.filter((a) => types.includes(a.type)), (a) => a.balance))])),
-      bars,
+      sub: 'Everyday money, savings and cards. The full picture, with your assets, is under Net worth.',
+      stats: mix.map(([label, types]) => [label, f(sum(L.accounts.filter((a) => types.includes(a.type)), (a) => a.balance))] as [string, string]),
     }
   },
   Body,

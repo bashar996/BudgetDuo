@@ -42,7 +42,7 @@ export function ItemPanel({ L, kind, who, id }: { L: Ledger; kind: Kind; who?: W
     if (debt) return { name: debt.name, amt: String(debt.balance), extra: String(debt.apr), min: String(debt.min), cat: '' }
     if (plan) return { name: plan.name, amt: String(plan.cost), extra: '', min: '', cat: '' }
     if (trip) return { name: trip.name, amt: String(trip.budget), extra: trip.when, min: '', cat: '' }
-    return { name: '', amt: '', extra: '', min: '', cat: kind === 'bill' ? 'utilities' : '' }
+    return { name: '', amt: '', extra: '', min: '', cat: kind === 'bill' ? L.catOr('utilities') : '' }
   })
   const [err, setErr] = useState('')
   const set = (k: keyof typeof d, v: string) => { setErr(''); setD((x) => ({ ...x, [k]: v })) }
@@ -55,7 +55,7 @@ export function ItemPanel({ L, kind, who, id }: { L: Ledger; kind: Kind; who?: W
     if (isNaN(amt)) return setErr('Add an amount.')
     const ex = parse(d.extra) || 0
     if (kind === 'income') act.setIncome(w, amt, clampDay(ex))
-    else if (kind === 'bill') act.saveBill({ id: bill?.id, name, amt, day: clampDay(ex), cat: d.cat || 'utilities', sub: bill?.sub ?? false, paid: bill?.paid ?? {} })
+    else if (kind === 'bill') act.saveBill({ id: bill?.id, name, amt, day: clampDay(ex), cat: d.cat || L.catOr('utilities'), sub: bill?.sub ?? false, paid: bill?.paid ?? {} })
     else if (kind === 'debt') {
       const mn = parse(d.min)
       act.saveDebt({ id: debt?.id, createdAt: debt?.createdAt ?? undefined, name, balance: amt, apr: ex, min: mn > 0 ? mn : Math.max(50, Math.round(amt * 0.02)) })

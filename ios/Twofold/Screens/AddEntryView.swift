@@ -107,7 +107,7 @@ struct AddEntryView: View {
                         let on = d.type == t.0
                         Button {
                             d.type = t.0; d.error = ""
-                            if t.0 == .income { d.cat = "income" } else if d.cat == "income" || d.cat == "transfer" { d.cat = "groceries" }
+                            if t.0 == .income { d.cat = "income" } else if d.cat == "income" || d.cat == "transfer" { d.cat = L.catOr("groceries") }
                         } label: {
                             Text(t.1).font(.geist(14, .medium)).padding(.horizontal, 16).frame(height: 44)
                                 .foregroundStyle(on ? Palette.white : Palette.black)
@@ -291,7 +291,7 @@ struct AddEntryView: View {
         guard !d.acct.isEmpty else { d.error = L.accounts.isEmpty ? "Add an account first" : "Pick an account"; return }
         let isX = d.type == .transfer, isInc = d.type == .income
         if isX && (d.acct.isEmpty || d.to.isEmpty || d.acct == d.to) { d.error = "Pick two different accounts"; return }
-        let cat = isX ? "transfer" : isInc ? "income" : (d.cat == "income" || d.cat == "transfer") ? "groceries" : d.cat
+        let cat = isX ? "transfer" : isInc ? "income" : (d.cat == "income" || d.cat == "transfer") ? L.catOr("groceries") : d.cat
         let trimmed = d.name.trimmingCharacters(in: .whitespaces)
         let name = trimmed.isEmpty ? (isX ? "Transfer" : isInc ? "Income" : L.categoryName(cat)) : trimmed
         let existing = store.tx.first { $0.id == d.txId }

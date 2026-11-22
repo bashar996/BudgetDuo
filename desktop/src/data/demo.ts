@@ -56,8 +56,8 @@ export function demoData(today = new Date()): Data {
     { id: 'a3', name: 'Shared credit card', type: 'card', who: 'J', bank: 'Main bank', last4: '0937', balance: -6400, limit: 25000, apr: 36, opening: 0 },
     { id: 'a4', name: 'High-yield saver', type: 'save', who: 'J', bank: 'Online bank', apy: 4.25, balance: 84000, opening: 0 },
     { id: 'a5', name: 'Home fixed deposit', type: 'save', who: 'J', bank: 'Main bank', apy: 5.1, balance: 106500, opening: 0 },
-    { id: 'a6', name: 'Brokerage', type: 'invest', who: 'J', balance: 64000, opening: 0 },
-    { id: 'a7', name: 'Long-term investment plan', type: 'invest', who: 'A', balance: 92000, opening: 0 },
+    { id: 'a6', name: 'Brokerage', type: 'invest', who: 'J', balance: 64000, opening: 0, cost: 52000 },
+    { id: 'a7', name: 'Long-term investment plan', type: 'invest', who: 'A', balance: 92000, opening: 0, cost: 80000 },
     { id: 'a8', name: 'Long-term investment plan', type: 'invest', who: 'B', balance: 58000, opening: 0 },
   ]
   // Opening balances so that today's balances match the design.
@@ -81,6 +81,8 @@ export function demoData(today = new Date()): Data {
     tx, accounts, bills, goals: goalsOut,
     debts: [{ id: 'd1', name: 'Car loan', balance: 68000, apr: 4.2, min: 1850 }, { id: 'd2', name: 'Personal loan', balance: 41000, apr: 7.9, min: 1450 }],
     planned: [{ id: 'p1', name: 'New sofa', cost: 5200, A: true, B: true }, { id: 'p2', name: 'Stand mixer', cost: 1600, A: false, B: true }, { id: 'p3', name: 'Anniversary weekend', cost: 2400, A: true, B: true }, { id: 'p4', name: 'Laptop upgrade', cost: 6000, A: true, B: false }],
+    // Preview only: real households start with no assets and no investment costs.
+    assets: [{ id: 's1', name: 'Family car', kind: 'vehicle', value: 78000 }, { id: 's2', name: 'Gold & jewellery', kind: 'gold', value: 36000 }],
     trips: [{ id: 'e1', name: 'Eid break getaway', when: 'Mar 2027', budget: 9000, spent: 3200 }, { id: 'e2', name: 'Kids’ birthday party', when: 'Jan 2027', budget: 2500, spent: 600 }, { id: 'e3', name: 'Summer family visit', when: 'Jul 2027', budget: 7500, spent: 0 }],
   }
 }
@@ -89,6 +91,6 @@ export function demoData(today = new Date()): Data {
 export function emptyData(): Data {
   return {
     household: { nameA: 'Bashar', nameB: 'Eman', currency: 'AED', members: ['demo'], memberWho: { demo: 'A' }, budgets: {}, incomes: [{ who: 'A', amt: 0, day: 1 }, { who: 'B', amt: 0, day: 1 }], checks: {}, roundSwept: {}, custom: [], strat: 'avalanche', extra: 0 },
-    tx: [], accounts: [], bills: [], goals: [], debts: [], planned: [], trips: [],
+    tx: [], accounts: [], bills: [], goals: [], debts: [], planned: [], trips: [], assets: [],
   }
 }

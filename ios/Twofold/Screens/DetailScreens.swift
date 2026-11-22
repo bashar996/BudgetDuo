@@ -12,9 +12,10 @@ struct AccountsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     NavRow(title: "Accounts", showBack: showBack)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Net worth").font(.geist(13)).foregroundStyle(Palette.mute)
-                        BigAmount(currency: L.money.currency, value: L.money.num(L.netWorth), size: 54).padding(.top, 4)
-                        Text("Own \(L.money.f(L.assets)) · owe \(L.money.f(L.liabilities))").font(.geist(14)).foregroundStyle(Palette.mute).padding(.top, 8)
+                        Text("Across your accounts").font(.geist(13)).foregroundStyle(Palette.mute)
+                        BigAmount(currency: L.money.currency, value: L.money.num(L.accountsTotal), size: 54).padding(.top, 4)
+                        Text("\(L.accounts.count) account\(L.accounts.count == 1 ? "" : "s") · the full picture is under Net worth")
+                            .font(.geist(14)).foregroundStyle(Palette.mute).padding(.top, 8)
                     }
                     .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 4)
                 }
@@ -57,6 +58,7 @@ struct AccountsView: View {
     }
 }
 
+@MainActor
 struct BillsView: View {
     var showBack = true
     @Environment(HouseholdStore.self) private var store
@@ -64,6 +66,10 @@ struct BillsView: View {
 
     var body: some View {
         if let L = store.ledger() {
+            // Unfolded with Bills opened from the left: the calendar is on the left pane.
+            let showCalendar = !(router.isWide && router.billsSplit && !showBack)
+            let day = router.billDay
+            let rows = L.billRows.filter { day == nil || $0.dueDay == day }
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 0) {
                     NavRow(title: "Bills", showBack: showBack)
@@ -75,7 +81,17 @@ struct BillsView: View {
                     .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 4)
                 }
             } content: {
-                ForEach(L.billRows) { b in
+                if showCalendar { BillCalendar(L: L, hint: "Tap a day to see its bills").padding(.bottom, 10) }
+                if let day {
+                    Button { router.billDay = nil } label: {
+                        Text("\(day) \(L.monthShort) only  ×").font(.geist(13.5, .medium)).padding(.horizontal, 14).frame(height: 44)
+                            .overlay(Capsule().strokeBorder(Palette.black, lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 4)
+                    .accessibilityLabel("Only bills on \(day) \(L.monthShort). Show all bills")
+                }
+                ForEach(rows) { b in
                     HStack(spacing: 12) {
                         DateTile(day: b.dueDay, month: L.monthShort)
                         Button { router.form = .bill(b.bill) } label: {

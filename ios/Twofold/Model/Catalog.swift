@@ -36,6 +36,27 @@ enum Catalog {
         categories + (custom ?? []).map { Category(id: $0.id, name: $0.name, group: CatGroup(rawValue: $0.g) ?? .wants, custom: true) }
     }
 
+    /// The household's categories: built-ins minus the ones it removed (`catDel`)
+    /// with renames and group moves (`catOv`) applied, then its own (`custom`).
+    /// Pocket money can't be renamed, moved or removed.
+    static func effective(_ h: Household) -> [Category] {
+        let gone = Set(h.catDel ?? [])
+        let ov = h.catOv ?? [:]
+        let builtIns: [Category] = categories.compactMap { (c: Category) -> Category? in
+            if c.group == .personal { return c }
+            if gone.contains(c.id) { return nil }
+            guard let o = ov[c.id] else { return c }
+            let g: CatGroup = o.g == "wants" ? .wants : o.g == "needs" ? .needs : c.group
+            return Category(id: c.id, name: o.name, group: g)
+        }
+        let own: [Category] = (h.custom ?? []).filter { !gone.contains($0.id) }.map {
+            Category(id: $0.id, name: $0.name, group: $0.g == "needs" ? .needs : .wants, custom: true)
+        }
+        return builtIns + own
+    }
+
+    static func isPocketMoney(_ id: String) -> Bool { id == "allowA" || id == "allowB" }
+
     static let groups: [(CatGroup, String)] = [(.needs, "Needs"), (.wants, "Wants"), (.personal, "Pocket money")]
 
     static let moneyDateChecks = [

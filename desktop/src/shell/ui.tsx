@@ -1,13 +1,13 @@
 // Screen state shared by the shell, the tabs and the side panels.
 import { createContext, useContext, type FC } from 'react'
 import type { Ledger } from '../data/ledger'
-import type { Account, Goal, Trip, Tx, Who } from '../data/types'
+import type { Account, AccountType, Goal, Trip, Tx, Who } from '../data/types'
 
-export type TabId = 'home' | 'activity' | 'budget' | 'bills' | 'accounts' | 'savings' | 'goals' | 'reports' | 'plan' | 'us'
+export type TabId = 'home' | 'activity' | 'budget' | 'bills' | 'accounts' | 'worth' | 'savings' | 'goals' | 'reports' | 'plan' | 'us'
 
 export const TABS: [TabId, string][] = [
   ['home', 'Today'], ['activity', 'Activity'], ['budget', 'Budget'], ['bills', 'Bills'], ['accounts', 'Accounts'],
-  ['savings', 'Savings'], ['goals', 'Debt'], ['reports', 'Reports'], ['plan', 'Plan ahead'], ['us', 'Us two'],
+  ['worth', 'Net worth'], ['savings', 'Savings'], ['goals', 'Debt'], ['reports', 'Reports'], ['plan', 'Plan ahead'], ['us', 'Us two'],
 ]
 
 /** Filters and selections that both the header and a tab body use. */
@@ -27,7 +27,9 @@ export type Panel =
   | { kind: 'contrib'; trip: Trip }
   | { kind: 'item'; item: 'income' | 'bill' | 'debt' | 'planned' | 'event'; who?: Who; id?: string }
   | { kind: 'pot'; goal?: Goal }
-  | { kind: 'acct'; acct?: Account }
+  /** `preset` picks the type for a new account ("+ Add investment"). */
+  | { kind: 'acct'; acct?: Account; preset?: AccountType }
+  | { kind: 'asset'; id?: string }
   | { kind: 'settings' }
 
 export interface UI {

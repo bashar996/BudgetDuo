@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#b9b0ff}a:hover{color:#ffffff}</style>
+</helmet>
+<div style="position:relative;height:{{ ph.hpx }};overflow:hidden;background:#0b0b0c;color:#ffffff;font-family:'Geist',system-ui,sans-serif;font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased">
+<div style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none">
+
+<sc-if value="{{ ph.is.home }}" hint-placeholder-val="{{ true }}">
+<div>
+  <div style="padding:64px 20px 4px;display:flex;align-items:center;gap:12px">
+    <div style="width:46px;height:46px;flex:none;border-radius:15px;background:#b9b0ff;color:#0b0b0c;display:grid;place-items:center;font-weight:600;font-size:19px">{{ ph.ini }}</div>
+    <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:500;letter-spacing:-.01em">{{ ph.h.hi }}</div><div style="font-size:13px;color:#a9a7b8">{{ ph.h.sub }}</div></div>
+    <button onClick="{{ ph.go.us }}" aria-label="Us two" style="height:44px;padding:0 2px;border:none;background:none;display:flex;align-items:center;cursor:pointer"><span style="width:32px;height:32px;border-radius:50%;background:#b9b0ff;color:#0b0b0c;display:grid;place-items:center;font:600 13px 'Geist',sans-serif;box-shadow:0 0 0 2px #0b0b0c">{{ ph.ini }}</span><span style="width:32px;height:32px;margin-left:-9px;border-radius:50%;background:#fbf9ef;color:#0b0b0c;display:grid;place-items:center;font:600 13px 'Geist',sans-serif;box-shadow:0 0 0 2px #0b0b0c">{{ ph.pini }}</span></button>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#b9b0ff"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#b9b0ff"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#b9b0ff;color:#0b0b0c;padding:6px 20px 130px;margin-top:-1px">
+    <div style="font-size:13px;color:#3a3566">Safe to spend this month</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:2px"><span style="font-size:22px;font-weight:500;color:#3a3566">{{ ph.cur }}</span><span style="font-size:60px;font-weight:500;letter-spacing:-.045em;line-height:1">{{ ph.h.safe }}</span></div>
+    <div style="font-size:13px;color:#3a3566;margin-top:10px">{{ ph.h.perDay }}</div>
+    <div style="height:6px;border-radius:3px;background:rgba(11,11,12,.16);margin-top:14px"><div style="height:100%;width:{{ ph.h.spentW }};background:#0b0b0c;border-radius:3px;transition:width .4s"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#3a3566;margin-top:6px"><span>{{ ph.h.spent }}</span><span>{{ ph.h.limit }}</span></div>
+    <div style="height:1px;background:rgba(11,11,12,.2);margin:18px 0"></div>
+    <div style="display:flex;gap:8px">
+      <button onClick="{{ ph.act.income }}" style="width:66px;height:66px;flex:none;border-radius:17px;border:none;background:#ffffff;color:#0b0b0c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-family:inherit"><span style="font-size:22px;line-height:1">↓</span><span style="font-size:11px;font-weight:500">Income</span></button>
+      <button onClick="{{ ph.act.transfer }}" style="width:66px;height:66px;flex:none;border-radius:17px;border:none;background:#ffffff;color:#0b0b0c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-family:inherit"><span style="font-size:22px;line-height:1">↗</span><span style="font-size:11px;font-weight:500">Move</span></button>
+      <button onClick="{{ ph.act.expense }}" style="width:66px;height:66px;flex:none;border-radius:17px;border:none;background:#ffffff;color:#0b0b0c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-family:inherit"><span style="font-size:22px;line-height:1">+</span><span style="font-size:11px;font-weight:500">Spend</span></button>
+      <button onClick="{{ ph.go.insights }}" style="flex:1;height:66px;border-radius:17px;border:none;background:#0b0b0c;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">Reports</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:26px"><span style="font-size:22px;font-weight:500;letter-spacing:-.01em">Coming up</span><button onClick="{{ ph.go.bills }}" style="height:44px;border:none;background:none;color:#0b0b0c;font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">All bills →</button></div>
+    <sc-for list="{{ ph.h.up }}" as="b" hint-placeholder-count="2">
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(11,11,12,.14)">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:#0b0b0c;color:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05"><span style="font-size:16px;font-weight:600">{{ b.day }}</span><span style="font-size:10px">{{ b.mon }}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.name }}</span><span style="font-size:13px;color:#3a3566">{{ b.sub }}</span></span>
+        <button onClick="{{ b.pay }}" style="height:44px;padding:0 16px;flex:none;border-radius:22px;border:none;background:#0b0b0c;color:#ffffff;font:500 13.5px 'Geist',sans-serif;cursor:pointer">Pay</button>
+      </div>
+    </sc-for>
+    <sc-if value="{{ ph.h.noUp }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#3a3566;padding:6px 0">Every bill for this month is paid.</div></sc-if>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:22px"><span style="font-size:22px;font-weight:500;letter-spacing:-.01em">Transactions</span><button onClick="{{ ph.go.activity }}" style="height:44px;border:none;background:none;color:#0b0b0c;font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0">See all →</button></div>
+    <sc-for list="{{ ph.h.recent }}" as="t" hint-placeholder-count="5">
+      <button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border:none;border-bottom:1px solid rgba(11,11,12,.14);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:rgba(255,255,255,.55);display:grid;place-items:center;font-weight:600;font-size:17px">{{ t.ini }}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span><span style="font-size:13px;color:#3a3566;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sub }}</span></span>
+        <span style="font-size:15px;font-weight:500;white-space:nowrap">{{ t.amt }}</span>
+      </button>
+    </sc-for>
+    <sc-if value="{{ ph.h.noRecent }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#3a3566;padding:6px 0">Nothing yet this month. Tap + to add the first one.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.budget }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:66px 20px 4px">
+    <div style="font-size:13px;color:#a9a7b8">{{ ph.b.kicker }}</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:22px;font-weight:500;color:#a9a7b8">{{ ph.cur }}</span><span style="font-size:60px;font-weight:500;letter-spacing:-.045em;line-height:1;color:#b9b0ff">{{ ph.b.left }}</span></div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px;text-wrap:pretty">{{ ph.b.note }}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px">
+      <div><div style="font-size:12px;color:#a9a7b8">Income</div><div style="font-size:16px;font-weight:500">{{ ph.b.income }}</div></div>
+      <div><div style="font-size:12px;color:#a9a7b8">Budgeted</div><div style="font-size:16px;font-weight:500">{{ ph.b.budgeted }}</div></div>
+      <div><div style="font-size:12px;color:#a9a7b8">To pots</div><div style="font-size:16px;font-weight:500">{{ ph.b.goals }}</div></div>
+    </div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:0 20px 130px;margin-top:-1px">
+    <sc-for list="{{ ph.b.groups }}" as="g" hint-placeholder-count="3">
+      <div style="padding-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:22px;font-weight:500;letter-spacing:-.01em">{{ g.name }}</span><span style="font-size:13px;color:#6b6878">{{ g.total }}</span></div>
+        <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="4">
+          <button onClick="{{ r.open }}" style="display:block;width:100%;padding:12px 0 4px;border:none;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer">
+            <span style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ r.name }}</span><span style="font-size:26px;letter-spacing:-.02em;line-height:1;color:{{ r.fg }}">{{ r.pct }}</span></span>
+            <span style="display:block;position:relative;height:5px;border-radius:3px;background:#0b0b0c;margin-top:8px"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ r.w }};background:{{ r.fill }};border-radius:3px;transition:width .4s"></span></span>
+            <span style="display:block;font-size:12.5px;color:#6b6878;margin-top:6px">{{ r.detail }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+    <button onClick="{{ ph.b.add }}" style="width:100%;height:52px;margin-top:22px;border-radius:18px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 15px 'Geist',sans-serif;cursor:pointer">+ New category</button>
+    <div style="font-size:13px;color:#6b6878;text-align:center;margin-top:10px">Tap a category to rename it, change its limit or delete it.</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.pots }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:66px 20px 4px">
+    <div style="font-size:13px;color:#a9a7b8">Saved in your pots</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:22px;font-weight:500;color:#a9a7b8">{{ ph.cur }}</span><span style="font-size:60px;font-weight:500;letter-spacing:-.045em;line-height:1">{{ ph.p.total }}</span></div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px">{{ ph.p.sub }}</div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#b9b0ff"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#b9b0ff"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#b9b0ff;color:#0b0b0c;padding:0 16px 130px;margin-top:-1px">
+    <sc-if value="{{ ph.p.ruCan }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#0b0b0c;color:#ffffff;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;margin-bottom:12px"><div style="font-size:15px;text-wrap:pretty">{{ ph.p.ruText }}</div><button onClick="{{ ph.p.ruMove }}" style="height:48px;border-radius:16px;border:none;background:#b9b0ff;color:#0b0b0c;font:500 15px 'Geist',sans-serif;cursor:pointer">{{ ph.p.ruBtn }}</button></div>
+    </sc-if>
+    <sc-for list="{{ ph.p.pots }}" as="g" hint-placeholder-count="3">
+      <div style="background:rgba(255,255,255,.5);border-radius:22px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="min-width:0"><div style="font-size:18px;font-weight:500">{{ g.name }}</div><div style="font-size:12.5px;color:#3a3566">{{ g.where }}</div></div><div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px"><button onClick="{{ g.edit }}" style="height:44px;padding:0 16px;border-radius:22px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 13.5px 'Geist',sans-serif;cursor:pointer">Edit</button><div style="font-size:30px;letter-spacing:-.03em;line-height:1">{{ g.pct }}</div></div></div>
+        <div style="height:5px;border-radius:3px;background:#0b0b0c;margin-top:12px"><div style="height:100%;width:{{ g.w }};background:#ffffff;border-radius:3px;transition:width .4s"></div></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:8px"><span>{{ g.saved }} of {{ g.target }}</span><span style="font-weight:500;text-align:right">{{ g.status }}</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button onClick="{{ g.add }}" style="flex:1;height:46px;border-radius:16px;border:none;background:#0b0b0c;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">Deposit</button><button onClick="{{ g.take }}" style="flex:1;height:46px;border-radius:16px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 15px 'Geist',sans-serif;cursor:pointer">Withdraw</button></div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ ph.p.noPots }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#3a3566;padding:6px 4px">No pots yet. Start one for anything you’re saving toward.</div></sc-if>
+    <button onClick="{{ ph.p.addPot }}" style="width:100%;height:52px;margin-top:6px;border-radius:18px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 15px 'Geist',sans-serif;cursor:pointer">+ New pot</button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.more }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:66px 20px 4px"><div style="font-size:34px;font-weight:500;letter-spacing:-.03em">More</div><div style="font-size:14px;color:#a9a7b8;margin-top:4px">{{ ph.m.sub }}</div></div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:0 20px 130px;margin-top:-1px;min-height:560px">
+    <sc-for list="{{ ph.m.rows }}" as="r" hint-placeholder-count="5">
+      <button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:16px 0;border:none;border-bottom:1px solid rgba(11,11,12,.12);background:none;text-align:left;font:inherit;color:inherit;cursor:pointer"><span style="flex:1;min-width:0"><span style="display:block;font-size:20px;font-weight:500;letter-spacing:-.01em">{{ r.t }}</span><span style="display:block;font-size:13.5px;color:#6b6878">{{ r.s }}</span></span><span style="width:38px;height:38px;flex:none;border-radius:50%;background:{{ r.abg }};color:{{ r.afg }};display:grid;place-items:center;font-size:20px;transition:background .15s">→</span></button>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.accounts }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Accounts</div><div style="width:44px"></div></div>
+  <div style="padding:10px 20px 4px">
+    <div style="font-size:13px;color:#a9a7b8">Across your accounts</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:22px;font-weight:500;color:#a9a7b8">{{ ph.cur }}</span><span style="font-size:54px;font-weight:500;letter-spacing:-.045em;line-height:1">{{ ph.ac.net }}</span></div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px">{{ ph.ac.sub }}</div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#b9b0ff"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#b9b0ff"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#b9b0ff;color:#0b0b0c;padding:0 16px 130px;margin-top:-1px">
+    <button onClick="{{ ph.act.transfer }}" style="width:100%;height:52px;border-radius:18px;border:none;background:#0b0b0c;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer;margin-bottom:12px">Move money between accounts</button>
+    <sc-for list="{{ ph.ac.list }}" as="a" hint-placeholder-count="5">
+      <button onClick="{{ a.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;margin-bottom:8px;border:none;border-radius:20px;background:#ffffff;color:#0b0b0c;font:inherit;text-align:left;cursor:pointer">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:12.5px;color:#6b6878">{{ a.type }}</span><span style="font-size:17px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span><span style="font-size:12.5px;color:#6b6878">{{ a.meta }}</span></span>
+        <span style="font-size:19px;font-weight:500;letter-spacing:-.02em;white-space:nowrap;color:{{ a.fg }}">{{ a.bal }}</span>
+      </button>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.billcal }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Bills</div><div style="width:44px"></div></div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:0 16px 110px;margin-top:-1px">
+    <div style="background:#ffffff;border-radius:22px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px"><span style="font-size:18px;font-weight:500;letter-spacing:-.01em">{{ ph.bl.month }}</span><span style="font-size:12.5px;color:#6b6878">That day’s bills show on the right</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px">
+        <sc-for list="{{ ph.bl.wd }}" as="w" hint-placeholder-count="7"><div style="font-size:12px;color:#6b6878;text-align:center;padding-bottom:2px">{{ w.w }}</div></sc-for>
+        <sc-for list="{{ ph.bl.cal }}" as="c" hint-placeholder-count="35"><button onClick="{{ c.on }}" style="aspect-ratio:1;min-width:0;padding:0;box-sizing:border-box;border-radius:12px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};box-shadow:{{ c.ring }};pointer-events:{{ c.pe }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 14px/1 'Geist',sans-serif;cursor:pointer"><span>{{ c.d }}</span><span style="display:flex;gap:2px;height:4px"><sc-for list="{{ c.dots }}" as="o" hint-placeholder-count="1"><span style="width:4px;height:4px;border-radius:50%;background:currentColor"></span></sc-for></span></button></sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;color:#6b6878"><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#b9b0ff;border:1.5px solid #b9b0ff"></span>Due</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#c23b30;border:1.5px solid #c23b30"></span>Overdue</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#ebe8da;border:1.5px solid #ebe8da"></span>Paid</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#0b0b0c;border:1.5px solid #0b0b0c"></span>Today</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:transparent;border:1.5px solid #0b0b0c"></span>Payday</span></div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.bills }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Bills</div><div style="width:44px"></div></div>
+  <div style="padding:10px 20px 4px">
+    <div style="font-size:13px;color:#a9a7b8">Still due this month</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:22px;font-weight:500;color:#a9a7b8">{{ ph.cur }}</span><span style="font-size:54px;font-weight:500;letter-spacing:-.045em;line-height:1;color:#b9b0ff">{{ ph.bl.due }}</span></div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px">{{ ph.bl.sub }}</div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:0 20px 130px;margin-top:-1px">
+    <sc-if value="{{ ph.bl.showCal }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#ffffff;border-radius:22px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px"><span style="font-size:18px;font-weight:500;letter-spacing:-.01em">{{ ph.bl.month }}</span><span style="font-size:12.5px;color:#6b6878">Tap a day to see its bills</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px">
+        <sc-for list="{{ ph.bl.wd }}" as="w" hint-placeholder-count="7"><div style="font-size:12px;color:#6b6878;text-align:center;padding-bottom:2px">{{ w.w }}</div></sc-for>
+        <sc-for list="{{ ph.bl.cal }}" as="c" hint-placeholder-count="35"><button onClick="{{ c.on }}" style="aspect-ratio:1;min-width:0;padding:0;box-sizing:border-box;border-radius:12px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};box-shadow:{{ c.ring }};pointer-events:{{ c.pe }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 14px/1 'Geist',sans-serif;cursor:pointer"><span>{{ c.d }}</span><span style="display:flex;gap:2px;height:4px"><sc-for list="{{ c.dots }}" as="o" hint-placeholder-count="1"><span style="width:4px;height:4px;border-radius:50%;background:currentColor"></span></sc-for></span></button></sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;color:#6b6878"><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#b9b0ff;border:1.5px solid #b9b0ff"></span>Due</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#c23b30;border:1.5px solid #c23b30"></span>Overdue</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#ebe8da;border:1.5px solid #ebe8da"></span>Paid</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:#0b0b0c;border:1.5px solid #0b0b0c"></span>Today</span><span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;box-sizing:border-box;border-radius:4px;background:transparent;border:1.5px solid #0b0b0c"></span>Payday</span></div>
+    </div>
+    </sc-if>
+    <sc-if value="{{ ph.bl.hasDay }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ph.bl.clearDay }}" style="height:44px;padding:0 14px;margin-bottom:4px;border-radius:22px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ ph.bl.dayLabel }}</button></sc-if>
+    <sc-for list="{{ ph.bl.list }}" as="b" hint-placeholder-count="8">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(11,11,12,.12)">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:#0b0b0c;color:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05"><span style="font-size:16px;font-weight:600">{{ b.day }}</span><span style="font-size:10px">{{ b.mon }}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.name }}</span><span style="font-size:13px;color:#6b6878">{{ b.sub }}</span></span>
+        <button onClick="{{ b.pay }}" style="height:44px;padding:0 16px;flex:none;border-radius:22px;border:1.5px solid #0b0b0c;background:{{ b.bg }};color:{{ b.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ b.btn }}</button>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.insights }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Reports</div><div style="width:44px"></div></div>
+  <div style="padding:8px 20px 0">
+    <div style="font-size:13px;color:#a9a7b8">Everyday spending, last 7 days</div>
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.03em;margin-top:2px">{{ ph.ins.total }}</div>
+    <div style="display:flex;gap:8px;height:200px;margin-top:10px">
+      <sc-for list="{{ ph.ins.bars }}" as="b" hint-placeholder-count="7">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="height:26px;box-sizing:border-box;opacity:{{ b.tagO }};background:#fbf9ef;color:#0b0b0c;font-size:12px;font-weight:500;line-height:26px;padding:0 8px;border-radius:9px;white-space:nowrap">{{ b.tag }}</span>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end"><div style="width:100%;height:{{ b.h }};background:{{ b.bg }};border-radius:12px 12px 5px 5px;transition:height .4s"></div></div>
+          <span style="font-size:12.5px;color:#d9d7e4">{{ b.d }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:4px 20px 130px;margin-top:-1px">
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em">Where it went</div>
+    <sc-for list="{{ ph.ins.cats }}" as="r" hint-placeholder-count="5">
+      <div style="padding:12px 0 2px"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ r.name }}</span><span style="font-size:26px;letter-spacing:-.02em;line-height:1">{{ r.pct }}</span></div><div style="height:5px;border-radius:3px;background:#0b0b0c;margin-top:8px"><div style="height:100%;width:{{ r.w }};background:#b9b0ff;border-radius:3px"></div></div><div style="font-size:12.5px;color:#6b6878;margin-top:6px">{{ r.amt }}</div></div>
+    </sc-for>
+    <sc-if value="{{ ph.ins.noCats }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#6b6878;padding:8px 0">No spending recorded this month yet.</div></sc-if>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:22px">Who spent</div>
+    <sc-for list="{{ ph.ins.who }}" as="r" hint-placeholder-count="3">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(11,11,12,.12)"><span style="width:36px;height:36px;flex:none;border-radius:50%;background:{{ r.bg }};color:{{ r.fg }};display:grid;place-items:center;font-weight:600;font-size:14px">{{ r.ini }}</span><span style="flex:1;font-size:16px">{{ r.name }}</span><span style="font-size:15px;font-weight:500">{{ r.amt }}</span></div>
+    </sc-for>
+    <button onClick="{{ ph.ins.dl }}" style="width:100%;height:52px;margin-top:22px;border-radius:18px;border:none;background:#0b0b0c;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">↓ Download this month’s report</button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.debt }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Debt</div><div style="width:44px"></div></div>
+  <div style="padding:10px 20px 4px">
+    <div style="font-size:13px;color:#a9a7b8">Debt-free by</div>
+    <div style="font-size:54px;font-weight:500;letter-spacing:-.045em;line-height:1;color:#b9b0ff;margin-top:4px">{{ ph.dv.free }}</div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px;text-wrap:pretty">{{ ph.dv.sub }}</div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:4px 20px 130px;margin-top:-1px;min-height:440px">
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em">Payoff order</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"><sc-for list="{{ ph.dv.strat }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 14px;border-radius:22px;border:1.5px solid #0b0b0c;background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 0;border-top:1px solid rgba(11,11,12,.12);border-bottom:1px solid rgba(11,11,12,.12)">
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">Extra each month</span><span style="font-size:13px;color:#6b6878">On top of the minimums</span></span>
+      <button onClick="{{ ph.dv.minus }}" aria-label="Less" style="width:44px;height:44px;flex:none;border-radius:15px;border:none;background:#0b0b0c;color:#ffffff;font-size:22px;cursor:pointer">−</button>
+      <span style="min-width:58px;text-align:center;font-size:19px;font-weight:500;letter-spacing:-.02em">{{ ph.dv.extra }}</span>
+      <button onClick="{{ ph.dv.plus }}" aria-label="More" style="width:44px;height:44px;flex:none;border-radius:15px;border:none;background:#0b0b0c;color:#ffffff;font-size:22px;cursor:pointer">+</button>
+    </div>
+    <sc-for list="{{ ph.dv.list }}" as="x" hint-placeholder-count="3">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(11,11,12,.12)">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:#0b0b0c;color:#ffffff;display:grid;place-items:center;font-size:17px;font-weight:600">{{ x.n }}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.name }}</span><span style="font-size:13px;color:#6b6878">{{ x.meta }}</span></span>
+        <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ x.bal }}</span><span style="font-size:12.5px;color:#6b6878;white-space:nowrap">{{ x.done }}</span></span>
+      </div>
+    </sc-for>
+    <sc-if value="{{ ph.dv.none }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#6b6878;padding:14px 0">No loans or card balances. Add them in the web app and they appear here.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.plan }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Plan ahead</div><div style="width:44px"></div></div>
+  <div style="padding:8px 20px 0">
+    <div style="font-size:13px;color:#a9a7b8">Cash in 30 days</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:22px;font-weight:500;color:#a9a7b8">{{ ph.cur }}</span><span style="font-size:54px;font-weight:500;letter-spacing:-.045em;line-height:1;color:{{ ph.pl.endFg }}">{{ ph.pl.end }}</span></div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px;text-wrap:pretty">{{ ph.pl.note }}</div>
+    <div style="display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:14px"><sc-for list="{{ ph.pl.bars }}" as="b" hint-placeholder-count="31"><div style="flex:1;min-width:0;height:{{ b.h }};background:{{ b.bg }};border-radius:5px 5px 2px 2px"></div></sc-for></div>
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#d9d7e4;margin-top:6px"><span>{{ ph.pl.from }}</span><span>{{ ph.pl.to }}</span></div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#b9b0ff"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#b9b0ff"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#b9b0ff;color:#0b0b0c;padding:4px 20px 130px;margin-top:-1px">
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em">Coming in and out</div>
+    <sc-for list="{{ ph.pl.evs }}" as="e" hint-placeholder-count="5">
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(11,11,12,.14)">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:#0b0b0c;color:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05"><span style="font-size:16px;font-weight:600">{{ e.day }}</span><span style="font-size:10px">{{ e.mon }}</span></span>
+        <span style="flex:1;min-width:0;font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.name }}</span>
+        <span style="font-size:15px;font-weight:500;white-space:nowrap">{{ e.amt }}</span>
+      </div>
+    </sc-for>
+    <sc-if value="{{ ph.pl.noEvs }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#3a3566;padding:6px 0">Nothing scheduled in the next 30 days.</div></sc-if>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:22px">Planned purchases</div>
+    <sc-for list="{{ ph.pl.items }}" as="p" hint-placeholder-count="3">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(11,11,12,.14)">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ p.name }}</span><span style="font-size:13px;color:#3a3566;text-wrap:pretty">{{ p.verdict }}</span></span>
+        <span style="font-size:15px;font-weight:500;white-space:nowrap">{{ p.cost }}</span>
+      </div>
+    </sc-for>
+    <sc-if value="{{ ph.pl.noItems }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#3a3566;padding:6px 0">No planned purchases yet. Add them in the web app.</div></sc-if>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:22px">Trips &amp; events</div>
+    <sc-for list="{{ ph.pl.trips }}" as="r" hint-placeholder-count="3">
+      <div style="padding:12px 0 2px"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ r.name }}</span><span style="font-size:13px;color:#3a3566;white-space:nowrap">{{ r.when }}</span></div><div style="height:5px;border-radius:3px;background:#0b0b0c;margin-top:8px"><div style="height:100%;width:{{ r.w }};background:#ffffff;border-radius:3px"></div></div><div style="font-size:12.5px;color:#3a3566;margin-top:6px">{{ r.detail }}</div></div>
+    </sc-for>
+    <sc-if value="{{ ph.pl.noTrips }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#3a3566;padding:6px 0">No trips or events planned.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.worth }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Net worth</div><div style="width:44px"></div></div>
+  <div style="padding:10px 20px 4px">
+    <div style="font-size:13px;color:#a9a7b8">Net worth</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:22px;font-weight:500;color:#a9a7b8">{{ ph.cur }}</span><span style="font-size:54px;font-weight:500;letter-spacing:-.045em;line-height:1">{{ ph.wv.net }}</span></div>
+    <div style="font-size:14px;color:#a9a7b8;margin-top:8px">{{ ph.wv.sub }}</div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:4px 20px 130px;margin-top:-1px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:22px;font-weight:500;letter-spacing:-.01em">What you own</span><span style="font-size:13px;color:#6b6878">{{ ph.wv.own }}</span></div>
+    <div style="display:flex;gap:3px;height:14px;margin:12px 0 4px"><sc-for list="{{ ph.wv.segs }}" as="s" hint-placeholder-count="4"><div style="flex-grow:{{ s.v }};flex-basis:0;min-width:6px;background:{{ s.bg }};border-radius:5px"></div></sc-for></div>
+    <sc-for list="{{ ph.wv.rows }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(11,11,12,.12)"><span style="width:14px;height:14px;flex:none;border-radius:5px;background:{{ r.bg }}"></span><span style="flex:1;min-width:0;font-size:16px">{{ r.label }}</span><span style="font-size:13px;color:#6b6878">{{ r.pct }}</span><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ r.amt }}</span></div></sc-for>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:24px">Assets</div>
+    <sc-for list="{{ ph.wv.assets }}" as="a" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(11,11,12,.12)"><span style="width:44px;height:44px;flex:none;border-radius:13px;background:#ebe8da;display:grid;place-items:center;font-weight:600;font-size:17px">{{ a.ini }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span><span style="font-size:13px;color:#6b6878">{{ a.meta }}</span></span><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ a.val }}</span></div></sc-for>
+    <sc-if value="{{ ph.wv.noAssets }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#6b6878;padding:8px 0">No assets yet. Add a home, car or gold in the web app.</div></sc-if>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:24px">Investments</div>
+    <sc-for list="{{ ph.wv.inv }}" as="a" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(11,11,12,.12)"><span style="width:44px;height:44px;flex:none;border-radius:13px;background:#ebe8da;display:grid;place-items:center;font-weight:600;font-size:17px">{{ a.ini }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span><span style="font-size:13px;color:#6b6878">{{ a.meta }}</span></span><span style="flex:none;display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ a.val }}</span><span style="font-size:12.5px;color:{{ a.gfg }};white-space:nowrap">{{ a.gain }}</span></span></div></sc-for>
+    <sc-if value="{{ ph.wv.noInv }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#6b6878;padding:8px 0">No investments yet.</div></sc-if>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:24px"><span style="font-size:22px;font-weight:500;letter-spacing:-.01em">What you owe</span><span style="font-size:13px;color:#6b6878">{{ ph.wv.owed }}</span></div>
+    <sc-for list="{{ ph.wv.owe }}" as="o" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(11,11,12,.12)"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.name }}</span><span style="font-size:13px;color:#6b6878">{{ o.meta }}</span></span><span style="font-size:15px;font-weight:500;white-space:nowrap">{{ o.bal }}</span></div></sc-for>
+    <sc-if value="{{ ph.wv.noOwe }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#6b6878;padding:8px 0">Nothing owed.</div></sc-if>
+    <div style="font-size:13px;color:#6b6878;margin-top:18px;text-wrap:pretty">Assets and investments are added and edited in the web app.</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.us }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Us two</div><div style="width:44px"></div></div>
+  <div style="padding:10px 20px 4px"><div style="font-size:38px;font-weight:500;letter-spacing:-.035em;line-height:1.05">{{ ph.us.names }}</div><div style="font-size:14px;color:#a9a7b8;margin-top:8px;text-wrap:pretty">{{ ph.us.note }}</div></div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#b9b0ff"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#b9b0ff"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#b9b0ff;color:#0b0b0c;padding:4px 20px 130px;margin-top:-1px">
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em">Pocket money</div>
+    <sc-for list="{{ ph.us.pocket }}" as="r" hint-placeholder-count="2">
+      <div style="padding:12px 0 2px"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><span style="font-size:16px">{{ r.name }}</span><span style="font-size:22px;letter-spacing:-.02em;line-height:1">{{ r.left }}</span></div><div style="height:5px;border-radius:3px;background:#0b0b0c;margin-top:8px"><div style="height:100%;width:{{ r.w }};background:#ffffff;border-radius:3px"></div></div><div style="font-size:12.5px;color:#3a3566;margin-top:6px">{{ r.detail }}</div></div>
+    </sc-for>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:22px">Money date</div>
+    <div style="font-size:13px;color:#3a3566;margin-bottom:8px">{{ ph.us.checkLabel }}</div>
+    <div style="background:rgba(255,255,255,.5);border-radius:22px;padding:4px 16px">
+      <sc-for list="{{ ph.us.checks }}" as="c" hint-placeholder-count="5">
+        <button onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:6px 0;border:none;border-bottom:1px solid rgba(11,11,12,.1);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer"><span style="width:24px;height:24px;flex:none;border-radius:8px;border:1.5px solid #0b0b0c;background:{{ c.bg }};color:#ffffff;display:grid;place-items:center;font-size:14px;font-weight:600">{{ c.mark }}</span><span style="font-size:15px;text-decoration:{{ c.deco }}">{{ c.t }}</span></button>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.is.activity }}" hint-placeholder-val="{{ false }}">
+<div>
+  <div style="padding:58px 12px 0;display:flex;align-items:center"><button onClick="{{ ph.back }}" aria-label="Back" style="width:44px;height:44px;border:none;background:none;color:#ffffff;font-size:24px;cursor:pointer;visibility:{{ ph.backV }}">←</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500">Activity</div><div style="width:44px"></div></div>
+  <div style="padding:8px 16px 0">
+    <input placeholder="Search" value="{{ ph.av.q }}" onChange="{{ ph.av.onQ }}" style="display:block;width:100%;box-sizing:border-box;height:46px;padding:0 16px;border:none;border-radius:16px;background:#1d1d22;color:#ffffff;font:500 15px 'Geist',sans-serif;outline:none">
+    <div style="display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ ph.av.who }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 14px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+  </div>
+  <svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:66px;transform:scaleX(-1)"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#fbf9ef"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#fbf9ef"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#0b0b0c"></rect></svg>
+  <div style="background:#fbf9ef;color:#0b0b0c;padding:0 20px 130px;margin-top:-1px;min-height:480px">
+    <sc-if value="{{ ph.av.hasNote }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ph.av.clear }}" style="height:44px;padding:0 14px;border-radius:22px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ ph.av.note }}</button></sc-if>
+    <sc-for list="{{ ph.av.groups }}" as="g" hint-placeholder-count="3">
+      <div style="padding-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:#6b6878"><span>{{ g.label }}</span><span>{{ g.total }}</span></div>
+        <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="3">
+          <button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border:none;border-bottom:1px solid rgba(11,11,12,.12);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer">
+            <span style="width:44px;height:44px;flex:none;border-radius:13px;background:#ebe8da;display:grid;place-items:center;font-weight:600;font-size:17px">{{ t.ini }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span><span style="font-size:13px;color:#6b6878;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sub }}</span></span>
+            <span style="font-size:15px;font-weight:500;white-space:nowrap">{{ t.amt }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+    <sc-if value="{{ ph.av.empty }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#6b6878;padding:24px 0">Nothing matches.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ ph.showTabs }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;left:14px;right:14px;bottom:20px;height:64px;box-sizing:border-box;border-radius:32px;background:#17171b;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 12px 30px rgba(0,0,0,.35);display:grid;grid-template-columns:1fr 1fr 64px 1fr 1fr;align-items:center;padding:0 6px;z-index:5">
+  <button onClick="{{ ph.tb.home.go }}" style="height:52px;border:none;background:none;color:{{ ph.tb.home.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">Home</button>
+  <button onClick="{{ ph.tb.budget.go }}" style="height:52px;border:none;background:none;color:{{ ph.tb.budget.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">Budget</button>
+  <button onClick="{{ ph.act.expense }}" aria-label="Add entry" style="width:52px;height:52px;margin:0 auto;border-radius:50%;border:none;background:#b9b0ff;color:#0b0b0c;font:400 30px/1 'Geist',sans-serif;cursor:pointer">+</button>
+  <button onClick="{{ ph.tb.pots.go }}" style="height:52px;border:none;background:none;color:{{ ph.tb.pots.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">Savings</button>
+  <button onClick="{{ ph.tb.more.go }}" style="height:52px;border:none;background:none;color:{{ ph.tb.more.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">More</button>
+</div></sc-if>
+
+<sc-if value="{{ ph.a.open }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:20;box-sizing:border-box;padding-top:{{ ph.a.topGap }};background:#0b0b0c;display:flex;flex-direction:column;transform:{{ ph.a.tf }};transition:transform .32s cubic-bezier(.2,.8,.2,1)">
+  <sc-if value="{{ ph.a.showTop }}" hint-placeholder-val="{{ true }}"><div style="background:#b9b0ff;color:#0b0b0c;padding:{{ ph.a.topPad }};border-radius:{{ ph.a.topR }}">
+    <div style="display:flex;align-items:center"><button onClick="{{ ph.a.close }}" aria-label="Close" style="width:64px;height:44px;border:none;background:none;color:#0b0b0c;font-size:26px;text-align:left;padding-left:10px;cursor:pointer">×</button><div style="flex:1;text-align:center;font-size:19px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ph.a.title }}</div><button onClick="{{ ph.a.del }}" style="width:64px;height:44px;border:none;background:none;color:#0b0b0c;font:500 14px 'Geist',sans-serif;opacity:{{ ph.a.delO }};pointer-events:{{ ph.a.delPe }};cursor:pointer">Delete</button></div>
+    <sc-if value="{{ ph.a.showTypes }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:6px;justify-content:center;margin-top:4px"><sc-for list="{{ ph.a.types }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.on }}" style="height:44px;padding:0 16px;border-radius:22px;border:1.5px solid #0b0b0c;background:{{ c.bg }};color:{{ c.fg }};font:500 14px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div></sc-if>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:8px;margin-top:14px"><span style="font-size:24px;font-weight:500;color:#3a3566">{{ ph.cur }}</span><span style="font-size:68px;font-weight:500;letter-spacing:-.045em;line-height:1;color:{{ ph.a.amtFg }}">{{ ph.a.amt }}</span></div>
+    <input placeholder="{{ ph.a.ph }}" value="{{ ph.a.name }}" onChange="{{ ph.a.onName }}" style="display:block;width:100%;box-sizing:border-box;height:44px;margin-top:4px;border:none;background:transparent;text-align:center;font:500 16px 'Geist',sans-serif;color:#0b0b0c;outline:none">
+    <div style="min-height:18px;text-align:center;font-size:13px;font-weight:600;color:#0b0b0c">{{ ph.a.err }}</div>
+  </div>
+  <div style="background:#b9b0ff"><svg viewBox="0 0 402 78" preserveAspectRatio="none" style="display:block;width:100%;height:60px"><path d="M0,78 L0,45 Q0,34 11,34 L69,34 Q80,34 80,45 L80,51 Q80,62 91,62 L141,62 Q152,62 152,51 L152,31 Q152,20 163,20 L215,20 Q226,20 226,31 L226,41 Q226,52 237,52 L293,52 Q304,52 304,41 Q304,30 315,30 L391,30 Q402,30 402,41 L402,78 Z" style="fill:#0b0b0c"></path><rect x="326" y="2" width="60" height="20" rx="10" style="fill:#0b0b0c"></rect><rect x="22" y="52" width="44" height="16" rx="8" style="fill:#b9b0ff"></rect></svg></div>
+  </sc-if>
+  <div style="flex:1;min-height:0;background:#0b0b0c;padding:{{ ph.a.pad }};display:flex;flex-direction:{{ ph.a.dir }};gap:10px;margin-top:-1px">
+    <sc-if value="{{ ph.a.showL }}" hint-placeholder-val="{{ true }}"><div style="flex:{{ ph.a.flexL }};min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;scrollbar-width:none">
+    <sc-if value="{{ ph.a.showTiles }}" hint-placeholder-val="{{ true }}"><div style="flex:none;display:flex;gap:8px;flex-wrap:{{ ph.a.wrap }};overflow-x:auto;scrollbar-width:none;padding:3px 3px 0"><sc-for list="{{ ph.a.tiles }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.on }}" style="flex:none;width:{{ ph.a.tw }};border:none;background:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit"><span style="width:{{ ph.a.ts }};height:{{ ph.a.ts }};border-radius:17px;background:{{ c.bg }};box-shadow:0 0 0 2px {{ c.ring }};color:#0b0b0c;display:grid;place-items:center;font-size:17px;font-weight:600">{{ c.ab }}</span><span style="font-size:12px;color:{{ c.fg }};max-width:{{ ph.a.tw }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.label }}</span></button></sc-for></div></sc-if>
+    <sc-if value="{{ ph.a.chipsL }}" hint-placeholder-val="{{ true }}"><div style="flex:none;display:flex;flex-direction:column;gap:8px"><sc-for list="{{ ph.a.rows }}" as="row" hint-placeholder-count="1"><div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ row.chips }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 14px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;white-space:nowrap;cursor:pointer">{{ c.label }}</button></sc-for></div></sc-for></div></sc-if>
+    </div></sc-if>
+    <sc-if value="{{ ph.a.showR }}" hint-placeholder-val="{{ true }}"><div style="flex:{{ ph.a.flexR }};min-width:0;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;margin-top:{{ ph.a.mtR }}"><sc-if value="{{ ph.a.chipsR }}" hint-placeholder-val="{{ false }}"><div style="flex:none;display:flex;flex-direction:column;gap:8px;margin-bottom:auto"><sc-for list="{{ ph.a.rows }}" as="row" hint-placeholder-count="2"><div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ row.chips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 14px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;white-space:nowrap;cursor:pointer">{{ c.label }}</button></sc-for></div></sc-for></div></sc-if><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><sc-for list="{{ ph.a.keys }}" as="k" hint-placeholder-count="12"><button onClick="{{ k.on }}" style="height:{{ k.h }};border-radius:17px;border:none;background:{{ k.bg }};color:{{ k.fg }};font:500 26px 'Geist',sans-serif;cursor:pointer">{{ k.k }}</button></sc-for></div>
+    <button onClick="{{ ph.a.save }}" style="flex:none;height:58px;border-radius:20px;border:none;background:#b9b0ff;color:#0b0b0c;font:500 17px 'Geist',sans-serif;cursor:pointer">{{ ph.a.saveLabel }}</button></div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.ps.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ ph.ps.close }}" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;opacity:{{ ph.ps.op }};transition:opacity .25s">
+  <div onClick="{{ ph.stop }}" style="width:100%;max-height:94%;overflow-y:auto;scrollbar-width:none;box-sizing:border-box;background:#fbf9ef;color:#0b0b0c;border-radius:30px 30px 0 0;padding:10px 20px 34px;transform:{{ ph.ps.tf }};transition:transform .3s cubic-bezier(.2,.8,.2,1)">
+    <div style="width:40px;height:5px;border-radius:3px;background:rgba(11,11,12,.25);margin:0 auto 14px"></div>
+    <sc-if value="{{ ph.ps.form }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="font-size:24px;font-weight:500;letter-spacing:-.01em">{{ ph.ps.title }}</div>
+      <div style="font-size:13px;color:#6b6878;margin:12px 0 6px">Name</div>
+      <input placeholder="e.g. New car" value="{{ ph.ps.name }}" onChange="{{ ph.ps.onName }}" style="display:block;width:100%;box-sizing:border-box;height:52px;padding:0 16px;border:none;border-radius:16px;background:#ffffff;color:#0b0b0c;font:500 17px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px #0b0b0c">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:13px;color:#6b6878;margin:12px 0 6px">Target ({{ ph.cur }})</div><input inputmode="decimal" placeholder="0" value="{{ ph.ps.target }}" onChange="{{ ph.ps.onTarget }}" style="display:block;width:100%;box-sizing:border-box;height:52px;padding:0 16px;border:none;border-radius:16px;background:#ffffff;color:#0b0b0c;font:500 17px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px #0b0b0c"></div>
+        <div><div style="font-size:13px;color:#6b6878;margin:12px 0 6px">Auto-save each payday</div><input inputmode="decimal" placeholder="0" value="{{ ph.ps.monthly }}" onChange="{{ ph.ps.onMonthly }}" style="display:block;width:100%;box-sizing:border-box;height:52px;padding:0 16px;border:none;border-radius:16px;background:#ffffff;color:#0b0b0c;font:500 17px 'Geist',sans-serif;outline:none" style-focus="box-shadow:0 0 0 2px #0b0b0c"></div>
+      </div>
+      <div style="font-size:13px;color:#6b6878;margin:12px 0 6px">Kept in</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ph.ps.accts }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 14px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;white-space:nowrap;cursor:pointer">{{ c.label }}</button></sc-for></div>
+      <sc-if value="{{ ph.ps.noAccts }}" hint-placeholder-val="{{ false }}"><div style="font-size:13.5px;color:#6b6878">No savings account yet. Add one in the web app so the pot has a home.</div></sc-if>
+      <div style="min-height:18px;margin-top:10px;font-size:13px;font-weight:600;color:#b3352b">{{ ph.ps.err }}</div>
+      <button onClick="{{ ph.ps.save }}" style="display:block;width:100%;height:54px;margin-top:6px;border-radius:18px;border:none;background:#0b0b0c;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">Save</button>
+      <sc-if value="{{ ph.ps.canDel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ ph.ps.askDel }}" style="display:block;width:100%;height:44px;margin-top:8px;border:none;background:none;color:#b3352b;font:500 14px 'Geist',sans-serif;cursor:pointer">Delete pot</button></sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ ph.ps.delStep }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="font-size:13px;color:#6b6878">Delete pot</div>
+      <div style="font-size:24px;font-weight:500;letter-spacing:-.01em">Delete {{ ph.ps.name }}?</div>
+      <div style="font-size:14.5px;margin-top:10px;text-wrap:pretty">{{ ph.ps.delInfo }}</div>
+      <div style="display:flex;gap:8px;margin-top:20px"><button onClick="{{ ph.ps.cancelDel }}" style="flex:1;height:54px;border-radius:18px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 15px 'Geist',sans-serif;cursor:pointer">Keep it</button><button onClick="{{ ph.ps.askDel }}" style="flex:1;height:54px;border-radius:18px;border:none;background:#c23b30;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">Delete</button></div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ph.bs.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ ph.bs.close }}" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;opacity:{{ ph.bs.op }};transition:opacity .25s">
+  <div onClick="{{ ph.stop }}" style="width:100%;max-height:94%;overflow-y:auto;scrollbar-width:none;box-sizing:border-box;background:#fbf9ef;color:#0b0b0c;border-radius:30px 30px 0 0;padding:10px 20px 34px;transform:{{ ph.bs.tf }};transition:transform .3s cubic-bezier(.2,.8,.2,1)">
+    <div style="width:40px;height:5px;border-radius:3px;background:rgba(11,11,12,.25);margin:0 auto 14px"></div>
+    <sc-if value="{{ ph.bs.form }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="font-size:13px;color:#6b6878">{{ ph.bs.title }}</div>
+      <sc-if value="{{ ph.bs.lock }}" hint-placeholder-val="{{ false }}"><div style="font-size:24px;font-weight:500;letter-spacing:-.01em">{{ ph.bs.name }}</div></sc-if>
+      <sc-if value="{{ ph.bs.editable }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <input placeholder="Category name" value="{{ ph.bs.nameVal }}" onChange="{{ ph.bs.onName }}" style="display:block;width:100%;box-sizing:border-box;height:52px;padding:0 16px;border:none;border-radius:16px;background:#ffffff;color:#0b0b0c;font:500 18px 'Geist',sans-serif;letter-spacing:-.01em;outline:none" style-focus="box-shadow:0 0 0 2px #0b0b0c">
+        <div style="display:flex;gap:6px"><sc-for list="{{ ph.bs.groups }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.on }}" style="flex:1;height:44px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;cursor:pointer">{{ c.label }}</button></sc-for></div>
+        <div style="font-size:13px;color:#6b6878;margin-top:6px">Monthly limit</div>
+      </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 12px">
+        <button onClick="{{ ph.bs.minus }}" aria-label="Less" style="width:58px;height:58px;border-radius:19px;border:none;background:#0b0b0c;color:#ffffff;font-size:28px;cursor:pointer">−</button>
+        <div style="text-align:center"><div style="font-size:13px;color:#6b6878">{{ ph.cur }}</div><div style="font-size:52px;font-weight:500;letter-spacing:-.04em;line-height:1">{{ ph.bs.limit }}</div></div>
+        <button onClick="{{ ph.bs.plus }}" aria-label="More" style="width:58px;height:58px;border-radius:19px;border:none;background:#0b0b0c;color:#ffffff;font-size:28px;cursor:pointer">+</button>
+      </div>
+      <div style="font-size:13.5px;color:#6b6878;text-align:center">{{ ph.bs.info }}</div>
+      <div style="min-height:18px;margin-top:6px;text-align:center;font-size:13px;font-weight:600;color:#b3352b">{{ ph.bs.err }}</div>
+      <div style="display:flex;gap:8px;margin-top:6px"><button onClick="{{ ph.bs.avg }}" style="flex:1;height:54px;border-radius:18px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 14px 'Geist',sans-serif;cursor:pointer">{{ ph.bs.avgLabel }}</button><button onClick="{{ ph.bs.save }}" style="flex:1;height:54px;border-radius:18px;border:none;background:#0b0b0c;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">Save</button></div>
+      <sc-if value="{{ ph.bs.canDel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ ph.bs.askDel }}" style="display:block;width:100%;height:44px;margin-top:8px;border:none;background:none;color:#b3352b;font:500 14px 'Geist',sans-serif;cursor:pointer">Delete category</button></sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ ph.bs.delStep }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="font-size:13px;color:#6b6878">Delete category</div>
+      <div style="font-size:24px;font-weight:500;letter-spacing:-.01em">Delete {{ ph.bs.nameVal }}?</div>
+      <div style="font-size:14.5px;margin-top:10px;text-wrap:pretty">{{ ph.bs.delInfo }}</div>
+      <sc-if value="{{ ph.bs.delUsed }}" hint-placeholder-val="{{ true }}"><div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px"><sc-for list="{{ ph.bs.moveTo }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.on }}" style="flex:none;height:44px;padding:0 14px;border-radius:22px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 13.5px 'Geist',sans-serif;white-space:nowrap;cursor:pointer">{{ c.label }}</button></sc-for></div><div style="font-size:12.5px;color:#6b6878;margin-top:10px;text-wrap:pretty">Uncategorised entries stay in Activity but stop counting toward any budget.</div></div></sc-if>
+      <div style="min-height:18px;margin-top:10px;font-size:13px;font-weight:600;color:#b3352b">{{ ph.bs.err }}</div>
+      <div style="display:flex;gap:8px;margin-top:6px"><button onClick="{{ ph.bs.cancelDel }}" style="flex:1;height:54px;border-radius:18px;border:1.5px solid #0b0b0c;background:none;color:#0b0b0c;font:500 15px 'Geist',sans-serif;cursor:pointer">Keep it</button><button onClick="{{ ph.bs.askDel }}" style="flex:1;height:54px;border-radius:18px;border:none;background:#c23b30;color:#ffffff;font:500 15px 'Geist',sans-serif;cursor:pointer">Delete</button></div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:424,&quot;height&quot;:896},&quot;ph&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}"></script>
+</body>
+</html>

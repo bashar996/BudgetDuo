@@ -69,14 +69,18 @@ function PotCard({ L, g }: { L: Ledger; g: Pot }) {
   const where = (a?.name || 'No account yet') + (a?.apy ? ' · earning ' + a.apy + '% a year' : '')
   const status = done ? 'Reached' : behind ? 'Needs ' + f(need - g.monthly) + ' more a month' : g.due ? 'On track' : n ? 'Steady' : 'Paused'
   const statusColor = done ? 'var(--good)' : behind ? 'var(--warn)' : 'var(--ink)'
+  const edit = () => ui.open({ kind: 'pot', goal: L.data.goals.find((x) => x.id === g.id) })
   return (
     <div style={css('background:var(--card);border-radius:26px;padding:20px;display:flex;flex-direction:column;gap:12px')}>
-      <div style={css('display:flex;justify-content:space-between;gap:10px;align-items:flex-end')}>
+      <div style={css('display:flex;justify-content:space-between;gap:10px;align-items:flex-start')}>
         <div style={css('min-width:0')}>
-          <button onClick={() => ui.open({ kind: 'pot', goal: L.data.goals.find((x) => x.id === g.id) })} style={css("background:none;border:none;padding:0;font:500 19px 'Geist',sans-serif;color:var(--ink);cursor:pointer;text-align:left")}>{g.name}</button>
+          <button onClick={edit} style={css("background:none;border:none;padding:0;font:500 19px 'Geist',sans-serif;color:var(--ink);cursor:pointer;text-align:left")}>{g.name}</button>
           <div style={css('font-size:12.5px;color:var(--mute)')}>{where}</div>
         </div>
-        <span style={css('font-size:32px;letter-spacing:-.03em;line-height:1')}>{Math.round(r * 100) + '%'}</span>
+        <div style={css('flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px')}>
+          <button onClick={edit} style={css("height:44px;padding:0 16px;border-radius:22px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font:500 13.5px 'Geist',sans-serif;cursor:pointer")}>Edit</button>
+          <span style={css('font-size:32px;letter-spacing:-.03em;line-height:1')}>{Math.round(r * 100) + '%'}</span>
+        </div>
       </div>
       <div style={css('height:5px;border-radius:3px;background:var(--track)')}><div style={sx('height:100%;background:#ffffff;border-radius:3px;transition:width .4s', { width: pc(r) })} /></div>
       <div style={css('display:flex;justify-content:space-between;gap:10px;font-size:13.5px')}>

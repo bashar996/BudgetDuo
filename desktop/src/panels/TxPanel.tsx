@@ -21,7 +21,7 @@ export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> 
     if (tx) return { type: tx.type, amt: String(tx.amt), name: tx.name, cat: tx.cat, who: tx.who, acct: tx.acct, to: tx.to ?? '', date: tx.date, note: tx.note ?? '', pot: tx.pot, potDir: tx.potDir, billId: tx.billId }
     const p = pre ?? {}
     return {
-      type: p.type ?? 'exp', amt: p.amt ? String(p.amt) : '', name: p.name ?? '', cat: p.cat ?? 'groceries', who: p.who ?? 'J',
+      type: p.type ?? 'exp', amt: p.amt ? String(p.amt) : '', name: p.name ?? '', cat: p.cat ?? L.catOr('groceries'), who: p.who ?? 'J',
       acct: p.acct ?? L.mainAcct, to: p.to ?? '', date: p.date ?? isoOf(new Date()), note: p.note ?? '', pot: p.pot, potDir: p.potDir, billId: p.billId,
     }
   })
@@ -41,7 +41,7 @@ export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> 
     const inc = d.type === 'inc'
     if (isX && (!d.acct || !d.to || d.acct === d.to)) return setErr('Pick two different accounts.')
     if (!d.acct && L.accounts.length) return setErr('Pick an account.')
-    const cat = isX ? 'transfer' : inc ? 'income' : d.cat === 'income' || d.cat === 'transfer' ? 'groceries' : d.cat
+    const cat = isX ? 'transfer' : inc ? 'income' : d.cat === 'income' || d.cat === 'transfer' ? L.catOr('groceries') : d.cat
     const c = L.cats.find((z) => z.id === cat)
     act.saveTx({
       id: tx?.id, createdAt: tx?.createdAt ?? undefined,

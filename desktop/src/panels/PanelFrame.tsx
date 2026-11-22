@@ -10,6 +10,8 @@ export interface PanelFrameProps {
   amount?: { value: string; onChange(v: string): void; currency: string }
   err?: string
   onDelete?: () => void
+  /** "Confirm delete" on the second step of a two-step delete. */
+  deleteLabel?: string
   onSave: () => void
   saveLabel?: string
   children: ReactNode
@@ -32,7 +34,7 @@ export function PanelFrame(p: PanelFrameProps) {
   }, [])
 
   return (
-    <div onClick={shut} style={sx('position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;transition:opacity .22s', { opacity: shown ? 1 : 0 })}>
+    <div className="nodrag" onClick={shut} style={sx('position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;transition:opacity .22s', { opacity: shown ? 1 : 0 })}>
       <div data-stage="cream" role="dialog" aria-label={p.title} onClick={(e) => e.stopPropagation()}
         style={sx('width:min(480px,100%);height:100%;overflow:auto;box-sizing:border-box;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.2,.8,.2,1)', { transform: shown ? 'translateX(0)' : 'translateX(100%)' })}>
         <div style={css('background:var(--accBase);color:#0b0b0c;padding:18px 18px 0 24px;flex:none')}>
@@ -62,7 +64,7 @@ export function PanelFrame(p: PanelFrameProps) {
           <div style={css('flex:1;padding:8px 24px 0;margin-top:-1px;display:flex;flex-direction:column;gap:16px')}>{p.children}</div>
           <div style={css('display:flex;flex-wrap:wrap;gap:8px 10px;position:sticky;bottom:0;background:var(--bg);padding:14px 24px 24px;flex:none')}>
             <div role="alert" style={css('flex-basis:100%;font-size:13.5px;font-weight:500;color:var(--bad)')}>{p.err}</div>
-            {p.onDelete && <button type="button" onClick={p.onDelete} style={css("font:500 15px 'Geist',sans-serif;padding:0 20px;height:58px;border-radius:20px;border:1.5px solid var(--bad);background:transparent;color:var(--bad);cursor:pointer")}>Delete</button>}
+            {p.onDelete && <button type="button" onClick={p.onDelete} style={css("font:500 15px 'Geist',sans-serif;padding:0 20px;height:58px;border-radius:20px;border:1.5px solid var(--bad);background:transparent;color:var(--bad);cursor:pointer")}>{p.deleteLabel ?? 'Delete'}</button>}
             <button type="submit" style={css("flex:1;font:500 17px 'Geist',sans-serif;height:58px;border-radius:20px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer")}>{p.saveLabel ?? 'Save'}</button>
           </div>
         </form>

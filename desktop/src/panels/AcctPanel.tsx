@@ -10,14 +10,14 @@ import { useUI } from '../shell/ui'
 import { PanelFrame } from './PanelFrame'
 import { ChipGroup, chips, Pair, TextField, parse } from './parts'
 
-export function AcctPanel({ L, acct }: { L: Ledger; acct?: Account }) {
+export function AcctPanel({ L, acct, preset }: { L: Ledger; acct?: Account; preset?: AccountType }) {
   const { act } = useStore()
   const { close, setView } = useUI()
   const old = acct ? L.data.accounts.find((a) => a.id === acct.id) : undefined
   const curBal = old ? L.balance(old) : 0
   const [d, setD] = useState(() => old
-    ? { name: old.name, atype: old.type, who: old.who, amt: String(Math.round(curBal * 100) / 100), bank: old.bank ?? '', last4: old.last4 ?? '', limit: old.limit ? String(old.limit) : '', apr: old.apr ? String(old.apr) : '', apy: old.apy ? String(old.apy) : '' }
-    : { name: '', atype: 'current' as AccountType, who: 'J' as Who, amt: '', bank: '', last4: '', limit: '', apr: '', apy: '' })
+    ? { name: old.name, atype: old.type, who: old.who, amt: String(Math.round(curBal * 100) / 100), bank: old.bank ?? '', last4: old.last4 ?? '', limit: old.limit ? String(old.limit) : '', apr: old.apr ? String(old.apr) : '', apy: old.apy ? String(old.apy) : '', cost: old.cost ? String(old.cost) : '' }
+    : { name: '', atype: preset ?? ('current' as AccountType), who: 'J' as Who, amt: '', bank: '', last4: '', limit: '', apr: '', apy: '', cost: '' })
   const [err, setErr] = useState('')
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => { setErr(''); setD((x) => ({ ...x, [k]: v })) }
 
@@ -26,11 +26,13 @@ export function AcctPanel({ L, acct }: { L: Ledger; acct?: Account }) {
     if (!name) return setErr('Give it a name.')
     if (isNaN(bal)) return setErr('Add the balance as it stands today.')
     const opening = old ? old.opening + (bal - curBal) : bal
-    const card = d.atype === 'card', sav = d.atype === 'save'
+    const card = d.atype === 'card', sav = d.atype === 'save', inv = d.atype === 'invest'
+    const cost = inv ? parse(d.cost) : NaN
     const id = act.saveAccount({
       id: old?.id, createdAt: old?.createdAt ?? undefined, name, type: d.atype, who: d.who, opening,
       bank: d.bank.trim() || null, last4: d.last4.trim() || null,
       limit: card ? parse(d.limit) || 0 : null, apr: card ? parse(d.apr) || null : null, apy: sav ? parse(d.apy) || 0 : null,
+      cost: cost > 0 ? cost : undefined,
     })
     setView({ selAcct: id })
     close()
@@ -60,6 +62,7 @@ export function AcctPanel({ L, acct }: { L: Ledger; acct?: Account }) {
           </Pair>
         )}
         {d.atype === 'save' && <TextField label="Interest rate (% a year)" decimal value={d.apy} onChange={(v) => set('apy', v)} />}
+        {d.atype === 'invest' && <TextField label="Amount you put in (optional)" decimal value={d.cost} onChange={(v) => set('cost', v)} />}
       </div>
     </PanelFrame>
   )

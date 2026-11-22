@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct BudgetView: View {
     @Environment(HouseholdStore.self) private var store
     @Environment(Router.self) private var router
@@ -23,16 +24,6 @@ struct BudgetView: View {
                 }
                 .padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 4)
             } content: {
-                HStack(spacing: 10) {
-                    Text("Tap a category to change its limit.").font(.geist(13.5)).foregroundStyle(Palette.gray)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button { router.form = .newCategory } label: {
-                        Text("+ New category").font(.geist(13.5, .medium)).padding(.horizontal, 14).frame(height: 44)
-                            .overlay(Capsule().strokeBorder(Palette.black, lineWidth: 1.5))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, 6)
                 ForEach(Catalog.groups, id: \.0) { item in
                     let g = item.0, title = item.1
                     let rs = L.rows.filter { $0.group == g }
@@ -49,6 +40,11 @@ struct BudgetView: View {
                     }
                     .padding(.top, 14)
                 }
+                BlockButton(title: "+ New category", fill: Palette.black, outline: true) { router.form = .newCategory }
+                    .padding(.top, 22)
+                Text("Tap a category to rename it, change its limit or delete it.")
+                    .font(.geist(13)).foregroundStyle(Palette.gray).multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity).padding(.top, 10)
             }
         }
     }
@@ -114,16 +110,11 @@ struct SavingsView: View {
                 }
                 ForEach(L.goals) { g in potCard(g, L) }
                 if L.goals.isEmpty {
-                    EmptyNote(text: L.accounts.contains { $0.type == .save }
-                              ? "No pots yet. Make one for an emergency fund, a trip or school fees."
-                              : "Pots live inside a savings account. Add a savings account first, then make a pot.",
-                              color: Palette.ink)
+                    EmptyNote(text: "No pots yet. Start one for anything you’re saving toward.", color: Palette.ink)
                         .padding(.horizontal, 4)
                 }
-                BlockButton(title: "New pot", fill: Palette.black, outline: true) {
-                    router.form = L.accounts.isEmpty ? .account(nil) : .pot(nil)
-                }
-                .padding(.top, 4)
+                BlockButton(title: "+ New pot", fill: Palette.black, outline: true) { router.form = .pot(nil) }
+                    .padding(.top, 6)
             }
         }
     }
@@ -136,13 +127,23 @@ struct SavingsView: View {
         let a = L.accounts.first { $0.id == g.acct }
         let status = rem <= 0 ? "Reached" : n > 0 ? "There by \(DateKit.monthLabel(DateKit.addMonths(L.ym, n), short: true))" : "Paused"
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .bottom, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(g.name).font(.geist(18, .medium))
                     Text((a?.name ?? "Savings") + (a?.apy.map { " · \(fmt($0))% a year" } ?? "")).font(.geist(12.5)).foregroundStyle(Palette.ink)
                 }
-                Spacer()
-                Text("\(Int((r * 100).rounded()))%").font(.geist(30)).tracking(em: -0.03, size: 30)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .trailing, spacing: 6) {
+                    Button { router.form = .pot(g) } label: {
+                        Text("Edit").font(.geist(13.5, .medium)).padding(.horizontal, 16).frame(height: 44)
+                            .overlay(Capsule().strokeBorder(Palette.black, lineWidth: 1.5))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Edit \(g.name)")
+                    Text("\(Int((r * 100).rounded()))%").font(.geist(30)).tracking(em: -0.03, size: 30)
+                }
+                .fixedSize()
             }
             ProgressLine(ratio: r, fill: Palette.white).padding(.top, 12)
             HStack {
@@ -164,12 +165,12 @@ struct SavingsView: View {
         .padding(16)
         .background(.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.bottom, 12)
-        .contextMenu { Button("Edit pot") { router.form = .pot(g) } }
     }
 }
 
 func fmt(_ x: Double) -> String { x == x.rounded() ? String(Int(x)) : String(format: "%.2f", x) }
 
+@MainActor
 struct MoreView: View {
     @Environment(HouseholdStore.self) private var store
     @Environment(Router.self) private var router
@@ -181,7 +182,8 @@ struct MoreView: View {
             let rows: [(String, String, Route)] = [
                 ("Activity", "\(L.monthTx.count) entries this month", .activity(account: nil)),
                 ("Bills", L.unpaidBills.isEmpty ? (L.bills.isEmpty ? "Add your monthly bills" : "All paid this month") : "\(L.money.f(L.unpaidTotal)) still due this month", .bills),
-                ("Accounts", "Net worth \(L.money.f(L.netWorth))", .accounts),
+                ("Accounts", L.accounts.count == 1 ? "1 account" : "\(L.accounts.count) accounts and cards", .accounts),
+                ("Net worth", "\(L.money.f(L.netWorth)) across everything you own", .worth),
                 ("Debt", L.allDebts.isEmpty ? "Nothing owed" : "Debt-free by \(L.debtFreeLabel)", .debt),
                 ("Reports", "Where the money went", .reports),
                 ("Plan ahead", "Next 30 days and big purchases", .plan),

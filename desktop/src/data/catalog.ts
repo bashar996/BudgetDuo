@@ -1,4 +1,4 @@
-import type { CustomCategory, Who } from './types'
+import type { AssetKind, Household, Who } from './types'
 
 export type Group = 'needs' | 'wants' | 'personal'
 export interface Category { id: string; name: string; g: Group; h: number; who?: Who; custom?: boolean; variable?: boolean }
@@ -28,14 +28,31 @@ export const GROUPS: [Group, string][] = [['needs', 'Needs'], ['wants', 'Wants']
 /** Category dot colour: shades of violet. */
 export const hue = (h: number) => 'oklch(' + (0.42 + (h / 360) * 0.4).toFixed(2) + ' 0.11 290)'
 
-export function allCategories(custom: CustomCategory[] | undefined, nameA: string, nameB: string): (Category & { color: string })[] {
-  return CATS.concat((custom ?? []).map((c) => ({ id: c.id, name: c.name, g: c.g, h: 200, custom: true, variable: true })))
+/** Pocket money can't be renamed, moved or deleted. */
+export const LOCKED = ['allowA', 'allowB']
+
+/** The household's categories: built-ins (minus catDel, with catOv applied) plus its own. */
+export function allCategories(H: Pick<Household, 'custom' | 'catOv' | 'catDel' | 'nameA' | 'nameB'>): (Category & { color: string })[] {
+  const gone = H.catDel ?? [], ov = H.catOv ?? {}, nameA = H.nameA, nameB = H.nameB
+  return CATS.filter((c) => !gone.includes(c.id) || LOCKED.includes(c.id))
+    .map((c) => (ov[c.id] && !LOCKED.includes(c.id) ? { ...c, name: ov[c.id].name, g: ov[c.id].g } : c))
+    .concat((H.custom ?? []).map((c) => ({ id: c.id, name: c.name, g: c.g, h: 200, custom: true, variable: true })))
     .map((c) => ({
       ...c,
       name: c.id === 'allowA' ? nameA + '’s pocket money' : c.id === 'allowB' ? nameB + '’s pocket money' : c.name,
       color: hue(c.h),
     }))
 }
+
+/** First remaining category when a default one was deleted (Groceries, Travel, Shopping, Utilities). */
+export function catOr(cats: { id: string }[], id: string) {
+  return (cats.find((c) => c.id === id) ?? cats[0])?.id ?? id
+}
+
+export const ASSET_KINDS: [AssetKind, string][] = [
+  ['property', 'Property'], ['vehicle', 'Vehicle'], ['gold', 'Gold & jewellery'], ['business', 'Business'], ['other', 'Other'],
+]
+export const assetKind = (k?: string) => ASSET_KINDS.find((x) => x[0] === k)?.[1] ?? 'Other'
 
 export const CHECKS = [
   'Look at the categories that ran over',

@@ -1,7 +1,7 @@
 // Every derived number the screens show, from the synced documents.
 // Mirrors renderVals() in design/Tandem Budget.dc.html, with balances and pot
 // totals worked out from entries (like the iPhone app's Ledger.swift).
-import { allCategories, type Category } from './catalog'
+import { allCategories, catOr as firstOr, type Category } from './catalog'
 import type { Account, Bill, Data, Goal, Tx, Who } from './types'
 import { addDays, addM, dim, isoOf, ymOf } from '../lib/dates'
 import { fmt, num, sum } from '../lib/money'
@@ -96,7 +96,9 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const mainAcct = (accounts.find((a) => a.type === 'current') ?? accounts[0])?.id ?? ''
 
   // Categories and budget rows.
-  const cats = allCategories(H.custom, A, B)
+  const cats = allCategories(H)
+  /** The category id, or the first remaining one if it was deleted. */
+  const catOr = (id: string) => firstOr(cats, id)
   const catBy: Record<string, { name: string; color: string }> = {
     income: { name: 'Income', color: 'var(--good)' },
     transfer: { name: 'Transfer', color: 'var(--mute)' },
@@ -128,9 +130,23 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const safe = tAvail - tSpent - unpaid
   const leftAssign = income - tLimit - goalsMo
 
-  // Net worth.
-  const assets = sum(accounts.filter((a) => a.balance > 0), (a) => a.balance)
+  // Net worth: own = positive balances + assets; owe = loans + accounts below zero.
+  const holdings = data.assets ?? []
+  const holdSum = sum(holdings, (x) => x.value)
+  const posSum = (types: string[]) => sum(accounts.filter((a) => types.includes(a.type) && a.balance > 0), (a) => a.balance)
+  const assets = sum(accounts.filter((a) => a.balance > 0), (a) => a.balance) + holdSum
   const liab = sum(data.debts, (x) => x.balance) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
+  /** What you own, in four groups (order and colours from the design). */
+  const ownGroups: { label: string; v: number; color: string }[] = [
+    { label: 'Cash', v: posSum(['current', 'cash', 'card']), color: 'var(--ink)' },
+    { label: 'Savings', v: posSum(['save']), color: 'var(--acc)' },
+    { label: 'Investments', v: posSum(['invest']), color: 'var(--accText)' },
+    { label: 'Property & other assets', v: holdSum, color: 'var(--mute)' },
+  ]
+  /** Investment accounts with their gain (null when no cost is recorded). */
+  const investments = accounts.filter((a) => a.type === 'invest').map((a) => ({ ...a, gain: a.cost && a.cost > 0 ? a.balance - a.cost : null }))
+  const withCost = investments.filter((a) => a.gain !== null)
+  const invGain = withCost.length ? sum(withCost, (a) => a.gain!) : null
 
   // Debt: loans plus cards in the red.
   const allDebts: DebtLine[] = (data.debts.map((d) => ({ ...d, loan: true })) as DebtLine[]).concat(
@@ -175,10 +191,10 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
     data, H, A, B, cur, f, num, today, tDay, curYm, ym, isCur, days, day, daysLeft, pace,
     whoName, whoCol, rollover, cushion,
     accounts, goals, acctBy, aName, mainAcct, balance, savedIn,
-    cats, catBy, catOf, inM, byCat, desc,
+    cats, catBy, catOf, catOr, inM, byCat, desc,
     mtx, exp, inc, spent, pExp, pSpent, income, goalsMo,
     rows, tAvail, tSpent, tLimit, billsM, unpaid, safe, leftAssign,
-    assets, liab, allDebts, strat, extra, debtPlan,
+    assets, liab, holdings, holdSum, ownGroups, investments, invGain, allDebts, strat, extra, debtPlan,
     events, forecast, roundUps, roundUpPot,
   }
 }

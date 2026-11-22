@@ -1,9 +1,17 @@
 import SwiftUI
 
+// A plain EnvironmentKey rather than `@Entry`, which needs the Xcode 16 SDK.
+private struct ScreenTrailingInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
 extension EnvironmentValues {
     /// On wide screens the detail pane runs under the trailing safe area (the camera
     /// strip in landscape) so its colours reach the edge; text is pushed in by this much.
-    @Entry var screenTrailingInset: CGFloat = 0
+    var screenTrailingInset: CGFloat {
+        get { self[ScreenTrailingInsetKey.self] }
+        set { self[ScreenTrailingInsetKey.self] = newValue }
+    }
 }
 
 /// Black header, stepped edge, then a coloured sheet running to the bottom.
