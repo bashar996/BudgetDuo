@@ -1,4 +1,5 @@
 import SwiftUI
+import Observation
 
 extension Color {
     init(hex: UInt32, opacity: Double = 1) {
@@ -7,10 +8,36 @@ extension Color {
     }
 }
 
+/// Per-phone look (Settings → Look), kept in UserDefaults. Observable, so every view
+/// that reads `Palette.lavender` in its body redraws when the accent changes.
+@Observable
+final class Look {
+    static let shared = Look()
+    /// The accents the Mac offers: lavender, blue, coral, sand.
+    static let accents: [(hex: UInt32, name: String)] = [
+        (0xb9b0ff, "Lavender"), (0xa9c4ff, "Blue"), (0xffb9a8, "Coral"), (0xd8d3c2, "Sand"),
+    ]
+    private static let key = "accent"
+
+    private(set) var accent: UInt32
+
+    init() {
+        let saved = UInt32(truncatingIfNeeded: UserDefaults.standard.integer(forKey: Look.key))
+        accent = Look.accents.contains { $0.hex == saved } ? saved : Look.accents[0].hex
+    }
+
+    func setAccent(_ hex: UInt32) {
+        guard Look.accents.contains(where: { $0.hex == hex }) else { return }
+        accent = hex
+        UserDefaults.standard.set(Int(hex), forKey: Look.key)
+    }
+}
+
 /// Black, lavender and cream only, as in the design reference.
 enum Palette {
     static let black = Color(hex: 0x0b0b0c)
-    static let lavender = Color(hex: 0xb9b0ff)
+    /// The accent: lavender unless another one is picked in Settings → Look.
+    static var lavender: Color { Color(hex: Look.shared.accent) }
     static let cream = Color(hex: 0xfbf9ef)
     static let white = Color.white
     /// Secondary text on black

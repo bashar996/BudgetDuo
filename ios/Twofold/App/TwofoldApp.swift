@@ -16,7 +16,6 @@ struct TwofoldApp: App {
             RootView()
                 .environment(session)
                 .preferredColorScheme(.dark)
-                .tint(Palette.lavender)
         }
     }
 }
@@ -38,6 +37,8 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: session.phase)
+        // Read in a view body (not the scene), so it follows Settings → Look.
+        .tint(Palette.lavender)
     }
 }
 

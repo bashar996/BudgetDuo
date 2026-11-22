@@ -36,6 +36,7 @@ struct MainView: View {
         .fullScreenCover(item: $router.entry) { AddEntryView(draft: $0) }
         .sheet(item: $router.form) { f in FormHost(form: f) }
         .overlay(alignment: .top) { ErrorToast() }
+        .overlay(alignment: .bottom) { UndoToast() }
     }
 }
 
@@ -68,15 +69,30 @@ private struct TabRoot: View {
                             }
                     }
                     .ignoresSafeArea(.container, edges: .horizontal)
+                    // One Back for both panes, docked in the rail column on the right edge,
+                    // low down where the thumb rests when the phone is unfolded.
+                    .overlay {
+                        if router.tab == tab {
+                            // Runs under the trailing safe area so the button can sit in the
+                            // rail's column; empty space lets touches through.
+                            VStack(spacing: 0) {
+                                Spacer(minLength: 0)
+                                RailBackButton()
+                                    .frame(width: max(inset.trailing, 76))
+                                    .padding(.bottom, 18)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                            .ignoresSafeArea(.container, edges: .horizontal)
+                        }
+                    }
+                    .onAppear { router.railInset = inset.trailing }
+                    .onChange(of: inset.trailing) { _, v in router.railInset = v }
                 } else {
                     stack
                 }
             }
-            .onAppear { router.isWide = wide }
-            .onChange(of: wide) { _, w in
-                router.isWide = w
-                if w { router.paths = [:] } else { router.detailPath = [] }
-            }
+            .onAppear { if router.isWide != wide { router.layoutChanged(wide: wide) } }
+            .onChange(of: wide) { _, w in if router.isWide != w { router.layoutChanged(wide: w) } }
         }
         .background(Palette.black.ignoresSafeArea())
     }
@@ -85,7 +101,7 @@ private struct TabRoot: View {
         // Unfolded, Bills opened from this pane: the calendar covers the pane
         // (the tab stays underneath, so Back returns to where it was).
         let billsCalendar = router.isWide && router.billsSplit && router.tab == tab && router.detail == .bills
-        return NavigationStack(path: Binding(get: { router.paths[tab] ?? [] }, set: { router.paths[tab] = $0 })) {
+        return NavigationStack(path: Binding(get: { router.paths[tab] ?? [] }, set: { router.setPath(tab, $0) })) {
             Group {
                 switch tab {
                 case .home: HomeView()
@@ -106,9 +122,8 @@ private struct TabRoot: View {
     /// Only the selected tab hosts the detail pane, so there's one stack bound
     /// to `detailPath` at a time.
     @ViewBuilder private var detail: some View {
-        @Bindable var router = router
         if router.tab == tab {
-            NavigationStack(path: $router.detailPath) {
+            NavigationStack(path: Binding(get: { router.detailPath }, set: { router.setDetailPath($0) })) {
                 RouteView(route: router.detail, showBack: false)
                     .navigationDestination(for: Route.self) { RouteView(route: $0) }
             }
@@ -132,6 +147,7 @@ struct RouteView: View {
         case .us: UsTwoView(showBack: showBack)
         case .settings: SettingsView(showBack: showBack)
         case .activity(let acct): ActivityView(showBack: showBack, account: acct)
+        case .loan(let id): LoanDetailView(id: id, showBack: showBack)
         }
     }
 }
@@ -149,6 +165,92 @@ private struct ErrorToast: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 14)
             .task(id: e) { try? await Task.sleep(for: .seconds(5)); store.error = nil }
+        }
+    }
+}
+
+/// "Deleted {name} · Undo" for about 5 seconds after an entry is deleted;
+/// Undo puts it back with the same id.
+@MainActor
+private struct UndoToast: View {
+    @Environment(HouseholdStore.self) private var store
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        Group {
+            if let t = router.undo {
+                HStack(spacing: 8) {
+                    Text("Deleted \(t.name) ·").font(.geist(14, .medium)).lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                        store.restore(t)
+                        router.undo = nil
+                    } label: {
+                        Text("Undo").font(.geist(14, .semibold)).foregroundStyle(Palette.lavender)
+                            .padding(.horizontal, 12).frame(minHeight: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Undo delete")
+                }
+                .padding(.leading, 16).padding(.trailing, 4)
+                .background(Palette.black, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.14), lineWidth: 1))
+                .foregroundStyle(Palette.white)
+                .padding(.horizontal, 14)
+                // Clear of the tab bar; unfolded, in the right pane and clear of the rail and its Back.
+                .frame(maxWidth: router.isWide ? CGFloat(440) : CGFloat.infinity)
+                .padding(.trailing, router.isWide ? max(0, 76 - router.railInset) : 0)
+                .frame(maxWidth: .infinity, alignment: router.isWide ? .trailing : .center)
+                .padding(.bottom, router.isWide ? 18 : 58)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task(id: t.id) {
+                    do { try await Task.sleep(for: .seconds(5)) } catch { return }
+                    if router.undo?.id == t.id { router.undo = nil }
+                }
+            }
+        }
+        .animation(.snappy(duration: 0.25), value: router.undo?.id)
+    }
+}
+
+/// Unfolded only: the one Back button, a 52pt dark circle in the tab rail's column.
+/// Shown while there's something to go back to; undoes the latest step in either pane.
+@MainActor
+private struct RailBackButton: View {
+    @Environment(HouseholdStore.self) private var store
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        Group {
+            if router.canGoBack {
+                Button { withAnimation(.snappy(duration: 0.25)) { router.goBack() } } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Palette.white)
+                        .frame(width: 52, height: 52)
+                        .background(Palette.tabBar, in: Circle())
+                        .overlay(Circle().strokeBorder(Palette.white.opacity(0.14), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("[", modifiers: .command)
+                .accessibilityLabel("Back")
+                .accessibilityValue(Text(targetName))
+                .accessibilityHint("Back to \(targetName)")
+                .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy(duration: 0.2), value: router.canGoBack)
+    }
+
+    private var targetName: String {
+        switch router.backTarget {
+        case .tab(let t): return t.rawValue
+        case .route(let r):
+            if case .loan(let id) = r, let d = store.debts.first(where: { $0.id == id }) { return d.name }
+            return r.title
+        case nil: return ""
         }
     }
 }

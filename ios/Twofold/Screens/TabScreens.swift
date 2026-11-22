@@ -8,13 +8,16 @@ struct BudgetView: View {
     var body: some View {
         if let L = store.ledger() {
             let left = L.leftToAssign
+            let note = L.assignNote
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(left < 0 ? "Over-assigned this month" : "Left to assign · \(L.monthName)").font(.geist(13)).foregroundStyle(Palette.mute)
-                    BigAmount(currency: L.money.currency, value: L.money.num(left), color: Palette.lavender).padding(.top, 4)
-                    Text(left < 0 ? "You’ve planned more than comes in. Trim a category to get back to zero."
-                         : left == 0 ? "Every bit of income has a job." : "Give it a job — a category or a pot.")
-                        .font(.geist(14)).foregroundStyle(Palette.mute).padding(.top, 8)
+                    // Zero-based budgets assign every bit of income; the other styles just show what's unbudgeted.
+                    Text((L.isZeroBased ? "Left to assign" : "Unbudgeted") + " · \(L.monthName)").font(.geist(13)).foregroundStyle(Palette.mute)
+                    BigAmount(currency: L.money.currency, value: L.money.num(left), color: left < 0 ? Palette.badOnBlack : Palette.lavender).padding(.top, 4)
+                    if !note.isEmpty {
+                        Text(note).font(.geist(14)).foregroundStyle(Palette.mute).padding(.top, 8)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     HStack(alignment: .top, spacing: 8) {
                         stat("Income", L.money.f(L.income)) { router.form = .pay(store.me) }
                         stat("Budgeted", L.money.f(L.totalLimit), nil)
@@ -24,6 +27,7 @@ struct BudgetView: View {
                 }
                 .padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 4)
             } content: {
+                if L.budgetStyle == "50/30/20" { styleCheck(L).padding(.bottom, 8) }
                 ForEach(Catalog.groups, id: \.0) { item in
                     let g = item.0, title = item.1
                     let rs = L.rows.filter { $0.group == g }
@@ -31,7 +35,7 @@ struct BudgetView: View {
                         HStack(alignment: .firstTextBaseline) {
                             Text(title).font(.geist(22, .medium)).tracking(em: -0.01, size: 22)
                             Spacer()
-                            Text("\(L.money.f(rs.reduce(0) { $0 + $1.spent })) of \(L.money.f(rs.reduce(0) { $0 + $1.limit }))")
+                            Text("\(L.money.f(rs.reduce(0) { $0 + $1.spent })) of \(L.money.f(rs.reduce(0) { $0 + $1.avail }))")
                                 .font(.geist(13)).foregroundStyle(Palette.gray)
                         }
                         ForEach(rs) { r in
@@ -42,7 +46,7 @@ struct BudgetView: View {
                 }
                 BlockButton(title: "+ New category", fill: Palette.black, outline: true) { router.form = .newCategory }
                     .padding(.top, 22)
-                Text("Tap a category to rename it, change its limit or delete it.")
+                Text("Tap a category to rename it, change its limit, move money in or delete it.")
                     .font(.geist(13)).foregroundStyle(Palette.gray).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity).padding(.top, 10)
             }
@@ -61,17 +65,55 @@ struct BudgetView: View {
         .disabled(action == nil)
     }
 
+    /// Budget style 50/30/20: what's planned for needs, wants and savings against the guide.
+    private func styleCheck(_ L: Ledger) -> some View {
+        let income = L.income
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("50 / 30 / 20 check").font(.geist(22, .medium)).tracking(em: -0.01, size: 22)
+            ForEach(L.styleBands) { b in
+                let share = income > 0 ? b.amount / income : 0
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        (Text(b.name).font(.geist(15, .medium))
+                         + Text(" · \(Int((share * 100).rounded()))% of income, guide is \(Int(b.guide * 100))%").font(.geist(13)).foregroundColor(Palette.gray))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(L.money.f(b.amount)).font(.geist(15, .medium)).lineLimit(1).fixedSize()
+                    }
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Palette.black.opacity(0.1))
+                            Capsule().fill(b.name == "Needs" ? Palette.black : b.name == "Wants" ? Palette.accentText : Palette.lavender)
+                                .frame(width: g.size.width * Money.pct(share))
+                            Rectangle().fill(Palette.black).frame(width: 2, height: 18)
+                                .offset(x: g.size.width * b.guide - 1)
+                        }
+                    }
+                    .frame(height: 10)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(b.name): \(L.money.f(b.amount)), \(Int((share * 100).rounded()))% of income. Guide \(Int(b.guide * 100))%")
+            }
+        }
+        .padding(18)
+        .background(Palette.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.top, 8)
+    }
+
     private func row(_ r: BudgetRow, _ L: Ledger) -> some View {
         let over = r.left < 0
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .lastTextBaseline, spacing: 10) {
                 Text(r.name).font(.geist(16))
+                // Rollover on: what came over from last month.
+                if abs(r.carry) >= 1 {
+                    Text("rolled \(r.carry > 0 ? "+" : "")\(L.money.f(r.carry))").font(.geist(12)).foregroundStyle(Palette.gray)
+                }
                 Spacer()
                 Text("\(Int((r.ratio * 100).rounded()))%").font(.geist(26)).tracking(em: -0.02, size: 26)
                     .foregroundStyle(over ? Palette.overText : Palette.black)
             }
             ProgressLine(ratio: r.ratio, fill: over ? Palette.overFill : Palette.lavender).padding(.top, 8)
-            Text("\(L.money.f(r.spent)) of \(L.money.f(r.limit)) · " + (over ? "\(L.money.f(-r.left)) over" : "\(L.money.f(r.left)) left"))
+            Text("\(L.money.f(r.spent)) of \(L.money.f(r.avail)) · " + (over ? "\(L.money.f(-r.left)) over" : "\(L.money.f(r.left)) left"))
                 .font(.geist(12.5)).foregroundStyle(Palette.gray).padding(.top, 6)
         }
         .padding(.top, 12).padding(.bottom, 4)
@@ -86,6 +128,7 @@ struct SavingsView: View {
 
     var body: some View {
         if let L = store.ledger() {
+            let roundOn = L.household.roundUps ?? false
             Screen(color: Palette.lavender, contentPadding: 16) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Saved in your pots").font(.geist(13)).foregroundStyle(Palette.mute)
@@ -95,7 +138,7 @@ struct SavingsView: View {
                 }
                 .padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 4)
             } content: {
-                if L.roundUps > 0, let pot = L.roundUpPot, let from = L.mainAccountId {
+                if roundOn, L.roundUps > 0, let pot = L.roundUpPot, let from = L.mainAccountId {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("\(L.money.f(L.roundUps)) of spare change from this month’s purchases is ready to save.")
                             .font(.geist(15)).fixedSize(horizontal: false, vertical: true)
@@ -115,6 +158,8 @@ struct SavingsView: View {
                 }
                 BlockButton(title: "+ New pot", fill: Palette.black, outline: true) { router.form = .pot(nil) }
                     .padding(.top, 6)
+                waysYouSave(L, roundOn: roundOn).padding(.horizontal, 4).padding(.top, 26)
+                recentMoves(L).padding(.horizontal, 4).padding(.top, 26)
             }
         }
     }
@@ -126,6 +171,7 @@ struct SavingsView: View {
         let n = g.monthly > 0 ? Int((rem / g.monthly).rounded(.up)) : 0
         let a = L.accounts.first { $0.id == g.acct }
         let status = rem <= 0 ? "Reached" : n > 0 ? "There by \(DateKit.monthLabel(DateKit.addMonths(L.ym, n), short: true))" : "Paused"
+        let auto = g.auto ?? false
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -152,6 +198,14 @@ struct SavingsView: View {
                 Text(status).font(.geist(13, .medium))
             }
             .font(.geist(13)).padding(.top, 8)
+            // Auto-save each payday, as on the Mac (the amount is set in Edit).
+            Toggle(isOn: Binding(get: { auto }, set: { store.setGoalAuto(g.id, $0) })) {
+                Text(auto ? "Auto-save on · \(L.money.f(g.monthly)) each payday" : "Auto-save off").font(.geist(13.5))
+            }
+            .tint(Palette.black)
+            .padding(.top, 8)
+            .overlay(alignment: .top) { Hairline(opacity: 0.1) }
+            .padding(.top, 8)
             HStack(spacing: 8) {
                 BlockButton(title: "Deposit", height: 46, radius: 16) {
                     router.add(store, L) { $0.type = .transfer; $0.to = g.acct; $0.pot = g.id; $0.potDir = .into; $0.name = "Deposit · \(g.name)" }
@@ -165,6 +219,71 @@ struct SavingsView: View {
         .padding(16)
         .background(.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.bottom, 12)
+    }
+
+    /// Payday auto-save, round-ups, month-end sweep and where extra money goes (the Mac's "Ways you save").
+    private func waysYouSave(_ L: Ledger, roundOn: Bool) -> some View {
+        let autoPots = L.goals.filter { $0.auto ?? false }
+        let autoTotal = autoPots.reduce(0) { $0 + $1.monthly }
+        let sweepOn = L.household.sweep ?? false
+        let pot = L.roundUpPot
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Ways you save").font(.geist(22, .medium)).tracking(em: -0.01, size: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Payday auto-save").font(.geist(16, .medium))
+                Text(autoTotal > 0
+                     ? "Right after payday, \(L.money.f(autoTotal)) moves from \(L.accountName(L.mainAccountId)) into \(autoPots.count) pot\(autoPots.count == 1 ? "" : "s"). Switch any pot on or off above."
+                     : "No pot is on auto-save yet. Switch one on above and it fills itself.")
+                    .font(.geist(13.5)).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 12)
+            .overlay(alignment: .bottom) { Hairline(opacity: 0.12) }
+            Toggle(isOn: Binding(get: { roundOn }, set: { store.updateHousehold(["roundUps": $0]) })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Round-ups").font(.geist(16, .medium))
+                    Text(roundOn
+                         ? (L.roundUps > 0 ? "\(L.money.f(L.roundUps)) of spare change from \(DateKit.monthLabel(L.ym)) is ready to move."
+                                           : "All round-ups for \(DateKit.monthLabel(L.ym)) are already moved.")
+                         : "Rounds each purchase up to the next 10 and saves the difference.")
+                        .font(.geist(13.5)).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Palette.black)
+            .padding(.vertical, 12)
+            .overlay(alignment: .bottom) { Hairline(opacity: 0.12) }
+            Toggle(isOn: Binding(get: { sweepOn }, set: { store.updateHousehold(["sweep": $0]) })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Month-end sweep").font(.geist(16, .medium))
+                    Text(sweepOn
+                         ? "On the last day of the month, whatever is left in safe-to-spend moves to \(pot?.name ?? "a pot"). Today that would be about \(L.money.f(max(0, L.safeToSpend.rounded())))."
+                         : "Moves whatever is left in safe-to-spend into a pot on the last day of the month.")
+                        .font(.geist(13.5)).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Palette.black)
+            .padding(.vertical, 12)
+            .overlay(alignment: .bottom) { Hairline(opacity: 0.12) }
+            if !L.goals.isEmpty {
+                Text("Extra money goes to").font(.geist(13)).foregroundStyle(Palette.ink).padding(.top, 14).padding(.bottom, 8)
+                FlowLayout(spacing: 6) {
+                    ForEach(L.goals) { g in
+                        CreamChip(label: g.name, on: pot?.id == g.id) { store.setRoundUpPot(g.id) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The latest deposits and withdrawals across every pot.
+    private func recentMoves(_ L: Ledger) -> some View {
+        let moves = Array(L.tx.filter { $0.type == .transfer && $0.pot != nil }.prefix(7))
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Recent moves").font(.geist(22, .medium)).tracking(em: -0.01, size: 22)
+            ForEach(moves) { t in
+                EntryButton(tx: t, ledger: L, tile: .white.opacity(0.55), subColor: Palette.ink, sheet: Palette.lavender)
+            }
+            if moves.isEmpty { EmptyNote(text: "Deposits and withdrawals will show here.", color: Palette.ink) }
+        }
     }
 }
 
@@ -188,7 +307,7 @@ struct MoreView: View {
                 ("Reports", "Where the money went", .reports),
                 ("Plan ahead", "Next 30 days and big purchases", .plan),
                 ("Us two", "Pay, pocket money and money date", .us),
-                ("Settings", "Names, currency, invite code", .settings),
+                ("Settings", "Names, budget style, look, invite code", .settings),
             ]
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 4) {

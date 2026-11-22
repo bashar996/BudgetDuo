@@ -125,9 +125,13 @@ struct FormHost: View {
         case .budget(let c): BudgetSheet(cat: c)
         case .settings: NavigationStack { SettingsView(showBack: false) }
         case .newCategory: BudgetSheet(cat: nil)
-        case .debt(let d): DebtForm(editing: d)
+        case .debt(let d): LoanForm(editing: d)
         case .planned(let p): PlannedForm(editing: p)
         case .trip(let t): TripForm(editing: t)
+        case .newCard: AccountForm(editing: nil, preset: .card)
+        case .newInvestment: AccountForm(editing: nil, preset: .invest)
+        case .asset(let a): AssetForm(editing: a)
+        case .tripSpend(let t): TripSpendSheet(trip: t)
         }
     }
 }
@@ -213,6 +217,9 @@ struct BudgetSheet: View {
     @State private var deleting = false
     /// "" nothing picked yet, "none" leave uncategorised, otherwise a category id.
     @State private var moveTo = ""
+    /// "Or move money in from": the category giving up part of its limit ("" none).
+    @State private var moveFrom = ""
+    @State private var moveText = ""
     @State private var loaded = false
     @FocusState private var typing: Bool
 
@@ -268,6 +275,7 @@ struct BudgetSheet: View {
             .padding(.top, 14).padding(.bottom, 12)
             Text(isNew ? "What you plan to spend on it each month" : "Spent \(L.money.f(L.spentByCat[id] ?? 0)) so far this month")
                 .font(.geist(13.5)).foregroundStyle(Palette.gray).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            if !isNew { extras(L, id) }
             sheetError(error, center: true).padding(.top, 6)
             HStack(spacing: 8) {
                 BlockButton(title: "3-month avg · \(L.money.num(avg))", fill: Palette.black, outline: true, height: 54) { set(avg) }
@@ -283,6 +291,45 @@ struct BudgetSheet: View {
                 .padding(.top, 8)
             }
         }
+    }
+
+    /// Existing categories: move money in from one with room, and the latest entries
+    /// (as the Mac's category panel).
+    private func extras(_ L: Ledger, _ id: String) -> some View {
+        let from = Array(L.rows.filter { $0.id != id && $0.left > 0 }.sorted { $0.left > $1.left }.prefix(6))
+        let latest = Array(L.monthExpenses.filter { $0.cat == id }.prefix(4))
+        return VStack(alignment: .leading, spacing: 0) {
+            if !from.isEmpty {
+                sheetLabel("Or move money in from")
+                FlowLayout(spacing: 6) {
+                    ForEach(from) { r in
+                        CreamChip(label: "\(r.name) · \(L.money.f(r.left))", on: moveFrom == r.id) {
+                            moveFrom = moveFrom == r.id ? "" : r.id; error = ""
+                        }
+                    }
+                }
+                if !moveFrom.isEmpty {
+                    SheetField(placeholder: "Amount to move", text: $moveText, size: 16, keyboard: .decimalPad).padding(.top, 8)
+                    Text("Comes off \(L.categoryName(moveFrom))’s limit and goes on top of this one when you save.")
+                        .font(.geist(12.5)).foregroundStyle(Palette.gray).padding(.top, 6)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if !latest.isEmpty {
+                sheetLabel("Latest in this category")
+                ForEach(latest) { t in
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(String(DateKit.dayLabel(t.date).dropFirst(4))).font(.geist(13)).foregroundStyle(Palette.gray).frame(width: 50, alignment: .leading)
+                        Text(t.name).font(.geist(15)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(L.money.f(t.amt)).font(.geist(15, .medium)).lineLimit(1).fixedSize()
+                    }
+                    .padding(.vertical, 9)
+                    .overlay(alignment: .bottom) { Hairline(opacity: 0.1) }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+        .padding(.top, 4).padding(.bottom, 6)
     }
 
     private func deleteStep(_ L: Ledger, _ id: String) -> some View {
@@ -369,6 +416,11 @@ struct BudgetSheet: View {
                 store.updateCategory(id, name: n, group: group)
             }
             store.setBudget(id, limit)
+            if !moveFrom.isEmpty, let typed = parseAmount(moveText), typed > 0 {
+                // Never more than the other category's limit (as the Mac).
+                let mv = min(typed, L.household.budgets[moveFrom] ?? 0)
+                if mv > 0 { store.moveBudget(from: moveFrom, to: id, amount: mv) }
+            }
         } else {
             store.addCategory(name: n, group: group, limit: limit)
         }
@@ -424,6 +476,8 @@ struct PayForm: View {
 @MainActor
 struct AccountForm: View {
     var editing: Account?
+    /// The type a new account starts as.
+    var preset: AccountType? = nil
     @Environment(HouseholdStore.self) private var store
     @State private var name = ""
     @State private var type: AccountType = .current
@@ -435,6 +489,10 @@ struct AccountForm: View {
     @State private var apy = ""
     @State private var cardApr = ""
     @State private var cost = ""
+    @State private var statementDay = ""
+    @State private var dueDay = ""
+    @State private var minPct = ""
+    @State private var minFloor = ""
 
     var body: some View {
         let L = store.ledger()
@@ -459,6 +517,31 @@ struct AccountForm: View {
                 CreamField(placeholder: "Optional", text: $limit, keyboard: .decimalPad)
                 FormLabel("Interest rate (APR %)").padding(.top, 16)
                 CreamField(placeholder: "36 if left empty", text: $cardApr, keyboard: .decimalPad)
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        FormLabel("Statement day")
+                        CreamField(placeholder: "Day 1–31", text: $statementDay, keyboard: .numberPad)
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        FormLabel("Due day")
+                        CreamField(placeholder: "Day 1–31", text: $dueDay, keyboard: .numberPad)
+                    }
+                }
+                .padding(.top, 16)
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        FormLabel("Minimum %")
+                        CreamField(placeholder: "5", text: $minPct, keyboard: .decimalPad)
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        FormLabel("Minimum at least")
+                        CreamField(placeholder: "100", text: $minFloor, keyboard: .decimalPad)
+                    }
+                }
+                .padding(.top, 16)
+                Text("The minimum payment is that % of what’s owed, but never less than the amount on the right.")
+                    .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if type == .invest {
                 FormLabel("Amount you put in (optional)").padding(.top, 16)
@@ -480,11 +563,20 @@ struct AccountForm: View {
     }
 
     private func load() {
+        if editing == nil, let preset { type = preset }
         guard let a = editing, let L = store.ledger() else { return }
         name = a.name; type = a.type; who = a.who; bank = a.bank ?? ""; last4 = a.last4 ?? ""
         let b = L.balance(a)
         balance = fmt(a.type == .card ? -b : b)
         limit = a.limit.map(fmt) ?? ""; apy = a.apy.map(fmt) ?? ""; cardApr = a.apr.map(fmt) ?? ""; cost = a.cost.map(fmt) ?? ""
+        statementDay = a.statementDay.map { String($0) } ?? ""; dueDay = a.dueDay.map { String($0) } ?? ""
+        minPct = a.minPct.map(fmt) ?? ""; minFloor = a.minFloor.map(fmt) ?? ""
+    }
+
+    /// A day of the month typed in, or nil.
+    private func day(_ s: String) -> Int? {
+        guard let n = Int(s.trimmingCharacters(in: .whitespaces)), n > 0 else { return nil }
+        return Swift.min(31, n)
     }
 
     private func save() {
@@ -499,7 +591,11 @@ struct AccountForm: View {
                            apy: (type == .save || type == .invest) ? parseAmount(apy) : nil,
                            apr: type == .card ? parseAmount(cardApr) : nil,
                            cost: type == .invest ? parseAmount(cost).flatMap { $0 > 0 ? $0 : nil } : nil,
-                           createdAt: editing?.createdAt))
+                           createdAt: editing?.createdAt,
+                           statementDay: type == .card ? day(statementDay) : nil,
+                           dueDay: type == .card ? day(dueDay) : nil,
+                           minPct: type == .card ? parseAmount(minPct).flatMap { $0 >= 0 ? $0 : nil } : nil,
+                           minFloor: type == .card ? parseAmount(minFloor).flatMap { $0 >= 0 ? $0 : nil } : nil))
     }
 }
 
@@ -509,6 +605,7 @@ struct AccountForm: View {
 struct BillForm: View {
     var editing: Bill?
     @Environment(HouseholdStore.self) private var store
+    @Environment(Router.self) private var router
     @State private var name = ""
     @State private var amt = ""
     @State private var day = 1
@@ -532,6 +629,15 @@ struct BillForm: View {
             }
             Toggle(isOn: $sub) { Text("Subscription").font(.geist(15)) }
                 .tint(Palette.black).padding(.top, 16)
+            if let id = editing?.debtId, let loan = store.debts.first(where: { $0.id == id }) {
+                Text("Shows the installment of \(loan.name). Paying it here pays the loan; change the amount or day from the loan, on Debt.")
+                    .font(.geist(13.5)).foregroundStyle(Palette.gray).padding(.top, 16)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { router.form = nil; router.drill(.loan(id)) } label: {
+                    Text("Open the loan →").font(.geist(14, .medium)).frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .presentationDetents([.large])
         .onAppear {
@@ -546,7 +652,7 @@ struct BillForm: View {
 
     private func save() {
         store.save(Bill(id: editing?.id ?? "", day: day, name: name.trimmingCharacters(in: .whitespaces),
-                        amt: parseAmount(amt) ?? 0, cat: cat, sub: sub, paid: editing?.paid ?? [:]))
+                        amt: parseAmount(amt) ?? 0, cat: cat, sub: sub, paid: editing?.paid ?? [:], debtId: editing?.debtId))
     }
 }
 
@@ -672,47 +778,6 @@ struct PotSheet: View {
     }
 }
 
-// MARK: Loan
-
-@MainActor
-struct DebtForm: View {
-    var editing: Debt?
-    @Environment(HouseholdStore.self) private var store
-    @State private var name = ""
-    @State private var balance = ""
-    @State private var apr = ""
-    @State private var min = ""
-
-    var body: some View {
-        let L = store.ledger()
-        FormSheetFrame(kicker: editing == nil ? "New loan" : "Edit loan", title: name.isEmpty ? "Loan" : name,
-                       canSave: !name.trimmingCharacters(in: .whitespaces).isEmpty && (parseAmount(balance) ?? -1) >= 0,
-                       onSave: save, onDelete: editing.map { d in { store.deleteDebt(d.id) } },
-                       deleteMessage: "It comes off the payoff plan.") {
-            FormLabel("Name")
-            CreamField(placeholder: "e.g. Car loan", text: $name)
-            FormLabel("Balance owed (\(L?.money.currency ?? ""))").padding(.top, 16)
-            CreamField(placeholder: "0", text: $balance, keyboard: .decimalPad)
-            FormLabel("Interest rate (APR %)").padding(.top, 16)
-            CreamField(placeholder: "0", text: $apr, keyboard: .decimalPad)
-            FormLabel("Minimum payment a month").padding(.top, 16)
-            CreamField(placeholder: "0", text: $min, keyboard: .decimalPad)
-            Text("Update the balance now and then; the plan works out the rest.")
-                .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 12)
-        }
-        .presentationDetents([.large])
-        .onAppear {
-            guard let d = editing else { return }
-            name = d.name; balance = fmt(d.balance); apr = fmt(d.apr); min = fmt(d.min)
-        }
-    }
-
-    private func save() {
-        store.save(Debt(id: editing?.id ?? "", name: name.trimmingCharacters(in: .whitespaces), balance: parseAmount(balance) ?? 0,
-                        apr: parseAmount(apr) ?? 0, min: parseAmount(min) ?? 0, createdAt: editing?.createdAt))
-    }
-}
-
 // MARK: Planned purchase
 
 @MainActor
@@ -787,5 +852,93 @@ struct TripForm: View {
     private func save() {
         store.save(Trip(id: editing?.id ?? "", name: name.trimmingCharacters(in: .whitespaces), when: when.trimmingCharacters(in: .whitespaces),
                         budget: parseAmount(budget) ?? 0, spent: parseAmount(spent) ?? 0, createdAt: editing?.createdAt))
+    }
+}
+
+// MARK: Asset (Net worth)
+
+/// A home, car, gold …: name, kind and what it's worth today (the Mac's asset panel).
+@MainActor
+struct AssetForm: View {
+    var editing: Asset?
+    @Environment(HouseholdStore.self) private var store
+    @State private var name = ""
+    @State private var kind = "property"
+    @State private var value = ""
+
+    var body: some View {
+        let cur = store.household?.currency ?? ""
+        FormSheetFrame(kicker: editing == nil ? "New asset" : "Edit asset", title: name.isEmpty ? "Asset" : name,
+                       canSave: !name.trimmingCharacters(in: .whitespaces).isEmpty && parseAmount(value) != nil,
+                       onSave: save, onDelete: editing.map { a in { store.deleteAsset(a.id) } },
+                       deleteMessage: "It comes off your net worth.") {
+            FormLabel("Name")
+            CreamField(placeholder: "e.g. Our flat", text: $name)
+            FormLabel("Kind").padding(.top, 16)
+            FlowLayout(spacing: 6) {
+                ForEach(Asset.kinds, id: \.id) { k in CreamChip(label: k.label, on: kind == k.id) { kind = k.id } }
+            }
+            FormLabel("What it’s worth today (\(cur))").padding(.top, 16)
+            CreamField(placeholder: "0", text: $value, keyboard: .decimalPad)
+            Text("Valued by hand; entries never move it. Update it now and then.")
+                .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .presentationDetents([.large])
+        .onAppear {
+            guard let a = editing else { return }
+            name = a.name; kind = a.kind; value = fmt(a.value)
+        }
+    }
+
+    private func save() {
+        store.save(Asset(id: editing?.id ?? "", name: name.trimmingCharacters(in: .whitespaces), kind: kind,
+                         value: parseAmount(value) ?? 0, createdAt: editing?.createdAt))
+    }
+}
+
+// MARK: Spending on a trip (Plan ahead → Log spend)
+
+/// Logs spending on a trip or event: a Travel expense today, added to what the trip has spent.
+@MainActor
+struct TripSpendSheet: View {
+    var trip: Trip
+    @Environment(HouseholdStore.self) private var store
+    @State private var amt = ""
+    @State private var acct = ""
+
+    var body: some View {
+        let L = store.ledger()
+        let accounts = (L?.accounts ?? []).filter { $0.type != .invest }
+        FormSheetFrame(kicker: "Log spend", title: trip.name, saveTitle: "Log spend",
+                       canSave: (parseAmount(amt) ?? 0) > 0, onSave: save) {
+            FormLabel("Amount (\(L?.money.currency ?? ""))")
+            CreamField(placeholder: "0", text: $amt, keyboard: .decimalPad)
+            FlowLayout(spacing: 6) {
+                ForEach([100.0, 250, 500, 1000], id: \.self) { v in
+                    CreamChip(label: "+" + Money(currency: "").num(v), on: false) {
+                        amt = fmt((parseAmount(amt) ?? 0) + v)
+                    }
+                }
+            }
+            .padding(.top, 10)
+            if !accounts.isEmpty {
+                FormLabel("Paid from").padding(.top, 16)
+                FlowLayout(spacing: 6) {
+                    ForEach(accounts) { a in CreamChip(label: a.name, on: acct == a.id) { acct = a.id } }
+                }
+            }
+            if let L {
+                Text("\(L.money.f(trip.spent)) of \(L.money.f(trip.budget)) spent so far. It’s logged as a \(L.categoryName(L.catOr("travel"))) expense today.")
+                    .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 14)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .onAppear { if acct.isEmpty { acct = L?.mainAccountId ?? "" } }
+    }
+
+    private func save() {
+        store.spendOnTrip(trip, amount: parseAmount(amt) ?? 0, account: acct)
     }
 }

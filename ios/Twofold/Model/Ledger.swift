@@ -4,10 +4,44 @@ struct BudgetRow: Identifiable {
     let id: String
     let group: CatGroup
     let name: String
+    /// Day-to-day spending (watched by coach tips).
+    let variable: Bool
+    /// Monthly limit as set.
     let limit: Double
+    /// Rolled over from last month (rollover on): last month's limit minus what was spent.
+    let carry: Double
     let spent: Double
-    var left: Double { limit - spent }
-    var ratio: Double { limit > 0 ? spent / limit : (spent > 0 ? 1.01 : 0) }
+    /// What can be spent this month: the limit plus anything rolled over (never below 0).
+    var avail: Double { max(0, limit + carry) }
+    var left: Double { avail - spent }
+    var ratio: Double { avail > 0 ? spent / avail : (spent > 0 ? 1.01 : 0) }
+}
+
+/// Shared costs this month and who owes whom (the Mac's `settleUp` in tabs/us.tsx).
+struct SettleUp {
+    /// "Split shared costs" is on.
+    let split: Bool
+    /// Shared spending this month (pocket money left out) by who paid.
+    let paid: [Who: Double]
+    let incomeA: Double
+    let incomeB: Double
+    /// > 0: B owes A; < 0: A owes B (what's already settled is taken off).
+    let owe: Double
+    /// All square (less than 1 either way).
+    let square: Bool
+    /// "50 / 50" or "62 / 38"
+    let rule: String
+    let line: String
+    let sub: String
+}
+
+/// One band of the 50/30/20 check on Budget.
+struct StyleBand: Identifiable {
+    let name: String
+    let amount: Double
+    /// 0.5, 0.3 or 0.2
+    let guide: Double
+    var id: String { name }
 }
 
 struct BillRow: Identifiable {
@@ -72,11 +106,18 @@ struct Ledger {
     let potSaved: [String: Double]
     let monthTx: [Tx]
     let monthExpenses: [Tx]
+    /// Last month's expenses (rollover and coach tips).
+    let prevExpenses: [Tx]
     let spentByCat: [String: Double]
     let rows: [BudgetRow]
+    /// "yyyy-MM-dd" of `today`.
+    let todayIso: String
+    /// Loan id → its state today (from the loan and its payment entries).
+    let loanStates: [String: LoanState]
 
     init(household: Household, tx: [Tx], accounts: [Account], bills: [Bill], goals: [Goal],
-         debts: [Debt] = [], planned: [Planned] = [], trips: [Trip] = [], assets: [Asset] = [], today: Date = Date()) {
+         debts: [Debt] = [], planned: [Planned] = [], trips: [Trip] = [], assets: [Asset] = [], today: Date = Date(),
+         loanStates: [String: LoanState]? = nil) {
         self.household = household
         self.tx = tx
         self.accounts = accounts
@@ -115,11 +156,25 @@ struct Ledger {
         var sp: [String: Double] = [:]
         monthExpenses.forEach { sp[$0.cat, default: 0] += $0.amt }
         spentByCat = sp
+        let ymPrev = DateKit.addMonths(ym, -1)
+        let pExp = tx.filter { $0.type == .expense && $0.month == ymPrev }
+        prevExpenses = pExp
+        var psp: [String: Double] = [:]
+        pExp.forEach { psp[$0.cat, default: 0] += $0.amt }
+        // Rollover (Settings, shared with the Mac): last month's unspent limit (or overspend)
+        // carries into this month, once there was spending last month.
+        let roll = (household.rollover ?? false) && !pExp.isEmpty
+
+        let iso = DateKit.iso(today)
+        todayIso = iso
+        self.loanStates = loanStates ?? Ledger.computeLoanStates(debts, tx, today: iso)
 
         let names = (a: household.nameA, b: household.nameB)
         rows = Catalog.effective(household).map { c in
             let name = c.id == "allowA" ? names.a + "’s pocket money" : c.id == "allowB" ? names.b + "’s pocket money" : c.name
-            return BudgetRow(id: c.id, group: c.group, name: name, limit: household.budgets[c.id] ?? 0, spent: sp[c.id] ?? 0)
+            let limit = household.budgets[c.id] ?? 0
+            return BudgetRow(id: c.id, group: c.group, name: name, variable: c.variable, limit: limit,
+                             carry: roll ? limit - (psp[c.id] ?? 0) : 0, spent: sp[c.id] ?? 0)
         }
     }
 
@@ -165,6 +220,8 @@ struct Ledger {
     // MARK: Budget
 
     var totalLimit: Double { rows.reduce(0) { $0 + $1.limit } }
+    /// Limits plus anything rolled over: what can be spent this month.
+    var totalAvail: Double { rows.reduce(0) { $0 + $1.avail } }
     var totalSpent: Double { rows.reduce(0) { $0 + $1.spent } }
     var income: Double { household.incomes.reduce(0) { $0 + $1.amt } }
     var goalsMonthly: Double { goals.reduce(0) { $0 + $1.monthly } }
@@ -181,8 +238,15 @@ struct Ledger {
 
     // MARK: Bills
 
+    /// A paid-off loan's bill stops coming due (months it was paid still show).
+    func billEnded(_ b: Bill) -> Bool {
+        guard let id = b.debtId, let d = debts.first(where: { $0.id == id }) else { return false }
+        return loanState(d).balance <= 0.005
+    }
+
     var billRows: [BillRow] {
-        bills.map { BillRow(bill: $0, dueDay: min($0.day, daysInMonth), isPaid: $0.paid[ym] ?? false) }
+        bills.filter { !billEnded($0) || ($0.paid[ym] ?? false) }
+            .map { BillRow(bill: $0, dueDay: min($0.day, daysInMonth), isPaid: $0.paid[ym] ?? false) }
             .sorted { $0.dueDay == $1.dueDay ? $0.bill.name < $1.bill.name : $0.dueDay < $1.dueDay }
     }
     var unpaidBills: [BillRow] { billRows.filter { !$0.isPaid } }
@@ -198,7 +262,7 @@ struct Ledger {
     }
 
     /// What's left in the category budgets once the unpaid bills are set aside.
-    var safeToSpend: Double { totalLimit - totalSpent - unpaidTotal }
+    var safeToSpend: Double { totalAvail - totalSpent - unpaidTotal }
 
     // MARK: Accounts & pots
 
@@ -208,9 +272,9 @@ struct Ledger {
     var assetsTotal: Double { assets.reduce(0) { $0 + $1.value } }
     /// Accounts in the black plus assets.
     var own: Double { accounts.map(balance).filter { $0 > 0 }.reduce(0, +) + assetsTotal }
-    /// Loans plus accounts in the red.
+    /// Loans (outstanding today) plus accounts in the red (cards).
     var liabilities: Double {
-        accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + debts.reduce(0) { $0 + $1.balance }
+        accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + loansOwed
     }
     var netWorth: Double { own - liabilities }
 
@@ -238,9 +302,12 @@ struct Ledger {
         monthTx.filter { $0.type == .transfer && $0.pot != nil }.reduce(0) { $0 + ($1.potDir == .out ? -$1.amt : $1.amt) }
     }
 
+    /// Everyday spending: expenses that aren't a bill or a loan payment.
+    static func isEveryday(_ t: Tx) -> Bool { t.type == .expense && t.billId == nil && t.debtId == nil }
+
     /// Spare change from rounding each everyday purchase up to the next 10.
     var roundUps: Double {
-        let raw = monthExpenses.filter { $0.billId == nil }.reduce(0) { $0 + (($1.amt / 10).rounded(.up) * 10 - $1.amt) }
+        let raw = monthExpenses.filter(Ledger.isEveryday).reduce(0) { $0 + (($1.amt / 10).rounded(.up) * 10 - $1.amt) }
         return max(0, (raw - (household.roundSwept[ym] ?? 0)).rounded())
     }
     var roundUpPot: Goal? { goals.first { $0.id == household.roundUpPot } ?? goals.first }
@@ -252,7 +319,7 @@ struct Ledger {
             let k = 6 - i
             let d = DateKit.cal.date(byAdding: .day, value: -k, to: today) ?? today
             let iso = DateKit.iso(d)
-            let v = tx.filter { $0.type == .expense && $0.billId == nil && $0.date == iso }.reduce(0) { $0 + $1.amt }
+            let v = tx.filter { Ledger.isEveryday($0) && $0.date == iso }.reduce(0) { $0 + $1.amt }
             let wd = DateKit.cal.component(.weekday, from: d) - 1
             return DayBar(id: i, label: DateKit.weekdays[wd], value: v)
         }
@@ -264,16 +331,73 @@ struct Ledger {
 
     func isCustom(_ id: String) -> Bool { household.custom?.contains { $0.id == id } ?? false }
 
-    // MARK: Debt
+    // MARK: Loans & cards
 
-    /// Loans plus any credit card that's in the red (APR defaults to 36%,
-    /// minimum to the larger of 100 or 5% of the balance).
+    /// A loan's payments for `Loans.loanState`: entries with its debtId.
+    static func payments(of debtId: String, in tx: [Tx]) -> [LoanPayment] {
+        tx.filter { $0.debtId == debtId }.map { LoanPayment(date: $0.date, amt: $0.amt, part: $0.debtPart ?? "installment") }
+    }
+
+    /// Every loan's state today (loan id → state).
+    static func computeLoanStates(_ debts: [Debt], _ tx: [Tx], today: String) -> [String: LoanState] {
+        var states: [String: LoanState] = [:]
+        for d in debts { states[d.id] = Loans.loanState(d, payments(of: d.id, in: tx), today: today) }
+        return states
+    }
+
+    func loanState(_ d: Debt) -> LoanState {
+        loanStates[d.id] ?? Loans.loanState(d, Ledger.payments(of: d.id, in: tx), today: todayIso)
+    }
+
+    /// Entries that paid this loan, newest first.
+    func loanPayments(_ d: Debt) -> [Tx] { tx.filter { $0.debtId == d.id } }
+
+    /// Loans with something still owed.
+    var activeLoans: [Debt] { debts.filter { loanState($0).balance > 0.005 } }
+    var loansOwed: Double { debts.reduce(0) { $0 + loanState($1).balance } }
+
+    /// The bill that shows this loan's installment, if any.
+    func loanBill(_ d: Debt) -> Bill? {
+        bills.first { $0.debtId == d.id && (d.billId == nil || $0.id == d.billId) }
+    }
+
+    var cards: [Account] { accounts.filter { $0.type == .card } }
+    func cardState(_ a: Account) -> CardState { Loans.cardState(a, balance(a), today: todayIso) }
+
+    /// Installments plus card minimums due each month.
+    var debtMonthly: Double {
+        activeLoans.reduce(0) { $0 + loanState($1).installment } + cards.reduce(0) { $0 + cardState($1).minDue }
+    }
+
+    /// Whole days from today to a "yyyy-MM-dd" (negative when it's past).
+    func daysUntil(_ iso: String) -> Int {
+        DateKit.cal.dateComponents([.day], from: DateKit.date(todayIso), to: DateKit.date(iso)).day ?? 0
+    }
+
+    /// "Due today", "Overdue" or "Due in 3 days".
+    func dueStatus(_ iso: String) -> String {
+        let n = daysUntil(iso)
+        if n < 0 { return "Overdue" }
+        if n == 0 { return "Due today" }
+        return "Due in \(n) day" + (n == 1 ? "" : "s")
+    }
+
+    // MARK: Debt plan
+
+    /// Loans still owing (outstanding today, effective rate, current installment) plus
+    /// cards in the red (owed, APR and minimum from `Loans.cardState`).
     var allDebts: [DebtLine] {
-        debts.map { DebtLine(id: $0.id, name: $0.name, balance: $0.balance, apr: $0.apr, min: $0.min) }
-            + accounts.filter { $0.type == .card && balance($0) < 0 }.map { (a: Account) -> DebtLine in
-                let owed = -balance(a)
-                return DebtLine(id: a.id, name: a.name, balance: owed, apr: a.apr ?? 36, min: max(100, (owed * 0.05).rounded()))
-            }
+        let loans: [DebtLine] = debts.compactMap { (d: Debt) -> DebtLine? in
+            let st = loanState(d)
+            guard st.balance > 0.005 else { return nil }
+            return DebtLine(id: d.id, name: d.name, balance: st.balance, apr: st.effectiveRate, min: st.installment)
+        }
+        let owing: [DebtLine] = cards.compactMap { (a: Account) -> DebtLine? in
+            let cs = cardState(a)
+            guard cs.owed > 0 else { return nil }
+            return DebtLine(id: a.id, name: a.name, balance: cs.owed, apr: cs.apr, min: cs.minDue)
+        }
+        return loans + owing
     }
 
     var strategy: String { household.strat ?? "avalanche" }
@@ -322,7 +446,8 @@ struct Ledger {
 
     // MARK: Plan ahead
 
-    static let cushion: Double = 5000
+    /// The cash cushion from Settings (shared with the Mac).
+    var cushion: Double { household.cushion ?? 5000 }
 
     struct Forecast {
         let series: [Double]
@@ -336,12 +461,12 @@ struct Ledger {
         let cal = DateKit.cal
         let cash = accounts.filter { $0.type == .current || $0.type == .cash }.map(balance).reduce(0, +)
         let since = DateKit.iso(cal.date(byAdding: .day, value: -60, to: today) ?? today)
-        let daily = tx.filter { $0.type == .expense && $0.billId == nil && $0.date >= since }.reduce(0) { $0 + $1.amt } / 60
+        let daily = tx.filter { Ledger.isEveryday($0) && $0.date >= since }.reduce(0) { $0 + $1.amt } / 60
         var events: [ForecastEvent] = []
         for k in 0...30 {
             let dt = cal.date(byAdding: .day, value: k, to: today) ?? today
             let m = DateKit.ym(dt), dd = DateKit.day(dt), dm = DateKit.daysIn(m)
-            for b in bills {
+            for b in bills where !billEnded(b) {
                 let bd = min(b.day, dm)
                 if !(b.paid[m] ?? false) && (bd == dd || (k == 0 && bd < dd)) {
                     events.append(ForecastEvent(offset: k, date: dt, name: b.name, amt: -b.amt))
@@ -392,6 +517,88 @@ struct Ledger {
         lines += cats.map { [$0.name, String(Int($0.spent.rounded())), "\(Int(($0.spent / max(totalSpent, 1) * 100).rounded()))%"] }
         lines += [[], ["Who", "Spent (\(cur))"]]
         lines += [Who.a, .b, .joint].map { [name($0), String(Int(spent(by: $0).rounded()))] }
+        return lines.map { $0.map { "\"" + $0.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }.joined(separator: ",") }
+            .joined(separator: "\n")
+    }
+
+    // MARK: Settings (shared with the Mac)
+
+    /// "Zero-based", "Category limits" or "50/30/20".
+    var budgetStyle: String { household.budgetStyle ?? "Zero-based" }
+    var isZeroBased: Bool { budgetStyle == "Zero-based" }
+
+    /// The line under "Left to assign" (the Mac's `note` in tabs/budget.tsx); empty for
+    /// the other styles once nothing is over-assigned.
+    var assignNote: String {
+        if income == 0 { return "Set your monthly pay under Us two, then give every bit of it a job here." }
+        if leftToAssign < 0 { return "You’ve planned \(money.f(-leftToAssign)) more than comes in. Trimming one or two categories will bring it back." }
+        if isZeroBased {
+            return leftToAssign == 0 ? "Every bit of income has a job. That’s the whole method."
+                : "Give the remaining \(money.f(leftToAssign)) a job — a category or a goal — so nothing drifts."
+        }
+        return ""
+    }
+
+    /// 50/30/20 check: what's planned for needs, wants (with pocket money) and savings.
+    var styleBands: [StyleBand] {
+        func limits(_ gs: [CatGroup]) -> Double { rows.filter { gs.contains($0.group) }.reduce(0) { $0 + $1.limit } }
+        return [StyleBand(name: "Needs", amount: limits([.needs]), guide: 0.5),
+                StyleBand(name: "Wants", amount: limits([.wants, .personal]), guide: 0.3),
+                StyleBand(name: "Savings", amount: goalsMonthly, guide: 0.2)]
+    }
+
+    /// Up to four day-to-day categories with a limit, busiest first (Mac `tips().watch`).
+    var watchRows: [BudgetRow] {
+        Array(rows.filter { $0.variable && $0.avail > 0 }.sorted { $0.ratio > $1.ratio }.prefix(4))
+    }
+
+    /// Up to three coach tips for Home (a port of `tips()` in desktop/src/tabs/home.tsx).
+    var coachTips: [String] {
+        var out: [String] = []
+        if let over = rows.filter({ $0.left < 0 }).min(by: { $0.left < $1.left }) {
+            out.append("\(over.name) went \(money.f(-over.left)) past its limit. No stress — move a little from a category with room and you’re square.")
+        }
+        if let tight = watchRows.first(where: { $0.left >= 0 && $0.ratio > 0.75 }) {
+            out.append("\(tight.name) has \(money.f(tight.left)) left for the next \(daysLeft) days — about \(money.f((tight.left / Double(daysLeft)).rounded())) a day keeps it on track.")
+        }
+        if !prevExpenses.isEmpty {
+            let lastMonthSoFar = prevExpenses.filter { (Int($0.date.suffix(2)) ?? 0) <= todayDay }.reduce(0) { $0 + $1.amt }
+            let diff = lastMonthSoFar - totalSpent
+            out.append(diff >= 0 ? "You’ve spent \(money.f(diff)) less than at this point last month. Nicely done, you two."
+                                 : "Spending is \(money.f(-diff)) ahead of this point last month — worth a quick look together.")
+        }
+        if leftToAssign > 0 {
+            out.append("\(money.f(leftToAssign)) of income isn’t assigned yet. Sending it to a goal now means it won’t quietly disappear.")
+        }
+        return Array(out.prefix(3))
+    }
+
+    /// Who owes whom this month when you split shared costs.
+    var settleUp: SettleUp {
+        let split = (household.splitMode ?? "One joint pot") != "One joint pot"
+        var pd: [Who: Double] = [.a: 0, .b: 0, .joint: 0]
+        monthExpenses.filter { !Catalog.isPocketMoney($0.cat) }.forEach { pd[$0.who, default: 0] += $0.amt }
+        let incA = household.incomes.filter { $0.who == .a }.reduce(0) { $0 + $1.amt }
+        let incB = income - incA
+        let rA = (household.splitRule ?? "50/50") == "By income" ? incA / (income != 0 ? income : 1) : 0.5
+        let pA = pd[.a] ?? 0, pB = pd[.b] ?? 0
+        let owe = pA - rA * (pA + pB) - (household.settled?[ym] ?? 0)
+        let sq = abs(owe) < 1
+        let A = household.nameA, B = household.nameB
+        let line = sq ? "You’re all square"
+            : (owe > 0 ? "\(B) owes \(A)" : "\(A) owes \(B)") + " " + money.f(abs(owe).rounded())
+        let sub = sq ? "Nothing to move between you this month."
+            : "\(A) covered \(money.f(pA)) and \(B) covered \(money.f(pB)) of shared costs from personal cards."
+        return SettleUp(split: split, paid: pd, incomeA: incA, incomeB: incB, owe: owe, square: sq,
+                        rule: "\(Int((rA * 100).rounded())) / \(Int(((1 - rA) * 100).rounded()))", line: line, sub: sub)
+    }
+
+    // MARK: Activity export
+
+    /// Entries as CSV, the same columns as the Mac's Activity export.
+    func activityCSV(_ list: [Tx]) -> String {
+        var lines: [[String]] = [["Date", "Name", "Category", "Who", "Type", "Amount", "Note"]]
+        lines += list.map { [$0.date, $0.name, $0.cat, $0.who.rawValue, $0.type.rawValue, fmt($0.amt), $0.note ?? ""] }
         return lines.map { $0.map { "\"" + $0.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }.joined(separator: ",") }
             .joined(separator: "\n")
     }

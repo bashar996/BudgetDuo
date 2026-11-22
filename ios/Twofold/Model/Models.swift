@@ -61,6 +61,29 @@ struct Household: Codable, Equatable {
     var catOv: [String: CategoryOverride]?
     /// Built-in categories the household removed.
     var catDel: [String]?
+    // Settings shared with the Mac (desktop/src/data/types.ts). Missing = the default.
+    /// "Zero-based" (default), "Category limits" or "50/30/20".
+    var budgetStyle: String?
+    /// Unspent money rolls into next month (default off).
+    var rollover: Bool?
+    /// The cash cushion the forecast warns about (default 5,000).
+    var cushion: Double?
+    /// Coach tips on Home (default on).
+    var coachTips: Bool?
+    /// "One joint pot" (default) or "Split shared costs".
+    var splitMode: String?
+    /// "50/50" (default) or "By income".
+    var splitRule: String?
+    /// "yyyy-MM" → amount already settled between you (A owes B is negative).
+    var settled: [String: Double]?
+    /// Round-ups switched on (default off).
+    var roundUps: Bool?
+    /// Month-end sweep switched on (default off).
+    var sweep: Bool?
+
+    static let budgetStyles = ["Zero-based", "Category limits", "50/30/20"]
+    static let splitModes = ["One joint pot", "Split shared costs"]
+    static let splitRules = ["50/50", "By income"]
 
     static func new(uid: String, nameA: String, nameB: String, currency: String) -> Household {
         Household(nameA: nameA, nameB: nameB, currency: currency, members: [uid], memberWho: [uid: Who.a.rawValue],
@@ -87,6 +110,10 @@ struct Tx: Codable, Identifiable, Equatable {
     var pot: String?
     var potDir: PotDirection?
     var createdAt: Date?
+    /// A loan payment: the loan's id (`debts/{id}`).
+    var debtId: String?
+    /// "installment" or "extra" (missing = installment).
+    var debtPart: String?
 
     var month: String { String(date.prefix(7)) }
 }
@@ -109,6 +136,14 @@ struct Account: Codable, Identifiable, Equatable {
     /// Investments only: the amount put in. Gain = balance − cost.
     var cost: Double?
     var createdAt: Date?
+    /// Cards: day of the month the statement is made.
+    var statementDay: Int?
+    /// Cards: day of the month the payment is due.
+    var dueDay: Int?
+    /// Cards: the minimum payment is this % of the balance (5 if missing) …
+    var minPct: Double?
+    /// … but at least this much (100 if missing).
+    var minFloor: Double?
 }
 
 /// `households/{code}/bills/{id}`
@@ -121,6 +156,8 @@ struct Bill: Codable, Identifiable, Equatable {
     var sub: Bool
     /// "yyyy-MM" → paid
     var paid: [String: Bool]
+    /// Set when the bill shows a loan's installment (paying it logs a loan payment).
+    var debtId: String?
 }
 
 /// A savings pot (`households/{code}/goals/{id}`). Like accounts, what's saved is
@@ -153,7 +190,6 @@ struct CategoryOverride: Codable, Equatable {
 }
 
 /// Something owned outside an account, valued by hand: `households/{code}/assets/{id}`.
-/// Edited in the Mac app; the phone only shows them.
 struct Asset: Codable, Identifiable, Equatable {
     var id: String
     var name: String
@@ -162,25 +198,66 @@ struct Asset: Codable, Identifiable, Equatable {
     var value: Double
     var createdAt: Date?
 
-    var kindLabel: String {
-        switch kind {
-        case "property": return "Property"
-        case "vehicle": return "Vehicle"
-        case "gold": return "Gold & jewellery"
-        case "business": return "Business"
-        default: return "Other"
-        }
-    }
+    /// Same kinds and labels as the Mac (`ASSET_KINDS`).
+    static let kinds: [(id: String, label: String)] = [
+        ("property", "Property"), ("vehicle", "Vehicle"), ("gold", "Gold & jewellery"), ("business", "Business"), ("other", "Other"),
+    ]
+
+    var kindLabel: String { Asset.kinds.first { $0.id == kind }?.label ?? "Other" }
 }
 
-/// A loan: `households/{code}/debts/{id}`
+/// A rate change on a variable-rate loan: from that month on ("yyyy-MM"), the new annual %.
+struct RateChange: Codable, Equatable, Hashable {
+    var from: String
+    var rate: Double
+}
+
+/// A loan: `households/{code}/debts/{id}`. Every field after `createdAt` is optional so
+/// loans saved by older builds still load. The outstanding balance of a loan with a
+/// schedule is worked out by `Loans.loanState` from its payments, never read from `balance`.
 struct Debt: Codable, Identifiable, Equatable {
     var id: String
     var name: String
+    /// Older, simple loans: the balance owed. Loans with a schedule keep the amount borrowed here.
     var balance: Double
+    /// Kept equal to `rate` for older builds.
     var apr: Double
+    /// Kept equal to the installment for older builds.
     var min: Double
     var createdAt: Date?
+    /// "personal", "car", "mortgage", "student" or "other"
+    var kind: String?
+    var lender: String?
+    /// Amount borrowed.
+    var principal: Double?
+    /// Annual rate in %.
+    var rate: Double?
+    /// "reducing" (missing) or "flat"
+    var rateType: String?
+    var termMonths: Int?
+    /// Date of the first installment, "yyyy-MM-dd"; its day is the payment day.
+    var firstDue: String?
+    /// The bank's installment; missing = calculated.
+    var installment: Double?
+    /// Installments paid before the loan was added to Twofold.
+    var paidBefore: Int?
+    var rateChanges: [RateChange]?
+    /// Early-settlement fee, % of the outstanding principal.
+    var fee: Double?
+    /// Account the installments come out of.
+    var acct: String?
+    /// Linked bill that shows the installment under Bills.
+    var billId: String?
+
+    var kindLabel: String {
+        switch kind ?? "" {
+        case "personal": return "Personal loan"
+        case "car": return "Car loan"
+        case "mortgage": return "Mortgage"
+        case "student": return "Student loan"
+        default: return "Loan"
+        }
+    }
 }
 
 /// Something you're saving up for, with each partner's vote:
