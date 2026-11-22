@@ -11,6 +11,7 @@ import { LoanPanel } from './LoanPanel'
 import { PotPanel } from './PotPanel'
 import { SettingsPanel } from './SettingsPanel'
 import { TxPanel } from './TxPanel'
+import { ImportPanel } from '../import/ImportPanel'
 
 /** Shows whichever side panel is open. Each kind lives in its own file. */
 export function PanelHost({ L }: { L: Ledger }) {
@@ -28,5 +29,6 @@ export function PanelHost({ L }: { L: Ledger }) {
     case 'acct': return <AcctPanel key={'a' + (p.acct?.id ?? '') + (p.preset ?? '')} L={L} acct={p.acct} preset={p.preset} />
     case 'asset': return <AssetPanel key={'as' + (p.id ?? '')} L={L} id={p.id} />
     case 'settings': return <SettingsPanel L={L} />
+    case 'import': return <ImportPanel key={'im' + (p.file ? p.file.name + p.file.size + p.file.lastModified : '')} L={L} file={p.file} acct={p.acct} />
   }
 }

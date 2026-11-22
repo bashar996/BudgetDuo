@@ -36,6 +36,8 @@ export type Panel =
   | { kind: 'acct'; acct?: Account; preset?: AccountType }
   | { kind: 'asset'; id?: string }
   | { kind: 'settings' }
+  /** Statement import (CSV, Excel, PDF): a file dropped on the window, or chosen in the panel. */
+  | { kind: 'import'; file?: File; acct?: string }
 
 export interface UI {
   tab: TabId

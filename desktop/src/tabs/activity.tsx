@@ -46,7 +46,7 @@ function Chip({ label, on, onClick, scroll }: { label: string; on: boolean; onCl
 }
 
 function Header({ L }: { L: Ledger }) {
-  const { view, setView } = useUI()
+  const { view, setView, open } = useUI()
   const exportCsv = () => {
     const rows: (string | number)[][] = [['Date', 'Name', 'Category', 'Who', 'Type', 'Amount', 'Note']]
     filtered(L, view).forEach((t) => rows.push([t.date, t.name, t.cat, t.who, t.type, t.amt, t.note || '']))
@@ -58,6 +58,7 @@ function Header({ L }: { L: Ledger }) {
       <div style={css('display:flex;flex-wrap:wrap;gap:10px')}>
         <input className="h-focus" placeholder="Search name, note or category" value={view.q} onChange={(e) => setView({ q: e.target.value })}
           style={css("flex:1;min-width:200px;box-sizing:border-box;height:50px;padding:0 18px;border:none;border-radius:18px;background:#1d1d22;color:#ffffff;font:500 15px 'Geist',sans-serif;outline:none")} />
+        <button className="h-dark" onClick={() => open({ kind: 'import', acct: view.fAcct !== 'all' ? view.fAcct : undefined })} style={css("font:500 14px 'Geist',sans-serif;padding:0 18px;height:50px;border-radius:18px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#ffffff;cursor:pointer")}>Import statement</button>
         <button className="h-dark" onClick={exportCsv} style={css("font:500 14px 'Geist',sans-serif;padding:0 18px;height:50px;border-radius:18px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#ffffff;cursor:pointer")}>Export CSV</button>
       </div>
       <div style={css('display:flex;flex-wrap:wrap;gap:6px')}>
@@ -118,7 +119,7 @@ function Body({ L }: { L: Ledger }) {
           </div>
         ))}
       </div>
-      {!list.length && <div style={css('padding:40px 0;color:var(--mute)')}>Nothing here yet. Use “Add entry” to log the first one.</div>}
+      {!list.length && <div style={css('padding:40px 0;color:var(--mute)')}>Nothing here yet. Use “Add entry” to log the first one, or “Import statement” to bring in a month from your bank.</div>}
     </div>
   )
 }

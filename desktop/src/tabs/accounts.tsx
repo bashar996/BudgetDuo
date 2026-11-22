@@ -133,6 +133,7 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
         <div style={css('display:flex;flex-wrap:wrap;gap:8px')}>
           <button onClick={() => ui.open({ kind: 'tx', pre: { acct: id } })} style={css("font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:none;background:var(--btn);color:var(--btnInk);cursor:pointer")}>+ Entry</button>
           <button onClick={() => ui.open({ kind: 'tx', pre: { type: 'xfer', acct: id, to: '' } })} style={BTN_LINE}>Transfer out</button>
+          {sel.type !== 'invest' && <button onClick={() => ui.open({ kind: 'import', acct: id })} style={BTN_LINE}>Import statement</button>}
           <button onClick={() => ui.open({ kind: 'acct', acct: L.data.accounts.find((a) => a.id === id) })} style={BTN_LINE}>Edit</button>
         </div>
       </div>

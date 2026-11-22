@@ -231,8 +231,47 @@ export function makeActions(be: Backend, getData: () => Data | null) {
         ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + t.date.slice(0, 7)]: true } })
       commit(...ops)
     },
+
+    // MARK: Statement import
+
+    /**
+     * Writes imported entries in batches of at most 450 writes (Firestore allows 500).
+     * A bill match uses the bill's fixed entry ID for that month and marks the bill paid,
+     * so it can't be counted twice. Returns what to pass to undoImport().
+     */
+    importEntries(entries: { tx: Draft<Tx>; bill?: { id: string; ym: string } }[]): ImportResult {
+      const D = getData()
+      const res: ImportResult = { ids: [], bills: [] }
+      let ops: Op[] = []
+      const flush = () => { if (ops.length) commit(...ops); ops = [] }
+      for (const e of entries) {
+        const bill = e.bill && D?.bills.find((b) => b.id === e.bill!.id)
+        const need = bill ? 2 : 1
+        if (ops.length + need > 450) flush()
+        const op = put('tx', { ...e.tx, ...(bill ? { id: 'bill-' + bill.id + '-' + e.bill!.ym, billId: bill.id } : {}) })
+        ops.push(op)
+        res.ids.push(op.id)
+        if (bill) {
+          ops.push({ kind: 'patch', col: 'bills', id: bill.id, fields: { ['paid.' + e.bill!.ym]: true } })
+          res.bills.push({ id: bill.id, ym: e.bill!.ym })
+        }
+      }
+      flush()
+      return res
+    },
+    /** Deletes exactly the entries an import wrote and marks the bills it paid unpaid again. */
+    undoImport(r: ImportResult) {
+      const D = getData()
+      const ops: Op[] = [
+        ...r.ids.map((id): Op => ({ kind: 'del', col: 'tx', id })),
+        ...r.bills.filter((b) => D?.bills.some((x) => x.id === b.id)).map((b): Op => ({ kind: 'patch', col: 'bills', id: b.id, fields: { ['paid.' + b.ym]: false } })),
+      ]
+      for (let i = 0; i < ops.length; i += 450) commit(...ops.slice(i, i + 450))
+    },
   }
 }
+
+export interface ImportResult { ids: string[]; bills: { id: string; ym: string }[] }
 
 export type Actions = ReturnType<typeof makeActions>
 

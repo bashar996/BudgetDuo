@@ -17,7 +17,7 @@ interface Draft {
 
 export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> }) {
   const { act } = useStore()
-  const { close, toast } = useUI()
+  const { close, toast, open } = useUI()
   const [d, setD] = useState<Draft>(() => {
     if (tx) return { type: tx.type, amt: String(tx.amt), name: tx.name, cat: tx.cat, who: tx.who, acct: tx.acct, to: tx.to ?? '', date: tx.date, note: tx.note ?? '', pot: tx.pot, potDir: tx.potDir, billId: tx.billId, debtId: tx.debtId, debtPart: tx.debtPart }
     const p = pre ?? {}
@@ -78,6 +78,10 @@ export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> 
           <input type="date" value={d.date} onChange={(e) => set('date', e.target.value)} style={inputStyle} />
           <input className="h-focus-ink" placeholder="Note" value={d.note} onChange={(e) => set('note', e.target.value)} style={inputStyle} />
         </Pair>
+        {!tx && !dPot && (
+          <button type="button" onClick={() => open({ kind: 'import', acct: d.acct || undefined })}
+            style={css("align-self:flex-start;height:44px;padding:0;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer")}>Have a statement? Import it instead</button>
+        )}
       </div>
     </PanelFrame>
   )

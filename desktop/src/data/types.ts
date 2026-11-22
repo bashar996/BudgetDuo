@@ -60,6 +60,9 @@ export interface Tx {
   to?: string | null
   pot?: string | null
   potDir?: 'in' | 'out' | null
+  /** Statement import: stable ID of the statement line (see import/dedupe.ts), and where it came from. */
+  importId?: string | null
+  source?: 'import' | null
   createdAt?: Date | null
 }
 

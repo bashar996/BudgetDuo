@@ -48,10 +48,13 @@
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
     "firebase": "^11.10.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.5.438",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "^5.9.3",
-    "vite": "^6.4.6"
+    "vite": "^6.4.6",
+    "xlsx": "^0.18.5"
   },
   "author": "Twofold"
 }
