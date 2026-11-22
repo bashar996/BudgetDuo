@@ -22,8 +22,15 @@ struct ZipArchive {
     init(_ data: Data) throws {
         let b = [UInt8](data)
         bytes = b
-        func u16(_ o: Int) -> Int { o + 2 <= b.count ? Int(b[o]) | Int(b[o + 1]) << 8 : 0 }
-        func u32(_ o: Int) -> Int { o + 4 <= b.count ? Int(b[o]) | Int(b[o + 1]) << 8 | Int(b[o + 2]) << 16 | Int(b[o + 3]) << 24 : 0 }
+        func u16(_ o: Int) -> Int {
+            guard o >= 0, o + 2 <= b.count else { return 0 }
+            let lo = Int(b[o]), hi = Int(b[o + 1])
+            return lo | (hi << 8)
+        }
+        func u32(_ o: Int) -> Int {
+            let lo = u16(o), hi = u16(o + 2)
+            return o + 4 <= b.count ? lo | (hi << 16) : 0
+        }
         guard b.count >= 22 else { throw Failure.notZip }
         // End of central directory: the last 0x06054b50 within the final 64 KB + 22 bytes.
         var eocd = -1
@@ -55,7 +62,11 @@ struct ZipArchive {
     func data(_ name: String) throws -> Data? {
         guard let e = entries[name] else { return nil }
         let b = bytes
-        func u16(_ o: Int) -> Int { o + 2 <= b.count ? Int(b[o]) | Int(b[o + 1]) << 8 : 0 }
+        func u16(_ o: Int) -> Int {
+            guard o >= 0, o + 2 <= b.count else { return 0 }
+            let lo = Int(b[o]), hi = Int(b[o + 1])
+            return lo | (hi << 8)
+        }
         let o = e.localOffset
         guard o + 30 <= b.count, b[o] == 0x50, b[o + 1] == 0x4B, b[o + 2] == 0x03, b[o + 3] == 0x04 else { throw Failure.broken(name) }
         let start = o + 30 + u16(o + 26) + u16(o + 28)

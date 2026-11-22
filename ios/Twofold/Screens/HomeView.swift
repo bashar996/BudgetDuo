@@ -12,6 +12,11 @@ struct HomeView: View {
     private func content(_ L: Ledger) -> some View {
         let me = store.me, other: Who = me == .a ? .b : .a
         let safe = L.safeToSpend
+        let syncNote: String = store.syncing ? " · syncing…" : ""
+        let greetingSub: String = "You & \(L.name(other)) · \(L.monthName)\(syncNote)"
+        let perDay: String = "About \(L.money.f(safe / Double(L.daysLeft))) a day for \(L.daysLeft) days, bills covered"
+        let safeNote: String = safe > 0 ? perDay
+            : (L.totalLimit > 0 ? "Budgets are used up for now — bills are still covered" : "Give your categories a limit to see what’s safe to spend")
         return Screen(color: Palette.lavender) {
             HStack(spacing: 12) {
                 Text(String(L.name(me).prefix(1))).font(.geist(19, .semibold))
@@ -20,7 +25,7 @@ struct HomeView: View {
                     .foregroundStyle(Palette.black)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Hi, \(L.name(me))").font(.geist(20, .medium)).tracking(em: -0.01, size: 20)
-                    Text("You & \(L.name(other)) · \(L.monthName)" + (store.syncing ? " · syncing…" : ""))
+                    Text(greetingSub)
                         .font(.geist(13)).foregroundStyle(Palette.mute)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -43,9 +48,7 @@ struct HomeView: View {
             Text("Safe to spend this month").font(.geist(13)).foregroundStyle(Palette.ink)
             BigAmount(currency: L.money.currency, value: L.money.num(safe), color: Palette.black, currencyColor: Palette.ink)
                 .padding(.top, 2)
-            Text(safe > 0 ? "About \(L.money.f(safe / Double(L.daysLeft))) a day for \(L.daysLeft) days, bills covered"
-                          : L.totalLimit > 0 ? "Budgets are used up for now — bills are still covered"
-                                             : "Give your categories a limit to see what’s safe to spend")
+            Text(safeNote)
                 .font(.geist(13)).foregroundStyle(Palette.ink).padding(.top, 10)
             ProgressLine(ratio: L.totalSpent / max(L.totalAvail, 1), fill: Palette.black, track: Palette.black.opacity(0.16), height: 6)
                 .padding(.top, 14)

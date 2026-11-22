@@ -305,7 +305,8 @@ function Review({ L, list, all, filter, setFilter, counts, edit, editMany }: {
   edit(p: PlanRow, e: Edit): void; editMany(list: PlanRow[], e: Edit): void
 }) {
   const ticked = all.filter((p) => p.on)
-  const tickedExp = ticked.filter((p) => p.kind === 'exp')
+  // Bulk category: rows on screen, ticked, plain expenses (not bill or loan matches).
+  const tickedExp = list.filter((p) => p.on && p.kind === 'exp' && p.status !== 'bill' && p.status !== 'loan')
   const allOn = list.length > 0 && list.every((p) => p.on)
   const filters: [Filter, string][] = [['all', 'All'], ['new', 'New'], ['dupe', 'Duplicates'], ['cat', 'Needs category']]
   return (

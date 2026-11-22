@@ -369,7 +369,11 @@ struct LoanForm: View {
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && (parseAmount(principal) ?? 0) > 0 && term > 0
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        if (parseAmount(principal) ?? 0) > 0 && term > 0 { return true }
+        // An older simple loan can be renamed or moved without adding the full details.
+        if let e = editing, Loans.isSimple(e), (parseAmount(principal) ?? 0) <= 0, term == 0 { return true }
+        return false
     }
 
     var body: some View {

@@ -98,7 +98,13 @@ enum StmtDetect {
         let roles = row.map(roleOf)
         func has(_ r: Role) -> Bool { roles.contains { $0 == r } }
         let money = has(.amount) || has(.debit) || has(.credit)
-        return (has(.date) || has(.vdate) ? 2 : 0) + (money ? 2 : 0) + (has(.desc) ? 1 : 0) + (has(.balance) ? 0.5 : 0)
+        // Summed step by step: one expression of four literal ternaries is slow to type-check.
+        var score: Double = 0
+        if has(.date) || has(.vdate) { score += 2 }
+        if money { score += 2 }
+        if has(.desc) { score += 1 }
+        if has(.balance) { score += 0.5 }
+        return score
     }
 
     static func cell(_ r: [String], _ c: Int) -> String { c >= 0 && c < r.count ? r[c].jsTrim : "" }
@@ -174,7 +180,8 @@ enum StmtDetect {
             let vals = rows.map { cell($0, c) }.filter { !$0.isEmpty }
             if vals.isEmpty { continue }
             let text = vals.filter { StmtAmounts.parse($0) == nil && !StmtDates.isDateLike($0) }
-            let len = Double(text.reduce(0) { $0 + $1.u16Count }) / Double(vals.count)
+            let chars: Int = text.reduce(0) { $0 + $1.u16Count }
+            let len = Double(chars) / Double(vals.count)
             if Double(text.count) >= Double(vals.count) * 0.6 && len > bestLen { bestLen = len; best = c }
         }
         return best

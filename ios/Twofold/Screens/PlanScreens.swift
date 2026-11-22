@@ -102,13 +102,14 @@ struct DebtView: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(plan.order.enumerated()), id: \.element) { k, id in
                 if let x = debts.first(where: { $0.id == id }) {
+                    let clear: String = plan.done[id].map { (m: Int) -> String in "Clear by \(DateKit.monthLabel(DateKit.addMonths(L.ym, m), short: true))" } ?? "Not cleared at this rate"
                     Button { openDebt(id, L) } label: {
                         HStack(spacing: 12) {
                             Text("\(k + 1)").font(.geist(15, .semibold)).frame(width: 32, height: 32)
                                 .background(Palette.black, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                 .foregroundStyle(Palette.white)
                             Text(x.name).font(.geist(15, .medium)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(plan.done[id].map { "Clear by \(DateKit.monthLabel(DateKit.addMonths(L.ym, $0), short: true))" } ?? "Not cleared at this rate")
+                            Text(clear)
                                 .font(.geist(12.5)).foregroundStyle(Palette.gray).lineLimit(1).fixedSize()
                         }
                         .padding(.vertical, 8)
@@ -293,6 +294,11 @@ struct PlanAheadView: View {
             let lo = min(0, minV), hi = max(cushion, series.max() ?? 0) * 1.05
             let end = series.last ?? 0
             let minIdx = series.firstIndex(of: minV) ?? 0
+            let range: Double = max(hi - lo, 1)
+            let dipText: String = "Dips to \(L.money.f(minV)) around \(dayLabel(L, minIdx)), below your \(L.money.f(cushion)) cushion."
+            let aboveText: String = "Stays above your \(L.money.f(cushion)) cushion all month."
+            let headline: String = L.accounts.isEmpty ? "Add an account and your bills, and the next 30 days appear here."
+                : (low ? dipText : aboveText)
             Screen(color: Palette.lavender) {
                 VStack(alignment: .leading, spacing: 0) {
                     NavRow(title: "Plan ahead", showBack: showBack)
@@ -300,17 +306,16 @@ struct PlanAheadView: View {
                         Text("Cash in 30 days").font(.geist(13)).foregroundStyle(Palette.mute)
                         BigAmount(currency: L.money.currency, value: L.money.num(end), size: 54,
                                   color: low && !L.accounts.isEmpty ? Palette.badOnBlack : Palette.white).padding(.top, 4)
-                        Text(L.accounts.isEmpty ? "Add an account and your bills, and the next 30 days appear here."
-                             : low ? "Dips to \(L.money.f(minV)) around \(dayLabel(L, minIdx)), below your \(L.money.f(cushion)) cushion."
-                                   : "Stays above your \(L.money.f(cushion)) cushion all month.")
+                        Text(headline)
                             .font(.geist(14)).foregroundStyle(Palette.mute).padding(.top, 8)
                             .fixedSize(horizontal: false, vertical: true)
                         GeometryReader { g in
                             HStack(alignment: .bottom, spacing: 3) {
                                 ForEach(Array(series.enumerated()), id: \.offset) { k, v in
+                                    let frac = CGFloat(max(0.04, (v - lo) / range))
                                     UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 2, bottomTrailingRadius: 2, topTrailingRadius: 5)
                                         .fill(v < cushion ? Palette.badOnBlack : k == 0 ? Palette.lavender : Palette.cream)
-                                        .frame(height: g.size.height * max(0.04, (v - lo) / max(hi - lo, 1)))
+                                        .frame(height: g.size.height * frac)
                                         .frame(maxWidth: .infinity)
                                 }
                             }
@@ -351,6 +356,8 @@ struct PlanAheadView: View {
                 sectionHeader("Trips & events") { router.form = .trip(nil) }
                 ForEach(L.trips) { t in
                     let left = t.budget - t.spent
+                    let leftText: String = left < 0 ? "\(L.money.f(-left)) over" : "\(L.money.f(left)) to go"
+                    let spentLine: String = "\(L.money.f(t.spent)) of \(L.money.f(t.budget)) · \(leftText)"
                     VStack(alignment: .leading, spacing: 0) {
                         Button { router.form = .trip(t) } label: {
                             VStack(alignment: .leading, spacing: 0) {
@@ -367,7 +374,7 @@ struct PlanAheadView: View {
                         .buttonStyle(.plain)
                         .accessibilityHint("Edits the trip")
                         HStack(spacing: 10) {
-                            Text("\(L.money.f(t.spent)) of \(L.money.f(t.budget)) · " + (left < 0 ? "\(L.money.f(-left)) over" : "\(L.money.f(left)) to go"))
+                            Text(spentLine)
                                 .font(.geist(12.5)).foregroundStyle(left < 0 ? Palette.overText : Palette.ink)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Button { router.form = .tripSpend(t) } label: {

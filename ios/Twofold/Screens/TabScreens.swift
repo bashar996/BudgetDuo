@@ -9,10 +9,11 @@ struct BudgetView: View {
         if let L = store.ledger() {
             let left = L.leftToAssign
             let note = L.assignNote
+            // Zero-based budgets assign every bit of income; the other styles just show what's unbudgeted.
+            let heading: String = "\(L.isZeroBased ? "Left to assign" : "Unbudgeted") · \(L.monthName)"
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Zero-based budgets assign every bit of income; the other styles just show what's unbudgeted.
-                    Text((L.isZeroBased ? "Left to assign" : "Unbudgeted") + " · \(L.monthName)").font(.geist(13)).foregroundStyle(Palette.mute)
+                    Text(heading).font(.geist(13)).foregroundStyle(Palette.mute)
                     BigAmount(currency: L.money.currency, value: L.money.num(left), color: left < 0 ? Palette.badOnBlack : Palette.lavender).padding(.top, 4)
                     if !note.isEmpty {
                         Text(note).font(.geist(14)).foregroundStyle(Palette.mute).padding(.top, 8)
@@ -101,6 +102,8 @@ struct BudgetView: View {
 
     private func row(_ r: BudgetRow, _ L: Ledger) -> some View {
         let over = r.left < 0
+        let tail: String = over ? "\(L.money.f(-r.left)) over" : "\(L.money.f(r.left)) left"
+        let detail: String = "\(L.money.f(r.spent)) of \(L.money.f(r.avail)) · \(tail)"
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .lastTextBaseline, spacing: 10) {
                 Text(r.name).font(.geist(16))
@@ -113,7 +116,7 @@ struct BudgetView: View {
                     .foregroundStyle(over ? Palette.overText : Palette.black)
             }
             ProgressLine(ratio: r.ratio, fill: over ? Palette.overFill : Palette.lavender).padding(.top, 8)
-            Text("\(L.money.f(r.spent)) of \(L.money.f(r.avail)) · " + (over ? "\(L.money.f(-r.left)) over" : "\(L.money.f(r.left)) left"))
+            Text(detail)
                 .font(.geist(12.5)).foregroundStyle(Palette.gray).padding(.top, 6)
         }
         .padding(.top, 12).padding(.bottom, 4)
@@ -170,13 +173,16 @@ struct SavingsView: View {
         let rem = max(0, g.target - saved)
         let n = g.monthly > 0 ? Int((rem / g.monthly).rounded(.up)) : 0
         let a = L.accounts.first { $0.id == g.acct }
-        let status = rem <= 0 ? "Reached" : n > 0 ? "There by \(DateKit.monthLabel(DateKit.addMonths(L.ym, n), short: true))" : "Paused"
+        let byText: String = "There by \(DateKit.monthLabel(DateKit.addMonths(L.ym, n), short: true))"
+        let status: String = rem <= 0 ? "Reached" : (n > 0 ? byText : "Paused")
         let auto = g.auto ?? false
+        let apyText: String = a?.apy.map { (x: Double) -> String in " · \(fmt(x))% a year" } ?? ""
+        let keptIn: String = (a?.name ?? "Savings") + apyText
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(g.name).font(.geist(18, .medium))
-                    Text((a?.name ?? "Savings") + (a?.apy.map { " · \(fmt($0))% a year" } ?? "")).font(.geist(12.5)).foregroundStyle(Palette.ink)
+                    Text(keptIn).font(.geist(12.5)).foregroundStyle(Palette.ink)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .trailing, spacing: 6) {

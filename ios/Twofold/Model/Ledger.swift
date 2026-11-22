@@ -366,7 +366,9 @@ struct Ledger {
 
     /// Installments plus card minimums due each month.
     var debtMonthly: Double {
-        activeLoans.reduce(0) { $0 + loanState($1).installment } + cards.reduce(0) { $0 + cardState($1).minDue }
+        let installments: Double = activeLoans.reduce(0) { $0 + loanState($1).installment }
+        let minimums: Double = cards.reduce(0) { $0 + cardState($1).minDue }
+        return installments + minimums
     }
 
     /// Whole days from today to a "yyyy-MM-dd" (negative when it's past).
@@ -585,8 +587,8 @@ struct Ledger {
         let owe = pA - rA * (pA + pB) - (household.settled?[ym] ?? 0)
         let sq = abs(owe) < 1
         let A = household.nameA, B = household.nameB
-        let line = sq ? "You’re all square"
-            : (owe > 0 ? "\(B) owes \(A)" : "\(A) owes \(B)") + " " + money.f(abs(owe).rounded())
+        let who = owe > 0 ? "\(B) owes \(A)" : "\(A) owes \(B)"
+        let line = sq ? "You’re all square" : who + " " + money.f(abs(owe).rounded())
         let sub = sq ? "Nothing to move between you this month."
             : "\(A) covered \(money.f(pA)) and \(B) covered \(money.f(pB)) of shared costs from personal cards."
         return SettleUp(split: split, paid: pd, incomeA: incA, incomeB: incB, owe: owe, square: sq,

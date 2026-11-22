@@ -55,8 +55,10 @@ enum StmtDedupe {
             if !dirOk { continue }
             let sim = max(StmtClean.similarity(name, t.name), StmtClean.similarity(desc, t.name))
             let alike = dd == 0 || sim >= 0.5 || t.billId != nil || (cat != nil && cat == t.cat)
-            if sameAcct ? !alike : !(sim >= 0.5) { continue }
-            let score = (sameAcct ? 2 : 0) + sim - Double(dd) * 0.1
+            let keep = sameAcct ? alike : sim >= 0.5
+            if !keep { continue }
+            let base: Double = sameAcct ? 2 : 0
+            let score = base + sim - Double(dd) * 0.1
             if score > bestScore { best = t; bestScore = score }
         }
         return best
@@ -162,17 +164,26 @@ enum ImportPlanner {
                               name: name, who: who)
 
             if isOut {
-                let bill = L.bills.first { b in
-                    !(b.paid[ym] ?? false) && !usedBills.contains(b.id + ym)
-                        && abs(b.amt - amt) <= max(0.011, b.amt * 0.01)
-                        && (StmtClean.similarity(name, b.name) >= 0.5 || StmtClean.similarity(row.desc, b.name) >= 0.5
-                            || abs(min(b.day, Loans.dim(ym)) - day) <= 3)
+                let bill = L.bills.first { (b: Bill) -> Bool in
+                    if b.paid[ym] ?? false { return false }
+                    if usedBills.contains(b.id + ym) { return false }
+                    let tolerance: Double = max(0.011, b.amt * 0.01)
+                    if abs(b.amt - amt) > tolerance { return false }
+                    if StmtClean.similarity(name, b.name) >= 0.5 { return true }
+                    if StmtClean.similarity(row.desc, b.name) >= 0.5 { return true }
+                    let dueDay: Int = min(b.day, Loans.dim(ym))
+                    return abs(dueDay - day) <= 3
                 }
-                let loan: Debt? = bill != nil ? nil : L.debts.first { l in
-                    let inst = Loans.installmentOf(l)
-                    let named = StmtClean.similarity(row.desc, l.name) >= 0.5
-                        || ((l.lender ?? "").isEmpty ? false : StmtClean.similarity(row.desc, l.lender ?? "") >= 0.5)
-                    return named && inst > 0 && abs(inst - amt) <= max(1, inst * 0.02)
+                var loan: Debt?
+                if bill == nil {
+                    loan = L.debts.first { (l: Debt) -> Bool in
+                        let inst = Loans.installmentOf(l)
+                        let lender = l.lender ?? ""
+                        let named = StmtClean.similarity(row.desc, l.name) >= 0.5
+                            || (!lender.isEmpty && StmtClean.similarity(row.desc, lender) >= 0.5)
+                        let tolerance: Double = max(1, inst * 0.02)
+                        return named && inst > 0 && abs(inst - amt) <= tolerance
+                    }
                 }
                 let other = isCard ? nil : ownAccount(row.desc, L.accounts, acctId)
                 if let bill {
@@ -234,12 +245,14 @@ enum ImportPlanner {
     /// ("bill-{billId}-{ym}") so it can't count twice; a loan match carries debtId.
     static func entry(_ p: ImportRow, acctId: String) -> ImportEntry {
         let trimmed = p.name.jsTrim
-        var t = Tx(id: "", date: p.row.date,
-                   name: trimmed.isEmpty ? (p.kind == .income ? "Income" : "Expense") : trimmed,
-                   cat: p.kind == .transfer ? "transfer" : p.kind == .income ? "income" : (p.cat ?? "other"),
+        let isTransfer = p.kind == .transfer, isIncome = p.kind == .income
+        let name: String = trimmed.isEmpty ? (isIncome ? "Income" : "Expense") : trimmed
+        let cat: String = isTransfer ? "transfer" : (isIncome ? "income" : (p.cat ?? "other"))
+        let from: String = isTransfer ? (p.from ?? acctId) : acctId
+        let to: String? = isTransfer ? p.to : nil
+        var t = Tx(id: "", date: p.row.date, name: name, cat: cat,
                    amt: StmtAmounts.round2(abs(p.row.amount)), who: p.who, type: p.kind, note: p.row.desc,
-                   billId: nil, acct: p.kind == .transfer ? (p.from ?? acctId) : acctId,
-                   to: p.kind == .transfer ? p.to : nil, pot: nil, potDir: nil, createdAt: Date(),
+                   billId: nil, acct: from, to: to, pot: nil, potDir: nil, createdAt: Date(),
                    debtId: nil, debtPart: nil, importId: p.importId, source: "import")
         if p.kind == .expense, let d = p.debtId { t.debtId = d; t.debtPart = "installment" }
         if p.kind == .expense, let b = p.bill {

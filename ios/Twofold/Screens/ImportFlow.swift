@@ -573,7 +573,9 @@ struct ImportFlowView: View {
 
     /// Sets the category of every ticked expense.
     private func setCategory(_ id: String) {
-        for i in plan.indices where plan[i].on && plan[i].kind == .expense {
+        // Only the rows on screen, and not bill or loan matches (their category is set by the bill/loan).
+        for i in plan.indices where plan[i].on && plan[i].kind == .expense && matches(plan[i], filter)
+            && plan[i].status != .bill && plan[i].status != .loan {
             plan[i].cat = id
             plan[i].catHow = "user"
             if plan[i].status == .needsCat { plan[i].status = .new; plan[i].note = "" }

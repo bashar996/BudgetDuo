@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import type { Ledger } from '../data/ledger'
 import type { Debt } from '../data/types'
-import { flatToReducing, installmentOf, loanState, nthDue, type RateType } from '../data/loans'
+import { flatToReducing, installmentOf, isSimple, loanState, nthDue, type RateType } from '../data/loans'
 import { loanPayments } from '../data/ledger'
 import { useStore } from '../data/store'
 import { css, sx } from '../lib/css'
@@ -72,9 +72,13 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
 
   const save = () => {
     if (!doc.name) return setErr('Give the loan a name.')
-    if (!(principal > 0)) return setErr('Add the amount borrowed.')
-    if (!(term > 0)) return setErr('Add the term, in years or months.')
-    if (!isDate(d.firstDue)) return setErr('Add the date of the first installment.')
+    // An older simple loan can be renamed or moved without adding the full details.
+    const keepSimple = !!old && isSimple(old) && !(principal > 0) && !(term > 0)
+    if (!keepSimple) {
+      if (!(principal > 0)) return setErr('Add the amount borrowed.')
+      if (!(term > 0)) return setErr('Add the term, in years or months.')
+      if (!isDate(d.firstDue)) return setErr('Add the date of the first installment.')
+    }
     if (rate < 0 || rate > 100) return setErr('The interest rate looks off. Use a yearly % like 7.9.')
     const { id: _draft, ...rest } = doc
     const nid = act.saveLoan({ ...rest, id: old?.id, createdAt: old?.createdAt ?? undefined }, d.inBills)

@@ -171,8 +171,7 @@ enum StmtDates {
             return order == .mdy ? iso(y, a, b) : iso(y, b, a)
         }
         if let m = reDMON.match(s) {
-            let y: Int? = m[3] != nil ? year(m[3]) : fallbackYear
-            guard let y else { return nil }
+            guard let y = m[3] != nil ? year(m[3]) : fallbackYear else { return nil }
             return iso(y, monthNo(m[2] ?? ""), int(m[1]))
         }
         if let m = reMOND.match(s) { return iso(int(m[3]), monthNo(m[1] ?? ""), int(m[2])) }

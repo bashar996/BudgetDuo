@@ -209,7 +209,8 @@ enum StmtPDF {
                 if date == nil, dates.count > 1 { date = StmtDates.parse(dates[1], order, fallbackYear: year) }
             }
             let toks = StmtAmounts.tokens(date != nil ? rest : line)
-            guard let date else {
+            // Not `guard let date`: a guard can't rebind a local declared in the same scope.
+            guard let rowDate = date else {
                 if StmtDetect.noiseRow.test(line), let t = toks.last, opening == nil, rows.isEmpty { opening = StmtAmounts.signed(t.amount) }
                 let trimmed = line.jsTrim
                 if let li = last, toks.isEmpty, conts[li] < 2, !trimmed.isEmpty, !contNoise.test(line), trimmed.u16Count < 80 {
@@ -247,7 +248,7 @@ enum StmtPDF {
                 money = a[0]
             }
             if money.value == 0 { last = nil; continue }
-            rows.append(StmtRawRow(i: i, date: date, desc: desc, money: money, fixed: fixed, balance: balance,
+            rows.append(StmtRawRow(i: i, date: rowDate, desc: desc, money: money, fixed: fixed, balance: balance,
                                    raw: gaps.replace(line, "  ").jsTrim))
             conts.append(0)
             last = rows.count - 1

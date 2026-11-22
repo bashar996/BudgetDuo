@@ -188,10 +188,12 @@ struct SheetField: View {
     }
 }
 
+@MainActor
 private func sheetLabel(_ text: String) -> some View {
     Text(text).font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 12).padding(.bottom, 6)
 }
 
+@MainActor
 private func sheetError(_ text: String, center: Bool = false) -> some View {
     Text(text).font(.geist(13, .semibold)).foregroundStyle(Palette.overText)
         .multilineTextAlignment(center ? .center : .leading)

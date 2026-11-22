@@ -264,9 +264,13 @@ enum Loans {
                 let rOld = rateAt(l, monthOf(nthDue(first, count + months - 1))), rNew = rateAt(l, monthOf(date))
                 if rNew != rOld { inst = emi(b, rNew, monthsToPay(b, rOld, inst)) }
             }
-            let interest = flat
-                ? (b >= flatPrin - 0.005 ? flatInt : flatInt * (b / (flatPrin != 0 ? flatPrin : 1)))
-                : (b * rateAt(l, monthOf(date))) / 1200
+            let interest: Double
+            if flat {
+                let share: Double = b / (flatPrin != 0 ? flatPrin : 1)
+                interest = b >= flatPrin - 0.005 ? flatInt : flatInt * share
+            } else {
+                interest = (b * rateAt(l, monthOf(date))) / 1200
+            }
             let pay = flat ? min(b, flatPrin) + interest : min(inst, b + interest)
             if pay - interest <= 0 { months = MAX; break }
             interestLeft += interest
@@ -274,16 +278,23 @@ enum Loans {
             months += 1
         }
         let done = bal <= 0.005
+        // Worked out one by one, so the big initializer call stays cheap to type-check.
+        let effectiveRate: Double = flat && hasN ? flatToReducing(baseRate, nn) : baseRate
+        let progress: Double = P > 0 ? 1 - bal / P : 1
+        let nextDue: String? = done ? nil : nthDue(first, count)
+        let endsYm: String? = done || months >= MAX ? nil : monthOf(nthDue(first, count + months - 1))
+        let feePct: Double = l.fee ?? 0
+        let settlement: Double = bal * (1 + feePct / 100)
         return LoanState(
             balance: bal, principal: P, rate: baseRate, rateType: rateType,
-            effectiveRate: flat && hasN ? flatToReducing(baseRate, nn) : baseRate,
+            effectiveRate: effectiveRate,
             installment: instToday, termMonths: n,
             installmentsPaid: count, installmentsLeft: done ? 0 : months,
-            progress: P > 0 ? 1 - bal / P : 1,
+            progress: progress,
             paidSoFar: paidSoFar, interestPaid: interestPaid, interestLeft: interestLeft, totalLeft: bal + interestLeft,
-            nextDue: done ? nil : nthDue(first, count),
-            endsYm: done ? nil : months >= MAX ? nil : monthOf(nthDue(first, count + months - 1)),
-            totalInterest: totalInterest, settlement: bal * (1 + (l.fee ?? 0) / 100),
+            nextDue: nextDue,
+            endsYm: endsYm,
+            totalInterest: totalInterest, settlement: settlement,
             schedule: schedule, simple: simple)
     }
 

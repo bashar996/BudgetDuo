@@ -171,6 +171,7 @@ struct ReportsView: View {
                         HStack(alignment: .bottom, spacing: 8) {
                             ForEach(wk) { b in
                                 let isHi = b.id == hi
+                                let frac = CGFloat(max(0.05, b.value / maxV))
                                 VStack(spacing: 6) {
                                     Text(isHi ? L.money.f(b.value) : " ").font(.geist(12, .medium)).lineLimit(1).fixedSize()
                                         .padding(.horizontal, 8).frame(height: 26)
@@ -179,7 +180,7 @@ struct ReportsView: View {
                                     GeometryReader { g in
                                         UnevenRoundedRectangle(topLeadingRadius: 12, bottomLeadingRadius: 5, bottomTrailingRadius: 5, topTrailingRadius: 12)
                                             .fill(isHi ? Palette.lavender : Palette.cream)
-                                            .frame(height: g.size.height * max(0.05, b.value / maxV))
+                                            .frame(height: g.size.height * frac)
                                             .frame(maxHeight: .infinity, alignment: .bottom)
                                     }
                                     Text(b.label).font(.geist(12.5)).foregroundStyle(Palette.soft)
@@ -274,11 +275,12 @@ struct UsTwoView: View {
                 Text("Income coming in").font(.geist(22, .medium)).padding(.top, 22)
                 ForEach([Who.a, .b]) { w in
                     let inc = L.household.incomes.first { $0.who == w }
+                    let incNote = payNote(inc, L)
                     Button { router.form = .pay(w) } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(L.name(w)).font(.geist(16))
-                                Text(inc.map { $0.amt > 0 ? "Paid on day \($0.day) · \(Int(($0.amt / max(L.income, 1) * 100).rounded()))% of income" : "Tap to set monthly pay" } ?? "Tap to set monthly pay")
+                                Text(incNote)
                                     .font(.geist(12.5)).foregroundStyle(Palette.ink)
                             }
                             Spacer()
@@ -344,6 +346,14 @@ struct UsTwoView: View {
                 Text("Once the money has moved between you. Shared spending after this still counts.")
             }
         }
+    }
+
+    /// "Paid on day 25 · 60% of income", or a prompt when no pay is set.
+    private func payNote(_ inc: Income?, _ L: Ledger) -> String {
+        guard let inc, inc.amt > 0 else { return "Tap to set monthly pay" }
+        let share: Double = inc.amt / max(L.income, 1) * 100
+        let pct = Int(share.rounded())
+        return "Paid on day \(inc.day) · \(pct)% of income"
     }
 
     /// Split shared costs: who owes whom this month, with Mark as settled.
@@ -529,10 +539,15 @@ struct ActivityView: View {
     /// This month's entries after the search and filters, newest first (as the Mac's `filtered`).
     private func filtered(_ L: Ledger) -> [Tx] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return L.tx.filter { t in
-            t.month == month && (who == nil || t.who == who) && (cat == nil || t.cat == cat)
-                && (acct == nil || t.acct == acct || t.to == acct)
-                && (q.isEmpty || (t.name + " " + (t.note ?? "") + " " + L.categoryName(t.cat)).lowercased().contains(q))
+        return L.tx.filter { (t: Tx) -> Bool in
+            if t.month != month { return false }
+            if let who, t.who != who { return false }
+            if let cat, t.cat != cat { return false }
+            if let acct, t.acct != acct && t.to != acct { return false }
+            if q.isEmpty { return true }
+            let note: String = t.note ?? ""
+            let text: String = [t.name, note, L.categoryName(t.cat)].joined(separator: " ")
+            return text.lowercased().contains(q)
         }
     }
 

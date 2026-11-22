@@ -107,7 +107,7 @@ struct AddEntryView: View {
             }
             if pot == nil {
                 HStack(spacing: 6) {
-                    ForEach([(TxType.expense, "Expense"), (.income, "Income"), (.transfer, "Transfer")], id: \.0) { t in
+                    ForEach(AddEntryView.typeChoices, id: \.0) { t in
                         let on = d.type == t.0
                         Button {
                             d.type = t.0; d.error = ""
@@ -143,6 +143,8 @@ struct AddEntryView: View {
         .background(Palette.lavender)
         .foregroundStyle(Palette.black)
     }
+
+    private static let typeChoices: [(TxType, String)] = [(.expense, "Expense"), (.income, "Income"), (.transfer, "Transfer")]
 
     private var placeholder: String { d.type == .transfer ? "Add a note" : d.type == .income ? "Where from?" : "What was it?" }
 
