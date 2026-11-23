@@ -418,7 +418,7 @@ struct Ledger {
 
     /// A card's numbers with its installment plans (`Loans.cardWithPlans`).
     func cardState(_ a: Account) -> CardPlanState {
-        let mine = plans(on: a.id)
+        let mine = plansOnCard(a.id)
         let ids = Set(mine.map(\.id))
         let remaining: Double = mine.reduce(0) { $0 + planState($1).remaining }
         let charges: [(date: String, amt: Double)] = tx.compactMap { (t: Tx) -> (date: String, amt: Double)? in
