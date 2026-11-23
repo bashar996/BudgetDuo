@@ -30,7 +30,8 @@ targets:
       base:
         # Must match the iOS app registered in Firebase.
         PRODUCT_BUNDLE_IDENTIFIER: app.tandem.budget
-        TARGETED_DEVICE_FAMILY: "1"
+        # iPhone and iPad.
+        TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Set your own team in Xcode (Signing & Capabilities) or here:
         # DEVELOPMENT_TEAM: ABCDE12345
@@ -45,5 +46,11 @@ targets:
           - Geist-SemiBold.ttf
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        # iPad: every orientation, so Split View and Stage Manager work.
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UIUserInterfaceStyle: Dark
         ITSAppUsesNonExemptEncryption: false

@@ -62,6 +62,7 @@ private struct TabRoot: View {
                             .frame(width: half)
                         detail
                             .environment(\.screenTrailingInset, inset.trailing)
+                            .environment(\.isDetailPane, true)
                             .frame(width: half)
                             .overlay(alignment: .leading) {
                                 LinearGradient(colors: [.white.opacity(0.07), .black.opacity(0.3)], startPoint: .leading, endPoint: .trailing)
@@ -72,7 +73,7 @@ private struct TabRoot: View {
                     // One Back for both panes, docked in the rail column on the right edge,
                     // low down where the thumb rests when the phone is unfolded.
                     .overlay {
-                        if router.tab == tab {
+                        if router.tab == tab && router.dockedBack {
                             // Runs under the trailing safe area so the button can sit in the
                             // rail's column; empty space lets touches through.
                             VStack(spacing: 0) {
@@ -217,7 +218,7 @@ private struct UndoToast: View {
         .padding(.horizontal, 14)
         // Clear of the tab bar; unfolded, in the right pane and clear of the rail and its Back.
         .frame(maxWidth: router.isWide ? CGFloat(440) : CGFloat.infinity)
-        .padding(.trailing, router.isWide ? max(0, 76 - router.railInset) : 0)
+        .padding(.trailing, router.dockedBack ? max(0, 76 - router.railInset) : 0)
         .frame(maxWidth: .infinity, alignment: router.isWide ? .trailing : .center)
         .padding(.bottom, router.isWide ? 18 : 58)
         .transition(.move(edge: .bottom).combined(with: .opacity))

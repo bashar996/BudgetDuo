@@ -157,7 +157,7 @@ struct BillCalendarScreen: View {
         if let L = store.ledger() {
             // Only shown unfolded, where Back is the one by the tab rail: just the title here.
             Screen(color: Palette.cream, mirrored: true, contentPadding: 16) {
-                NavRow(title: "Bills")
+                NavRow(title: "Bills", onBack: { router.closeBillsSplit() })
             } content: {
                 BillCalendar(L: L, hint: "That day’s bills show on the right")
             }

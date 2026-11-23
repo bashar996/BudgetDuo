@@ -92,6 +92,17 @@ Repeat for the second phone (or share via TestFlight if you have the paid accoun
 4. Work through **Start here**: add accounts, set pay (Budget → Income, or More → Us two),
    give categories a limit (Budget tab, tap a category), log a first entry (+).
 
+## iPad
+
+The same app runs on iPad (it's a universal app; one install from Xcode or TestFlight
+covers both). On an iPad, or in Split View / Stage Manager when the window is at least
+700 points wide, it uses the two-pane layout: tabs and lists on the left, the detail on the
+right, and the add-entry keypad across both halves. Narrower windows get the iPhone layout.
+iPad supports every orientation; each pane keeps its own back arrow (the single docked
+Back by the tab rail is only used on the unfolded iPhone Duo).
+
+To run it: pick an iPad (or an iPad simulator) as the run destination in Xcode.
+
 ## Project layout
 
 ```

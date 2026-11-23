@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import UIKit
 
 /// The app's tabs. (Not called `Tab`, which is SwiftUI's tab type.)
 /// Declared in tab-bar order.
@@ -144,6 +145,10 @@ final class Router {
     }
     /// Unfolded / wide screens show detail screens in a right-hand pane.
     var isWide = false
+    /// iPad: wide panes keep their own back arrows; the docked rail Back is for the Duo.
+    static let isPad = UIDevice.current.userInterfaceIdiom == .pad
+    /// The single Back docked by the tab rail (unfolded iPhone Duo only).
+    var dockedBack: Bool { isWide && !Router.isPad }
     /// Wide screens: width of the trailing column the system tab rail sits in (the
     /// Back button docks there; toasts keep clear of it).
     var railInset: CGFloat = 0
@@ -201,6 +206,15 @@ final class Router {
     }
 
     /// The narrow layout's back arrow (and a deleted loan leaving its screen).
+    /// Wide iPad: Back from a screen goes back within its own pane.
+    func paneBack(detail: Bool, _ dismiss: DismissAction) {
+        if detail {
+            if !detailPath.isEmpty { setDetailPath(Array(detailPath.dropLast())) } else { dismiss() }
+        } else {
+            if !path.isEmpty { setPath(tab, Array(path.dropLast())) } else { dismiss() }
+        }
+    }
+
     func back(_ dismiss: DismissAction) {
         if isWide {
             if !detailPath.isEmpty { setDetailPath(Array(detailPath.dropLast())) }
