@@ -79,6 +79,9 @@ struct BillsView: View {
             let showCalendar = !(router.isWide && router.billsSplit && !showBack)
             let day = router.billDay
             let rows = L.billRows.filter { day == nil || $0.dueDay == day }
+            // The picked day's month (a budget month can run across two months).
+            let dayIso: String? = day.flatMap { L.period.date(forDay: $0) }
+            let dayMonth: String = dayIso.map { DateKit.monthName(String($0.prefix(7)), short: true) } ?? L.monthShort
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 0) {
                     NavRow(title: "Bills", showBack: showBack)
@@ -93,16 +96,16 @@ struct BillsView: View {
                 if showCalendar { BillCalendar(L: L, hint: "Tap a day to see its bills").padding(.bottom, 10) }
                 if let day {
                     Button { router.billDay = nil } label: {
-                        Text("\(day) \(L.monthShort) only  ×").font(.geist(13.5, .medium)).padding(.horizontal, 14).frame(height: 44)
+                        Text("\(day) \(dayMonth) only  ×").font(.geist(13.5, .medium)).padding(.horizontal, 14).frame(height: 44)
                             .overlay(Capsule().strokeBorder(Palette.black, lineWidth: 1.5))
                     }
                     .buttonStyle(.plain)
                     .padding(.bottom, 4)
-                    .accessibilityLabel("Only bills on \(day) \(L.monthShort). Show all bills")
+                    .accessibilityLabel("Only bills on \(day) \(dayMonth). Show all bills")
                 }
                 ForEach(rows) { b in
                     HStack(spacing: 12) {
-                        DateTile(day: b.dueDay, month: L.monthShort)
+                        DateTile(day: b.dueDay, month: b.monthShort)
                         Button { router.form = .bill(b.bill) } label: {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(b.bill.name).font(.geist(16, .medium)).lineLimit(1)
@@ -113,7 +116,7 @@ struct BillsView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint("Edits the bill")
-                        Button(b.isPaid ? "Paid" : "Pay") { store.togglePaid(b, ym: L.ym, account: L.mainAccountId) }
+                        Button(b.isPaid ? "Paid" : "Pay") { store.togglePaid(b, account: L.mainAccountId) }
                             .font(.geist(13.5, .medium)).padding(.horizontal, 16).frame(height: 44)
                             .foregroundStyle(b.isPaid ? Palette.black : Palette.white)
                             .background(b.isPaid ? .clear : Palette.black, in: Capsule())
@@ -127,7 +130,7 @@ struct BillsView: View {
                     .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .contextMenu {
                         Button { router.form = .bill(b.bill) } label: { Label("Edit", systemImage: "pencil") }
-                        Button { store.togglePaid(b, ym: L.ym, account: L.mainAccountId) } label: {
+                        Button { store.togglePaid(b, account: L.mainAccountId) } label: {
                             Label(b.isPaid ? "Mark unpaid" : "Mark paid", systemImage: b.isPaid ? "arrow.uturn.backward" : "checkmark")
                         }
                         Button(role: .destructive) { deleting = b.bill } label: { Label("Delete", systemImage: "trash") }
@@ -196,6 +199,7 @@ struct ReportsView: View {
                 }
             } content: {
                 Text("Where it went").font(.geist(22, .medium)).padding(.top, 4)
+                Text(L.periodLabel).font(.geist(13)).foregroundStyle(Palette.gray)
                 ForEach(top) { r in
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(alignment: .lastTextBaseline) {
@@ -222,7 +226,7 @@ struct ReportsView: View {
                     .overlay(alignment: .bottom) { Hairline(opacity: 0.12) }
                 }
                 ShareLink(item: ReportFile(name: L.reportFileName, text: L.reportCSV),
-                          preview: SharePreview("Twofold report · \(DateKit.monthLabel(L.ym))")) {
+                          preview: SharePreview("Twofold report · \(L.periodLabel)")) {
                     Text("↓ Download this month’s report").font(.geist(15, .medium)).frame(maxWidth: .infinity).frame(height: 52)
                         .background(Palette.black, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .foregroundStyle(Palette.white)
@@ -408,6 +412,7 @@ struct ActivityView: View {
     @State private var who: Who?
     @State private var acct: String?
     @State private var cat: String?
+    /// The budget month shown (its key, "yyyy-MM"; see `Period`).
     @State private var month = DateKit.ym(Date())
     @State private var seeded = false
     /// Statement import: the file picker, then the import flow for the picked file.
@@ -423,16 +428,24 @@ struct ActivityView: View {
 
     var body: some View {
         if let L = store.ledger() {
-            let list = filtered(L)
+            let shownPeriod = Period(key: month, start: L.cycleStart)
+            let list = filtered(L, shownPeriod)
             let groups = Dictionary(grouping: list, by: \.date).sorted { $0.key > $1.key }
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 10) {
                     NavRow(title: "Activity", showBack: showBack)
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Button("←") { month = DateKit.addMonths(month, -1) }.frame(width: 44, height: 44).accessibilityLabel("Previous month")
-                            Text(DateKit.monthLabel(month)).font(.geist(16, .medium)).frame(maxWidth: .infinity)
-                            Button("→") { month = DateKit.addMonths(month, 1) }.frame(width: 44, height: 44)
+                            Button("←") { month = Period.shift(month, -1) }.frame(width: 44, height: 44).accessibilityLabel("Previous month")
+                            VStack(spacing: 0) {
+                                Text(DateKit.monthLabel(month)).font(.geist(16, .medium))
+                                if shownPeriod.start > 1 {
+                                    Text(shownPeriod.rangeLabel).font(.geist(12.5)).foregroundStyle(Palette.mute)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .accessibilityElement(children: .combine)
+                            Button("→") { month = Period.shift(month, 1) }.frame(width: 44, height: 44)
                                 .disabled(month >= L.ym).opacity(month >= L.ym ? 0.3 : 1).accessibilityLabel("Next month")
                         }
                         .font(.geist(20))
@@ -450,7 +463,7 @@ struct ActivityView: View {
                             .accessibilityLabel("Import statement")
                             .accessibilityHint("Adds entries from a bank statement: CSV, Excel or PDF")
                             ShareLink(item: ReportFile(name: "twofold-\(month).csv", text: L.activityCSV(list)),
-                                      preview: SharePreview("Twofold entries · \(DateKit.monthLabel(month))")) {
+                                      preview: SharePreview("Twofold entries · \(shownPeriod.label())")) {
                                 Text("Export").font(.geist(14, .medium)).padding(.horizontal, 14).frame(height: 46)
                                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.3), lineWidth: 1))
                                     .foregroundStyle(Palette.white)
@@ -497,7 +510,7 @@ struct ActivityView: View {
                     Text("Touch and hold an entry to edit or delete it.").font(.geist(12.5)).foregroundStyle(Palette.gray).padding(.top, 14)
                 }
             }
-            .onAppear { if !seeded { acct = account; seeded = true } }
+            .onAppear { if !seeded { acct = account; month = L.ym; seeded = true } }
             .fileImporter(isPresented: $picking, allowedContentTypes: ActivityView.statementTypes) { picked($0) }
             .fullScreenCover(item: $job) { j in
                 ImportFlowView(job: j) { acctId, ym in
@@ -536,11 +549,11 @@ struct ActivityView: View {
         }
     }
 
-    /// This month's entries after the search and filters, newest first (as the Mac's `filtered`).
-    private func filtered(_ L: Ledger) -> [Tx] {
+    /// The budget month's entries after the search and filters, newest first (as the Mac's `filtered`).
+    private func filtered(_ L: Ledger, _ p: Period) -> [Tx] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         return L.tx.filter { (t: Tx) -> Bool in
-            if t.month != month { return false }
+            if !p.contains(t.date) { return false }
             if let who, t.who != who { return false }
             if let cat, t.cat != cat { return false }
             if let acct, t.acct != acct && t.to != acct { return false }
@@ -576,9 +589,30 @@ struct ActivityView: View {
             }
             .accessibilityHint("Adds entries to \(a.name) from a CSV, Excel or PDF statement")
             .padding(.top, 8)
+            if a.type == .card { cardPlans(a, L) }
         }
         .padding(16)
         .background(Palette.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    /// A card's installment plans, under its balance: what each still has to bill and the next
+    /// one (each opens its own screen), and "+ Installment plan".
+    private func cardPlans(_ a: Account, _ L: Ledger) -> some View {
+        let plans = L.plansOnCard(a.id)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Installment plans").font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 14)
+            ForEach(plans) { p in PlanRowButton(plan: p, ledger: L) }
+            if plans.isEmpty {
+                Text("Bought something in monthly installments on this card? Add it as a plan and each installment is posted here in its month.")
+                    .font(.geist(13)).foregroundStyle(Palette.gray).padding(.vertical, 6)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button { router.form = .cardPlan(nil, a.id) } label: {
+                Text("+ Installment plan").font(.geist(13.5, .medium)).foregroundStyle(Palette.accentText)
+                    .frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
 
@@ -668,6 +702,7 @@ struct SettingsView: View {
         let mode = h.splitMode ?? "One joint pot"
         let rule = h.splitRule ?? "50/50"
         let money = Money(currency: h.currency)
+        let cycle = Period.clamp(h.cycleStart)
         return VStack(alignment: .leading, spacing: 0) {
             sectionTitle("Budgeting", note: "Shared by both of you; changes apply straight away.")
             FormLabel("Budget style").padding(.top, 14)
@@ -680,6 +715,7 @@ struct SettingsView: View {
                  : style == "50/30/20" ? "Budget checks needs, wants and savings against 50%, 30% and 20% of income."
                  : "Just limits per category: Budget shows what’s unbudgeted.")
                 .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
+            cycleRow(cycle)
             Toggle(isOn: Binding(get: { rollover }, set: { store.updateHousehold(["rollover": $0]) })) {
                 Text(rollover ? "Unspent money rolls into next month" : "Each month starts fresh").font(.geist(15))
             }
@@ -725,6 +761,40 @@ struct SettingsView: View {
             }
             }
         }
+    }
+
+    /// "Budget month starts on day" − n +, with the budget month it gives today
+    /// (shared through the household document as the integer `cycleStart`, 1–28).
+    private func cycleRow(_ cycle: Int) -> some View {
+        let current = Period(containing: DateKit.iso(Date()), start: cycle)
+        let hint: String = "This budget month: " + current.rangeLabel
+        return HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Budget month starts on day").font(.geist(15)).fixedSize(horizontal: false, vertical: true)
+                Text(hint).font(.geist(12.5)).foregroundStyle(Palette.gray).fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            stepButton("−", "Earlier") { setCycle(cycle - 1) }
+                .disabled(cycle <= 1).opacity(cycle <= 1 ? 0.35 : 1)
+            Text("\(cycle)").font(.geist(18, .medium)).frame(minWidth: 36).monospacedDigit()
+                .accessibilityHidden(true)
+            stepButton("+", "Later") { setCycle(cycle + 1) }
+                .disabled(cycle >= 28).opacity(cycle >= 28 ? 0.35 : 1)
+        }
+        .padding(.top, 16)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Budget month starts on day")
+        .accessibilityValue("Day \(cycle). \(hint)")
+        .accessibilityAdjustableAction { dir in
+            if dir == .increment { setCycle(cycle + 1) }
+            else if dir == .decrement { setCycle(cycle - 1) }
+        }
+    }
+
+    private func setCycle(_ day: Int) {
+        let d = max(1, min(28, day))
+        guard d != Period.clamp(store.household?.cycleStart) else { return }
+        store.updateHousehold(["cycleStart": d])
     }
 
     /// The per-phone accent (UserDefaults), like the Mac's per-Mac look.

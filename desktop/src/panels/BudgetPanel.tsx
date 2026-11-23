@@ -18,7 +18,7 @@ export function BudgetPanel({ L, cat }: { L: Ledger; cat: string }) {
   // Every category can be renamed, moved and deleted except the two pocket-money ones.
   const editable = !!row && row.g !== 'personal'
   const [d, setD] = useState(() => {
-    // Average of the three full months before this one (real today).
+    // Average of the three full budget months before this one (real today).
     let tot = 0
     for (let k = 1; k <= 3; k++) tot += L.inM(addM(L.curYm, -k)).filter((t) => t.cat === cat && t.type === 'exp').reduce((a, t) => a + t.amt, 0)
     return { name: row?.name ?? '', g: (row?.g === 'wants' ? 'wants' : 'needs') as 'needs' | 'wants', limit: String(L.H.budgets[cat] || 0), from: '', move: '', avg: Math.round(tot / 3 / 10) * 10, delStep: false, moveTo: '' }

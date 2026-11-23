@@ -7,7 +7,8 @@ import type { Ledger } from '../data/ledger'
 import type { Tx } from '../data/types'
 import { ACCOUNT_TYPES, assetKind } from '../data/catalog'
 import { css, sx } from '../lib/css'
-import { addM, dim, MN, mLabel, pad } from '../lib/dates'
+import { addM, MN, mLabel } from '../lib/dates'
+import { periodRange } from '../lib/period'
 import { pc, sum } from '../lib/money'
 
 const LAV = 'var(--accBase)', CRM = '#fbf9ef'
@@ -18,8 +19,8 @@ const ROW_BTN = css('display:flex;align-items:center;gap:12px;width:100%;padding
 const TILE = css('width:44px;height:44px;flex:none;border-radius:13px;background:var(--soft);display:grid;place-items:center;font-weight:600;font-size:17px')
 const EMPTY = css('padding:8px 0;font-size:14px;color:var(--mute);text-wrap:pretty')
 
-/** Net worth at the end of each of the last six months (the last one is now):
- *  today's figure minus everything entered after that month ended. Loans and
+/** Net worth at the end of each of the last six budget months (the last one is now):
+ *  today's figure minus everything entered after that period ended. Loans and
  *  assets are kept at today's value since entries don't move them. */
 function netHist(L: Ledger) {
   const net = L.assets - L.liab
@@ -27,7 +28,7 @@ function netHist(L: Ledger) {
     (L.acctBy[t.acct] ? (t.type === 'inc' ? t.amt : -t.amt) : 0) + (t.type === 'xfer' && t.to && L.acctBy[t.to] ? t.amt : 0)
   return [5, 4, 3, 2, 1, 0].map((k) => {
     if (!k) return net
-    const m = addM(L.curYm, -k), end = m + '-' + pad(dim(m))
+    const end = periodRange(addM(L.curYm, -k), L.start).to
     return net - sum(L.data.tx.filter((t) => t.date > end), eff)
   })
 }
@@ -40,7 +41,13 @@ function Body({ L }: { L: Ledger }) {
   const ui = useUI()
   const { f } = L
   const own = L.assets
-  const owe = L.accounts.filter((a) => a.balance < 0).map((a) => ({ id: a.id, name: a.name, meta: (ACCOUNT_TYPES[a.type] ?? ACCOUNT_TYPES.current)[0], bal: -a.balance }))
+  // A card owes its balance plus what its installment plans still have to bill (shown under it).
+  const inPlans = (id: string) => L.cardBy[id]?.cs.planRemaining ?? 0
+  const owe = L.accounts.filter((a) => a.balance < 0 || inPlans(a.id) > 0.005).map((a) => ({
+    id: a.id, name: a.name,
+    meta: (ACCOUNT_TYPES[a.type] ?? ACCOUNT_TYPES.current)[0] + (inPlans(a.id) > 0.005 ? ' · incl. ' + f(Math.round(inPlans(a.id))) + ' in installment plans' : ''),
+    bal: Math.max(0, -a.balance) + inPlans(a.id),
+  }))
     .concat(L.loans.filter((l) => l.st.balance > 0.005).map(({ doc: x, st }) => ({ id: x.id, name: x.name, meta: Math.round(st.rate * 100) / 100 + '% ' + (st.rateType === 'flat' ? 'flat' : 'interest') + (st.endsYm ? ' · ends ' + mLabel(st.endsYm, true) : ''), bal: st.balance })))
 
   return (
@@ -138,11 +145,10 @@ export const worthTab: TabDef = {
     const net = L.assets - L.liab
     const hist = netHist(L)
     const lo = Math.min(...hist), hLo = lo - Math.abs(lo) * 0.06, hHi = Math.max(...hist)
-    const m0 = L.today.getMonth()
     const bars: HeroBar[] = hist.map((v, i) => ({
       h: pc(Math.max(0.08, (v - hLo) / (hHi - hLo || 1))),
       bg: i === 5 ? LAV : CRM,
-      label: MN[(m0 - 5 + i + 12) % 12].slice(0, 3),
+      label: MN[+addM(L.curYm, i - 5).slice(5) - 1].slice(0, 3),
       tag: i === 5 ? f(Math.round(v)) : '',
       title: f(Math.round(v)),
     }))

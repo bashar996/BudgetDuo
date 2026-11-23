@@ -8,18 +8,31 @@ one shared budget for two people, synced between both phones.
   rollover; rename, regroup, add and delete categories, move money in from another one), Savings
   (pots with Edit / New pot sheets, auto-save switch, deposit/withdraw, round-ups, month-end
   sweep, where extra money goes, recent moves), More → Activity (search, who / account / category
-  filters, CSV export, statement import), Bills (with this month's calendar), Accounts, Net worth (add and edit
+  filters, CSV export, statement import), Bills (with the budget month's calendar), Accounts, Net worth (add and edit
   assets and investments), Debt (payoff plan, loans with their full schedule and payments, credit
-  cards with minimums and payoff), Reports (with a CSV download), Plan ahead (30-day cash forecast
+  cards with minimums and payoff, card installment plans), Reports (with a CSV download), Plan ahead (30-day cash forecast
   against your cushion, planned purchases with both votes and Mark bought, trips with Log spend),
   Us two (settle-up, who paid, pay, pocket money, money date), Settings; plus the full-screen
   keypad for adding entries and the category / pot bottom sheets. Everything the Mac app can
   create, edit or delete can be done on the phone too.
 - **Settings shared with the Mac** (household document): budget style (Zero-based, Category
-  limits, 50/30/20), rollover, cash cushion, coach tips, how you share money and the split rule.
+  limits, 50/30/20), the day the budget month starts, rollover, cash cushion, coach tips, how you
+  share money and the split rule.
   They work the same on both: rollover adds last month's unspent limit to each category, the
   cushion drives Plan ahead, split mode adds settle-up to Us two ("Mark as settled" adds what
   was owed to `settled.{month}`). **Look** (the accent colour) is per phone.
+- **Budget month** (Settings → "Budget month starts on day", 1–28, written as the integer
+  `cycleStart`; missing = 1 = calendar months): e.g. 25 makes each budget month run 25th → 24th.
+  `Model/Period.swift` holds the rules (the same as the Mac's `desktop/src/lib/period.ts`): a
+  budget month keeps a "yyyy-MM" key, named after the month most of its days are in (start 25:
+  "2026-12" is 25 Nov – 24 Dec; start 10: "2026-11" is 10 Nov – 9 Dec), so `checks`,
+  `roundSwept` and `settled` stay keyed the same way. Everything "this month" follows it (spent,
+  safe to spend and the per-day figure, rollover, coach tips, Home, Us two, Reports, Savings'
+  "moved in", round-ups, Activity's month arrows); headings show the month name plus the range
+  when the start isn't the 1st. Each bill is due once per budget month (its day inside the
+  range); its `paid` flag and payment entry id (`bill-{billId}-{yyyy-MM}`) use the calendar month
+  of that due date, so existing data keeps working. Pay days, loans, cards and the 30-day
+  forecast stay on calendar dates.
 - **Look:** black, lavender (or the accent you pick) and cream with the stepped blob edges, Geist type.
 - **Wide screens** (an unfolded foldable): budget and tabs on the left, the detail on the right;
   the keypad screen uses both halves (all categories in a grid on the left, chips and keypad on the right).
@@ -92,6 +105,17 @@ Repeat for the second phone (or share via TestFlight if you have the paid accoun
 4. Work through **Start here**: add accounts, set pay (Budget → Income, or More → Us two),
    give categories a limit (Budget tab, tap a category), log a first entry (+).
 
+## iPad
+
+The same app runs on iPad (it's a universal app; one install from Xcode or TestFlight
+covers both). On an iPad, or in Split View / Stage Manager when the window is at least
+700 points wide, it uses the two-pane layout: tabs and lists on the left, the detail on the
+right, and the add-entry keypad across both halves. Narrower windows get the iPhone layout.
+iPad supports every orientation; each pane keeps its own back arrow (the single docked
+Back by the tab rail is only used on the unfolded iPhone Duo).
+
+To run it: pick an iPad (or an iPad simulator) as the run destination in Xcode.
+
 ## Project layout
 
 ```
@@ -114,14 +138,15 @@ ios/
 ```
 users/{uid}                      { householdId }
 households/{code}                names, currency, members, budgets, incomes, checks, round-ups
-households/{code}/tx/{id}        entries (expense / income / transfer, pot moves; loan payments carry debtId, debtPart;
+households/{code}/tx/{id}        entries (expense / income / transfer, pot moves; loan payments and card plan entries carry debtId, debtPart;
                                  imported ones carry importId and source "import")
 households/{code}/accounts/{id}  opening balance + details (cards: limit, apr, statementDay, dueDay, minPct, minFloor)
 households/{code}/bills/{id}     day, amount, category, paid months (a loan's bill carries debtId)
 households/{code}/goals/{id}     pots: target, starting amount, monthly, account
 households/{code}/debts/{id}     loans: kind, lender, principal, rate, rateType, termMonths, firstDue,
                                  installment, paidBefore, rateChanges, fee, acct, billId
-                                 (+ legacy balance, apr, min kept up to date for older builds)
+                                 (+ legacy balance, apr, min kept up to date for older builds);
+                                 card installment plans: kind "cardplan", acct = the card, cat, procFee, billedThrough
 households/{code}/planned/{id}   planned purchases with each partner's vote
 households/{code}/events/{id}    trips and events: budget, spent
 households/{code}/assets/{id}    home, car, gold …: name, kind, value (missing = none)
@@ -130,7 +155,7 @@ households/{code}/assets/{id}    home, car, gold …: name, kind, value (missing
 The household document also holds your own categories (`custom`), renamed or regrouped
 built-in categories (`catOv`: id → name and group), removed built-ins (`catDel`) and the debt
 plan settings (`strat`, `extra`), the shared settings (`budgetStyle`, `rollover`, `cushion`,
-`coachTips`, `splitMode`, `splitRule`, `settled`, `roundUps`, `sweep`; missing = the default).
+`coachTips`, `splitMode`, `splitRule`, `settled`, `roundUps`, `sweep`, `cycleStart`; missing = the default).
 Investment accounts may carry `cost`, the amount put in, so Net worth can show the gain.
 Loan payments (`debtId`) don't count as everyday spending: they're left out of round-ups, the
 forecast's daily average and the last-7-days chart, as on the Mac.
@@ -144,6 +169,33 @@ the loan; a rate change re-works the installment so the loan still ends when it 
 installment. Card minimums are `minPct`% of what's owed but at least `minFloor` (defaults 5% and
 100; APR 36%). Entries can be deleted from any list (touch and hold → Delete), with Undo for 5 s
 that restores the same entry id.
+
+### Card installment plans
+
+A purchase the bank split into monthly installments on a credit card (Easy Payment Plan, Flexi
+installments …): Debt → a card → **+ Installment plan** (or a card's entries, from Accounts). It's
+a `debts/{id}` document with `kind: "cardplan"` and `acct` = the card, so the loan maths is reused
+(rate 0 and "flat" by default). The budget counts **one installment a month** in the plan's
+category (`cat`, Shopping by default), not the full price:
+
+- Each installment n is posted by the app as an expense on the card: id `plan-{planId}-{n}`, dated
+  `nthDue(firstDue, n − 1)`, `debtId` = the plan, `debtPart` "installment", amounts rounded so they add
+  up to the total (1,000 over 3 → 333.33, 333.34, 333.33). The same batch sets `billedThrough = n`.
+  `HouseholdStore.billPlans` runs when entries, loans or accounts change and when the day changes
+  (checked every minute and when the app comes to the front), only once all three collections have
+  synced from the server, and skips a plan whose last write hasn't come back yet. Both phones and
+  the Mac write identical documents, so nothing doubles; a deleted installment isn't posted again.
+- A processing fee (`procFee`) is posted once when the plan is added (`plan-{id}-fee`, `debtPart`
+  "fee": linked to the plan but not a payment). **Close early** posts the quote (what's left ×
+  (1 + fee %)) as `plan-{id}-close` (`debtPart` "extra"); billing then stops. Editing never rewrites
+  posted entries.
+- The card's numbers (`Loans.cardWithPlans`): owed = what's on the card + what its plans still have
+  to bill (the bank blocks it), and the limit used counts both; the minimum = the usual minimum on
+  the rest + this cycle's installments in full. In the payoff plan each plan is its own line; Net
+  worth counts the remaining plan amount under the card. Plans never show in Bills or the Loans list.
+- Statement import: a card line matching a posted installment (amount ±1%, date ±5 days, and the
+  plan's name or "EPP", "IPP", "INSTAL…", "EASY PAYMENT", "FLEXI" in the description) is "Already in
+  Twofold". An existing entry with a `debtId` also counts towards the usual duplicate rule.
 
 Deleting a category can move its entries and bills to another
 one (written in batches of at most 450); otherwise they show as "Other" and count towards no budget.

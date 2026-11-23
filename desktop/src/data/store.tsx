@@ -3,11 +3,18 @@ import { createContext, useContext } from 'react'
 import { DELETE, inc, type Backend, type Col, type Op } from './backend'
 import type { Account, Asset, Bill, Data, Debt, Goal, Household, Planned, Trip, Tx, Who } from './types'
 import { allCategories, catOr, LOCKED } from './catalog'
-import { installmentOf, isSimple, loanState } from './loans'
+import { installmentOf, isPlan, isSimple, loanState, planChargesDue, planEntryId, planFeeDate, planState } from './loans'
 import { loanPayments } from './ledger'
-import { dim, isoOf, pad } from '../lib/dates'
+import { dim, isoD, isoOf, pad } from '../lib/dates'
 
 type Draft<T extends { id: string }> = Omit<T, 'id'> & { id?: string }
+
+/** The calendar month a bill payment's `paid` flag is keyed by: from its fixed ID
+ *  ("bill-<bill>-YYYY-MM"), else the entry's own date. */
+export const billPaidKey = (t: Tx) => {
+  const pre = 'bill-' + t.billId + '-', m = t.id.startsWith(pre) ? t.id.slice(pre.length) : ''
+  return /^\d{4}-\d{2}$/.test(m) ? m : t.date.slice(0, 7)
+}
 
 function strip<T extends object>(v: T): Record<string, unknown> {
   const o: Record<string, unknown> = {}
@@ -42,6 +49,9 @@ export function makeActions(be: Backend, getData: () => Data | null) {
     }
   }
 
+  /** Card plans with a billing write in flight: plan id → the billedThrough it writes. */
+  const billing = new Map<string, { to: number; at: number }>()
+
   return {
     // Entries
     saveTx(t: Draft<Tx>) { const op = put('tx', t); commit(op); return op.id },
@@ -49,11 +59,12 @@ export function makeActions(be: Backend, getData: () => Data | null) {
     deleteTx(t: Tx) {
       const ops: Op[] = [{ kind: 'del', col: 'tx', id: t.id }]
       if (t.billId && getData()?.bills.some((b) => b.id === t.billId))
-        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + t.date.slice(0, 7)]: false } })
+        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + billPaidKey(t)]: false } })
       commit(...ops)
     },
 
     // Bills: the entry ID is fixed per bill and month, so paying twice can't double-count.
+    // `ym` is the CALENDAR month of the due date (BillRow.pm), not the budget-month key.
     togglePaid(b: Bill, ym: string, acct: string) {
       const paid = !!b.paid?.[ym]
       const txId = 'bill-' + b.id + '-' + ym
@@ -224,11 +235,95 @@ export function makeActions(be: Backend, getData: () => Data | null) {
       commit(put('tx', { ...t }))
       return t
     },
+    // MARK: Card installment plans (loans.ts, "Card installment plans")
+
+    /**
+     * Saves a plan on a card. Writes the legacy fields like a loan, and keeps billedThrough at
+     * least at paidBefore. A new plan with a processing fee posts the fee on the card once.
+     * Editing never touches entries already posted; new amounts apply to what's still to be billed.
+     */
+    savePlan(p: Draft<Debt>) {
+      const D = getData()!
+      const old = p.id ? D.debts.find((x) => x.id === p.id) : undefined
+      const id = p.id || be.newId('debts')
+      const int = (v: number | null | undefined) => (v == null ? v : Math.round(v))
+      const paidBefore = int(p.paidBefore) ?? 0
+      const doc = {
+        ...p, id, kind: 'cardplan' as const, rate: p.rate ?? 0, rateType: p.rateType ?? 'flat', installment: null,
+        termMonths: int(p.termMonths), paidBefore,
+        billedThrough: Math.max(paidBefore, old?.billedThrough ?? old?.paidBefore ?? 0),
+      } as Debt
+      const ops: Op[] = [put('debts', { ...doc, apr: doc.rate ?? 0, min: installmentOf(doc), balance: doc.principal ?? 0 })]
+      if (!old && (p.procFee ?? 0) > 0 && p.acct) {
+        ops.push(put('tx', {
+          id: planEntryId(id, 'fee'), date: planFeeDate(doc, isoOf(new Date())), name: p.name + ' · processing fee', cat: cat(p.cat || 'shopping'),
+          amt: Math.round(p.procFee! * 100) / 100, who: 'J' as Who, type: 'exp' as const, acct: p.acct, debtId: id, debtPart: 'fee' as const,
+        }))
+      }
+      commit(...ops)
+      return id
+    },
+    /** Closes a plan early: one expense on the card for the quote (what's left plus the fee). Returns it, for Undo. */
+    closePlan(p: Debt): Tx | null {
+      const D = getData()
+      if (!D || !p.acct) return null
+      const today = isoOf(new Date())
+      const ps = planState(p, loanPayments(D.tx, p.id), today)
+      const amt = Math.round(ps.settlement * 100) / 100
+      if (ps.done || !(amt > 0)) return null
+      const t: Tx = {
+        id: planEntryId(p.id, 'close'), createdAt: new Date(), date: today, name: p.name + ' · closed early', cat: cat(p.cat || 'shopping'),
+        amt, who: 'J', type: 'exp', acct: p.acct, debtId: p.id, debtPart: 'extra',
+      }
+      commit(put('tx', { ...t }))
+      return t
+    },
+    /**
+     * Posts every plan installment that's due and not posted yet (loans.ts planChargesDue), with
+     * fixed ids and billedThrough in the same write, so it's safe on every device at once.
+     * Called whenever the data or the day changes. A plan whose last write hasn't come back yet
+     * is skipped, so a slow sync can't post the same installments again and again.
+     * Returns how many entries it wrote.
+     */
+    billPlans(today = isoOf(new Date())): number {
+      const D = getData()
+      if (!D) return 0
+      // Each plan's entries and its billedThrough go in the same batch (Firestore: 500 writes at most).
+      let ops: Op[] = [], wrote = 0
+      const flush = () => { if (ops.length) commit(...ops); ops = [] }
+      for (const p of D.debts) {
+        if (!isPlan(p) || !p.acct || !D.accounts.some((a) => a.id === p.acct)) continue
+        const wait = billing.get(p.id)
+        if (wait) {
+          // Back in the data (or the write was given up on after a minute): bill again from there.
+          if ((p.billedThrough ?? 0) >= wait.to || Date.now() - wait.at > 60000) billing.delete(p.id)
+          else continue
+        }
+        const due = planChargesDue(p, loanPayments(D.tx, p.id), today)
+        if (!due.length) continue
+        if (ops.length + due.length + 1 > 450) flush()
+        wrote += due.length
+        for (const c of due) {
+          ops.push(put('tx', {
+            id: planEntryId(p.id, c.n), date: c.date, name: p.name + ' · ' + c.n + '/' + p.termMonths, cat: cat(p.cat || 'shopping'), amt: c.amt,
+            who: 'J' as Who, type: 'exp' as const, acct: p.acct, debtId: p.id, debtPart: 'installment' as const,
+            // The same on every device, so two writing at once write the same document.
+            createdAt: isoD(c.date),
+          }))
+        }
+        const to = due[due.length - 1].n
+        ops.push({ kind: 'patch', col: 'debts', id: p.id, fields: { billedThrough: to } })
+        billing.set(p.id, { to, at: Date.now() })
+      }
+      flush()
+      return wrote
+    },
+
     /** Puts a deleted entry back with the same ID and fields (and marks its bill paid again). */
     restoreTx(t: Tx) {
       const ops: Op[] = [put('tx', { ...t })]
       if (t.billId && getData()?.bills.some((b) => b.id === t.billId))
-        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + t.date.slice(0, 7)]: true } })
+        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + billPaidKey(t)]: true } })
       commit(...ops)
     },
 

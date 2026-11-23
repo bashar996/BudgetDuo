@@ -40,9 +40,12 @@ function Body({ L }: { L: Ledger }) {
         <div style={css('display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:10px')}>
           {accounts.map((a) => {
             const on = !!sel && sel.id === a.id
-            const used = a.type === 'card' && a.limit ? Math.max(0, -a.balance) / a.limit : 0
+            // Cards: the limit used counts what's still to be billed in installment plans (loans.ts cardWithPlans).
+            const cs = a.type === 'card' ? L.cardBy[a.id]?.cs : undefined
+            const used = cs?.utilisation ?? 0
             const meta = [a.bank, a.last4 ? '•• ' + a.last4 : '', L.whoName[a.who] || 'Joint'].filter(Boolean).join(' · ')
-            const extra = a.type === 'card' ? (a.limit ? Math.round(used * 100) + '% of ' + f(a.limit) + ' limit used' : 'No limit set')
+            const inPlans = cs && cs.planRemaining > 0.005 ? ' · ' + f(Math.round(cs.planRemaining)) + ' more in plans' : ''
+            const extra = a.type === 'card' ? (a.limit ? Math.round(used * 100) + '% of ' + f(a.limit) + ' limit used' + inPlans : 'No limit set' + inPlans)
               : a.type === 'save' ? (a.apy ? a.apy + '% a year · ' : '') + L.goals.filter((g) => g.acct === a.id).length + ' pots'
               : a.type === 'invest' ? 'Balance updated by hand' : a.type === 'cash' ? 'Notes and coins' : 'Everyday spending'
             return (
@@ -99,7 +102,7 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
     run -= v
     return { t, v, after }
   })
-  const mLed = led.filter((x) => x.t.date.slice(0, 7) === L.ym)
+  const mLed = led.filter((x) => x.t.date >= L.period.from && x.t.date <= L.period.to)
 
   const dayBal: { v: number; title: string }[] = []
   let b = sel.balance, k = 0
@@ -157,8 +160,38 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
         ))}
         {!mLed.length && <div style={css('padding:20px 0;color:var(--mute);font-size:14px')}>Nothing moved through this account this month.</div>}
         <div style={css('font-size:12.5px;color:var(--mute);padding-top:12px')}>{mLed.length > 12 ? 'Showing the latest 12. Filter Activity by this account for the rest.' : 'Small figure under each amount is the balance after it.'}</div>
+        {sel.type === 'card' && <CardPlans L={L} id={id} />}
       </div>
     </section>
+  )
+}
+
+/** A card's installment plans, under its ledger: what each still has to bill and the next one. */
+function CardPlans({ L, id }: { L: Ledger; id: string }) {
+  const ui = useUI()
+  const { f } = L
+  const line = L.cardBy[id]
+  if (!line) return null
+  return (
+    <div style={css('margin-top:22px')}>
+      <div style={css('display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:4px')}>
+        <span style={H22}>Installment plans</span>
+        <button onClick={() => ui.open({ kind: 'planForm', acct: id })} style={css("height:44px;border:none;background:none;color:var(--ink);font:500 14px 'Geist',sans-serif;cursor:pointer;padding:0")}>+ Plan</button>
+      </div>
+      {line.plans.map(({ doc, st, ps }) => (
+        <button key={doc.id} className="h-row" onClick={() => ui.open({ kind: 'loan', id: doc.id })} style={css('display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left')}>
+          <span style={css('flex:1;min-width:0;display:flex;flex-direction:column')}>
+            <span style={css('font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{doc.name}</span>
+            <span style={css('font-size:12.5px;color:var(--mute)')}>{ps.closed ? 'Closed early' : ps.done ? 'All ' + ps.term + ' billed' : ps.billed + ' of ' + ps.term + ' billed · ' + f(round2(st.installment)) + '/month' + (ps.next ? ' · next ' + dLab(isoD(ps.next.date)).slice(4) : '')}</span>
+          </span>
+          <span style={css('display:flex;flex-direction:column;align-items:flex-end')}>
+            <span style={css('font-weight:500;white-space:nowrap')}>{f(Math.round(ps.remaining))}</span>
+            <span style={css('font-size:12px;color:var(--mute)')}>to be billed</span>
+          </span>
+        </button>
+      ))}
+      {!line.plans.length && <div style={css('padding:8px 0;color:var(--mute);font-size:14px;text-wrap:pretty')}>Bought something in monthly installments on this card? Add it as a plan and each installment is posted here in its month.</div>}
+    </div>
   )
 }
 

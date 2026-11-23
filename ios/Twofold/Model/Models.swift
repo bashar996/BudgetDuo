@@ -80,6 +80,9 @@ struct Household: Codable, Equatable {
     var roundUps: Bool?
     /// Month-end sweep switched on (default off).
     var sweep: Bool?
+    /// Day of the month the budget month starts, 1–28 (missing = 1: calendar months).
+    /// See `Period` for how budget months are keyed and named.
+    var cycleStart: Int?
 
     static let budgetStyles = ["Zero-based", "Category limits", "50/30/20"]
     static let splitModes = ["One joint pot", "Split shared costs"]
@@ -110,9 +113,10 @@ struct Tx: Codable, Identifiable, Equatable {
     var pot: String?
     var potDir: PotDirection?
     var createdAt: Date?
-    /// A loan payment: the loan's id (`debts/{id}`).
+    /// A loan payment: the loan's id (`debts/{id}`). Also set on a card installment plan's entries.
     var debtId: String?
-    /// "installment" or "extra" (missing = installment).
+    /// "installment" or "extra" (missing = installment). "fee": a card plan's processing fee
+    /// (linked to the plan, but not a payment).
     var debtPart: String?
     /// Statement import: stable ID of the statement line ("imp_…", the same on the Mac),
     /// so a statement imported on either device isn't imported again.
@@ -230,7 +234,8 @@ struct Debt: Codable, Identifiable, Equatable {
     /// Kept equal to the installment for older builds.
     var min: Double
     var createdAt: Date?
-    /// "personal", "car", "mortgage", "student" or "other"
+    /// "personal", "car", "mortgage", "student" or "other"; "cardplan" for a card installment
+    /// plan (`acct` is then the card; see "Card installment plans" in Loans.swift).
     var kind: String?
     var lender: String?
     /// Amount borrowed.
@@ -253,6 +258,13 @@ struct Debt: Codable, Identifiable, Equatable {
     var acct: String?
     /// Linked bill that shows the installment under Bills.
     var billId: String?
+    // Card installment plans only (kind "cardplan"):
+    /// Budget category the installments are posted in.
+    var cat: String?
+    /// One-off processing fee, posted once when the plan is added.
+    var procFee: Double?
+    /// Highest installment number already posted on the card (starts at paidBefore).
+    var billedThrough: Int?
 
     var kindLabel: String {
         switch kind ?? "" {
@@ -260,6 +272,7 @@ struct Debt: Codable, Identifiable, Equatable {
         case "car": return "Car loan"
         case "mortgage": return "Mortgage"
         case "student": return "Student loan"
+        case "cardplan": return "Installment plan"
         default: return "Loan"
         }
     }

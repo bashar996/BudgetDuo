@@ -27,8 +27,10 @@ export type Panel =
   | { kind: 'cat' }
   | { kind: 'contrib'; trip: Trip }
   | { kind: 'item'; item: 'income' | 'bill' | 'planned' | 'event'; who?: Who; id?: string }
-  /** A loan: summary, schedule, payments (the wide panel). */
+  /** A loan: summary, schedule, payments (the wide panel). A card installment plan opens its own version. */
   | { kind: 'loan'; id: string }
+  /** New / edit card installment plan (`acct` picks the card for a new one). */
+  | { kind: 'planForm'; id?: string; acct?: string; back?: Panel }
   /** New / edit loan. */
   | { kind: 'loanForm'; id?: string; back?: Panel }
   | { kind: 'pot'; goal?: Goal }

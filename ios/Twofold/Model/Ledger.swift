@@ -44,11 +44,19 @@ struct StyleBand: Identifiable {
     var id: String { name }
 }
 
+/// A bill in the current budget month.
 struct BillRow: Identifiable {
     let bill: Bill
-    let dueDay: Int
+    /// When it's due in the budget month, "yyyy-MM-dd".
+    let due: String
     let isPaid: Bool
     var id: String { bill.id }
+    /// Day of the month it's due (the calendar day of `due`).
+    var dueDay: Int { Int(due.suffix(2)) ?? bill.day }
+    /// The calendar month of `due` ("yyyy-MM"): its key in `bill.paid` and in the payment's entry id.
+    var paidKey: String { String(due.prefix(7)) }
+    /// "Nov"
+    var monthShort: String { DateKit.monthName(paidKey, short: true) }
 }
 
 struct DebtLine: Identifiable {
@@ -98,9 +106,21 @@ struct Ledger {
     let assets: [Asset]
     let today: Date
 
+    /// The current budget month's key ("yyyy-MM"; see `Period`). With the default
+    /// start day (the 1st) it's simply this calendar month.
     let ym: String
+    /// Day of the month the budget month starts (`Household.cycleStart`, 1 = calendar months).
+    let cycleStart: Int
+    /// The current budget month: its key, first and last day.
+    let period: Period
+    /// This calendar month ("yyyy-MM"), for things counted in calendar months (loans, payoff dates).
+    let calendarYm: String
+    /// Today's day of the calendar month.
     let todayDay: Int
-    let daysInMonth: Int
+    /// Days in the budget month.
+    let periodDays: Int
+    /// Today's day number in the budget month (1 = its first day).
+    let dayIndex: Int
     let money: Money
     let balances: [String: Double]
     let potSaved: [String: Double]
@@ -128,9 +148,17 @@ struct Ledger {
         self.trips = trips
         self.assets = assets
         self.today = today
-        ym = DateKit.ym(today)
+        let iso = DateKit.iso(today)
+        todayIso = iso
+        let start = Period.startDay(of: household)
+        let cur = Period(containing: iso, start: start)
+        cycleStart = start
+        period = cur
+        ym = cur.key
+        calendarYm = DateKit.ym(today)
         todayDay = DateKit.day(today)
-        daysInMonth = DateKit.daysIn(ym)
+        periodDays = cur.days
+        dayIndex = cur.dayIndex(iso)
         money = Money(currency: household.currency)
 
         var bal: [String: Double] = [:]
@@ -150,23 +178,20 @@ struct Ledger {
         balances = bal
         potSaved = saved.mapValues { max(0, $0) }
 
-        let ymNow = ym
-        monthTx = tx.filter { $0.month == ymNow }
+        monthTx = tx.filter { cur.contains($0.date) }
         monthExpenses = monthTx.filter { $0.type == .expense }
         var sp: [String: Double] = [:]
         monthExpenses.forEach { sp[$0.cat, default: 0] += $0.amt }
         spentByCat = sp
-        let ymPrev = DateKit.addMonths(ym, -1)
-        let pExp = tx.filter { $0.type == .expense && $0.month == ymPrev }
+        let prev = cur.previous
+        let pExp = tx.filter { $0.type == .expense && prev.contains($0.date) }
         prevExpenses = pExp
         var psp: [String: Double] = [:]
         pExp.forEach { psp[$0.cat, default: 0] += $0.amt }
-        // Rollover (Settings, shared with the Mac): last month's unspent limit (or overspend)
-        // carries into this month, once there was spending last month.
+        // Rollover (Settings, shared with the Mac): last budget month's unspent limit (or
+        // overspend) carries into this one, once there was spending last budget month.
         let roll = (household.rollover ?? false) && !pExp.isEmpty
 
-        let iso = DateKit.iso(today)
-        todayIso = iso
         self.loanStates = loanStates ?? Ledger.computeLoanStates(debts, tx, today: iso)
 
         let names = (a: household.nameA, b: household.nameB)
@@ -198,9 +223,18 @@ struct Ledger {
         accounts.first { $0.id == id }?.name ?? "Account"
     }
 
+    /// The budget month's name ("December").
     var monthName: String { DateKit.monthName(ym) }
     var monthShort: String { DateKit.monthName(ym, short: true) }
-    var daysLeft: Int { daysInMonth - todayDay + 1 }
+    /// "December", plus " · 25 Nov – 24 Dec" when the budget month doesn't start on the 1st.
+    var periodName: String { period.name }
+    /// "December 2026", plus " · 25 Nov – 24 Dec" when the budget month doesn't start on the 1st.
+    var periodLabel: String { period.label() }
+    /// First and last day of the budget month ("yyyy-MM-dd").
+    var periodFrom: String { period.from }
+    var periodTo: String { period.to }
+    /// Days left in the budget month, today included.
+    var daysLeft: Int { max(1, periodDays - dayIndex + 1) }
 
     /// `preferred` if the household still has that category, otherwise the first
     /// one it has (used for defaults such as Groceries on a new entry).
@@ -230,8 +264,8 @@ struct Ledger {
     func average(of cat: String, months: Int = 3) -> Double {
         var total = 0.0
         for k in 1...months {
-            let m = DateKit.addMonths(ym, -k)
-            total += tx.filter { $0.cat == cat && $0.type == .expense && $0.month == m }.reduce(0) { $0 + $1.amt }
+            let p = period.shifted(-k)
+            total += tx.filter { $0.cat == cat && $0.type == .expense && p.contains($0.date) }.reduce(0) { $0 + $1.amt }
         }
         return (total / Double(months) / 10).rounded() * 10
     }
@@ -244,10 +278,16 @@ struct Ledger {
         return loanState(d).balance <= 0.005
     }
 
+    /// Each bill once in the budget month: due on its day inside the period, paid
+    /// according to the calendar month of that date (`paid["yyyy-MM"]`).
     var billRows: [BillRow] {
-        bills.filter { !billEnded($0) || ($0.paid[ym] ?? false) }
-            .map { BillRow(bill: $0, dueDay: min($0.day, daysInMonth), isPaid: $0.paid[ym] ?? false) }
-            .sorted { $0.dueDay == $1.dueDay ? $0.bill.name < $1.bill.name : $0.dueDay < $1.dueDay }
+        let p = period
+        let all: [BillRow] = bills.map { (b: Bill) -> BillRow in
+            let due: String = p.billDue(day: b.day)
+            return BillRow(bill: b, due: due, isPaid: b.paid[String(due.prefix(7))] ?? false)
+        }
+        return all.filter { $0.isPaid || !billEnded($0.bill) }
+            .sorted { $0.due == $1.due ? $0.bill.name < $1.bill.name : $0.due < $1.due }
     }
     var unpaidBills: [BillRow] { billRows.filter { !$0.isPaid } }
     var unpaidTotal: Double { unpaidBills.reduce(0) { $0 + $1.bill.amt } }
@@ -255,10 +295,7 @@ struct Ledger {
 
     func billStatus(_ b: BillRow) -> String {
         if b.isPaid { return "Paid" }
-        if b.dueDay < todayDay { return "Overdue" }
-        if b.dueDay == todayDay { return "Due today" }
-        let n = b.dueDay - todayDay
-        return "Due in \(n) day" + (n == 1 ? "" : "s")
+        return dueStatus(b.due)
     }
 
     /// What's left in the category budgets once the unpaid bills are set aside.
@@ -272,9 +309,10 @@ struct Ledger {
     var assetsTotal: Double { assets.reduce(0) { $0 + $1.value } }
     /// Accounts in the black plus assets.
     var own: Double { accounts.map(balance).filter { $0 > 0 }.reduce(0, +) + assetsTotal }
-    /// Loans (outstanding today) plus accounts in the red (cards).
+    /// Loans (outstanding today), what card installment plans still have to bill, plus accounts
+    /// in the red (cards).
     var liabilities: Double {
-        accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + loansOwed
+        accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + loansOwed + plansOwed
     }
     var netWorth: Double { own - liabilities }
 
@@ -333,9 +371,11 @@ struct Ledger {
 
     // MARK: Loans & cards
 
-    /// A loan's payments for `Loans.loanState`: entries with its debtId.
+    /// A loan's payments for `Loans.loanState`: entries with its debtId (a card plan's
+    /// processing fee, debtPart "fee", isn't a payment).
     static func payments(of debtId: String, in tx: [Tx]) -> [LoanPayment] {
-        tx.filter { $0.debtId == debtId }.map { LoanPayment(date: $0.date, amt: $0.amt, part: $0.debtPart ?? "installment") }
+        tx.filter { $0.debtId == debtId && $0.debtPart != "fee" }
+            .map { LoanPayment(date: $0.date, amt: $0.amt, part: $0.debtPart == "extra" ? "extra" : "installment") }
     }
 
     /// Every loan's state today (loan id → state).
@@ -349,27 +389,48 @@ struct Ledger {
         loanStates[d.id] ?? Loans.loanState(d, Ledger.payments(of: d.id, in: tx), today: todayIso)
     }
 
-    /// Entries that paid this loan, newest first.
+    /// Entries that paid this loan (a card plan: every entry it posted), newest first.
     func loanPayments(_ d: Debt) -> [Tx] { tx.filter { $0.debtId == d.id } }
 
+    /// Loans, without card installment plans (those show under their card).
+    var loans: [Debt] { debts.filter { !Loans.isPlan($0) } }
     /// Loans with something still owed.
-    var activeLoans: [Debt] { debts.filter { loanState($0).balance > 0.005 } }
-    var loansOwed: Double { debts.reduce(0) { $0 + loanState($1).balance } }
+    var activeLoans: [Debt] { loans.filter { loanState($0).balance > 0.005 } }
+    var loansOwed: Double { loans.reduce(0) { $0 + loanState($1).balance } }
 
     /// The bill that shows this loan's installment, if any.
     func loanBill(_ d: Debt) -> Bill? {
         bills.first { $0.debtId == d.id && (d.billId == nil || $0.id == d.billId) }
     }
 
-    var cards: [Account] { accounts.filter { $0.type == .card } }
-    func cardState(_ a: Account) -> CardState { Loans.cardState(a, balance(a), today: todayIso) }
+    // Card installment plans (Loans.swift, "Card installment plans").
 
-    /// Installments plus card minimums due each month.
-    var debtMonthly: Double {
-        let installments: Double = activeLoans.reduce(0) { $0 + loanState($1).installment }
-        let minimums: Double = cards.reduce(0) { $0 + cardState($1).minDue }
-        return installments + minimums
+    /// Every card installment plan.
+    var plans: [Debt] { debts.filter(Loans.isPlan) }
+    /// A plan's installments billed, what's left and what's next, today.
+    func planState(_ p: Debt) -> PlanState { Loans.planState(p, st: loanState(p)) }
+    /// The installment plans on a card.
+    func plansOnCard(_ card: String) -> [Debt] { plans.filter { $0.acct == card } }
+    /// What every plan still has to bill (part of what's owed on the cards).
+    var plansOwed: Double { plans.reduce(0) { $0 + planState($1).remaining } }
+
+    var cards: [Account] { accounts.filter { $0.type == .card } }
+
+    /// A card's numbers with its installment plans (`Loans.cardWithPlans`).
+    func cardState(_ a: Account) -> CardPlanState {
+        let mine = plansOnCard(a.id)
+        let ids = Set(mine.map(\.id))
+        let remaining: Double = mine.reduce(0) { $0 + planState($1).remaining }
+        let charges: [(date: String, amt: Double)] = tx.compactMap { (t: Tx) -> (date: String, amt: Double)? in
+            guard let id = t.debtId, ids.contains(id), t.acct == a.id, t.debtPart != "extra" else { return nil }
+            return (date: t.date, amt: t.amt)
+        }
+        return Loans.cardWithPlans(a, balance(a), planRemaining: remaining, charges: charges, today: todayIso)
     }
+
+    /// Installments (loans and card plans) plus card minimums due each month: what the payoff
+    /// plan pays before any extra (as the Mac's "Monthly payments").
+    var debtMonthly: Double { allDebts.reduce(0) { $0 + $1.min } }
 
     /// Whole days from today to a "yyyy-MM-dd" (negative when it's past).
     func daysUntil(_ iso: String) -> Int {
@@ -386,20 +447,26 @@ struct Ledger {
 
     // MARK: Debt plan
 
-    /// Loans still owing (outstanding today, effective rate, current installment) plus
-    /// cards in the red (owed, APR and minimum from `Loans.cardState`).
+    /// Loans still owing (outstanding today, effective rate, current installment), each card
+    /// installment plan on its own (what's left to bill, at its installment), plus cards in the
+    /// red: only what's on the card, at the minimum on that (the plans are their own lines).
     var allDebts: [DebtLine] {
-        let loans: [DebtLine] = debts.compactMap { (d: Debt) -> DebtLine? in
+        let owingLoans: [DebtLine] = loans.compactMap { (d: Debt) -> DebtLine? in
             let st = loanState(d)
             guard st.balance > 0.005 else { return nil }
             return DebtLine(id: d.id, name: d.name, balance: st.balance, apr: st.effectiveRate, min: st.installment)
         }
-        let owing: [DebtLine] = cards.compactMap { (a: Account) -> DebtLine? in
-            let cs = cardState(a)
-            guard cs.owed > 0 else { return nil }
-            return DebtLine(id: a.id, name: a.name, balance: cs.owed, apr: cs.apr, min: cs.minDue)
+        let owingPlans: [DebtLine] = plans.compactMap { (p: Debt) -> DebtLine? in
+            let ps = planState(p)
+            guard ps.remaining > 0.005 else { return nil }
+            return DebtLine(id: p.id, name: p.name, balance: ps.remaining, apr: ps.st.effectiveRate, min: ps.st.installment)
         }
-        return loans + owing
+        let owingCards: [DebtLine] = cards.compactMap { (a: Account) -> DebtLine? in
+            let cs = cardState(a)
+            guard cs.owedOnCard > 0 else { return nil }
+            return DebtLine(id: a.id, name: a.name, balance: cs.owedOnCard, apr: cs.apr, min: Loans.minPayment(cs.owedOnCard, a))
+        }
+        return owingLoans + owingPlans + owingCards
     }
 
     var strategy: String { household.strat ?? "avalanche" }
@@ -443,7 +510,7 @@ struct Ledger {
     var debtFreeLabel: String {
         if allDebts.isEmpty { return "Debt-free" }
         let plan = debtPlan()
-        return plan.months >= 720 ? "Not at this rate" : DateKit.monthLabel(DateKit.addMonths(ym, plan.months), short: true)
+        return plan.months >= 720 ? "Not at this rate" : DateKit.monthLabel(DateKit.addMonths(calendarYm, plan.months), short: true)
     }
 
     // MARK: Plan ahead
@@ -496,19 +563,19 @@ struct Ledger {
         let surplus = max(0, leftToAssign)
         guard surplus > 0 else { return "Needs room in the budget first" }
         let n = Int((p.cost / surplus).rounded(.up))
-        return "Set aside \(money.f((p.cost / Double(n)).rounded(.up))) a month, yours by \(DateKit.monthLabel(DateKit.addMonths(ym, n), short: true))"
+        return "Set aside \(money.f((p.cost / Double(n)).rounded(.up))) a month, yours by \(DateKit.monthLabel(DateKit.addMonths(calendarYm, n), short: true))"
     }
 
     // MARK: Report
 
     var reportFileName: String { "twofold-report-\(ym).csv" }
 
-    /// This month's report as CSV: totals, categories with share, who spent.
+    /// This budget month's report as CSV: totals, categories with share, who spent.
     var reportCSV: String {
         let cur = money.currency
         let cats = rows.filter { $0.spent > 0 }.sorted { $0.spent > $1.spent }
         var lines: [[String]] = [
-            ["Twofold report", DateKit.monthLabel(ym)],
+            ["Twofold report", periodLabel],
             ["Household", household.nameA + " & " + household.nameB],
             [],
             ["Spent (\(cur))", String(Int(totalSpent.rounded()))],
@@ -564,7 +631,10 @@ struct Ledger {
             out.append("\(tight.name) has \(money.f(tight.left)) left for the next \(daysLeft) days — about \(money.f((tight.left / Double(daysLeft)).rounded())) a day keeps it on track.")
         }
         if !prevExpenses.isEmpty {
-            let lastMonthSoFar = prevExpenses.filter { (Int($0.date.suffix(2)) ?? 0) <= todayDay }.reduce(0) { $0 + $1.amt }
+            // The same number of days into last budget month.
+            let prev = period.previous
+            let idx = dayIndex
+            let lastMonthSoFar = prevExpenses.filter { prev.dayIndex($0.date) <= idx }.reduce(0) { $0 + $1.amt }
             let diff = lastMonthSoFar - totalSpent
             out.append(diff >= 0 ? "You’ve spent \(money.f(diff)) less than at this point last month. Nicely done, you two."
                                  : "Spending is \(money.f(-diff)) ahead of this point last month — worth a quick look together.")

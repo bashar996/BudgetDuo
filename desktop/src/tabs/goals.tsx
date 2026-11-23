@@ -6,11 +6,12 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import type { HeroBar, TabDef } from '../shell/ui'
 import { useUI } from '../shell/ui'
 import { useStore } from '../data/store'
-import { simDebt, type CardLine, type Ledger, type LoanLine } from '../data/ledger'
+import { simDebt, type CardLine, type Ledger, type LoanLine, type PlanLine } from '../data/ledger'
 import { css, sx } from '../lib/css'
 import { addM, dLab, isoD, mLabel } from '../lib/dates'
 import { pc, sum } from '../lib/money'
 import { dueText, loanMeta, pct, r2, rateText } from '../panels/loanBits'
+import { planRate } from '../panels/PlanPanel'
 
 const LAV = 'var(--accBase)', CRM = '#fbf9ef'
 const NEVER = 720
@@ -84,13 +85,36 @@ function LoanTile({ L, x }: { L: Ledger; x: LoanLine }) {
   )
 }
 
+/** A plan under its card: "Phone · 4 of 12 · AED 400/month · ends Jul 2027", what's left, a thin bar. */
+function PlanRow({ L, p }: { L: Ledger; p: PlanLine }) {
+  const ui = useUI()
+  const { f } = L
+  const { doc, st, ps } = p
+  const meta = ps.closed ? 'Closed early' : ps.done ? 'All ' + ps.term + ' billed'
+    : ps.billed + ' of ' + ps.term + ' · ' + f(r2(st.installment)) + '/month · ends ' + (ps.endsYm ? mLabel(ps.endsYm, true) : '—')
+  return (
+    <button className="h-row" onClick={stop(() => ui.open({ kind: 'loan', id: doc.id }))} aria-label={'Installment plan ' + doc.name}
+      style={css('display:flex;flex-direction:column;gap:7px;width:100%;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer;text-align:left')}>
+      <span style={css('display:flex;justify-content:space-between;align-items:baseline;gap:10px;width:100%')}>
+        <span style={css('min-width:0;display:flex;flex-direction:column;font-size:13.5px')}>
+          <span style={css('font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{doc.name}</span>
+          <span style={css('font-size:12.5px;color:var(--mute);text-wrap:pretty')}>{meta}</span>
+        </span>
+        <span style={css('font-size:13.5px;font-weight:500;white-space:nowrap')}>{ps.done ? '' : f(Math.round(ps.remaining))}</span>
+      </span>
+      <span style={css('display:block;width:100%')}><Bar v={ps.closed ? 1 : ps.billed / (ps.term || 1)} /></span>
+    </button>
+  )
+}
+
 function CardTile({ L, x }: { L: Ledger; x: CardLine }) {
   const ui = useUI()
   const { f } = L
-  const { acct: a, cs } = x
+  const { acct: a, cs, plans } = x
   const used = cs.utilisation ?? 0
   const card = L.data.accounts.find((z) => z.id === a.id)
   const pay = (amt: number) => ui.open({ kind: 'tx', pre: { type: 'xfer', acct: L.mainAcct, to: a.id, amt: r2(amt), name: a.name + ' payment' } })
+  const linkBtn = css("align-self:flex-start;border:none;background:none;padding:0;min-height:32px;font:500 13.5px 'Geist',sans-serif;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer")
   const minOnly = cs.minOnly.never ? 'Paying only the minimum, it’s never paid off.'
     : 'Paying only the minimum: ' + cs.minOnly.months + (cs.minOnly.months === 1 ? ' month, ' : ' months, ') + f(Math.round(cs.minOnly.interest)) + ' interest.'
   return (
@@ -104,6 +128,7 @@ function CardTile({ L, x }: { L: Ledger; x: CardLine }) {
       <span>
         <span style={css('display:block;font-size:12.5px;color:var(--mute)')}>Owed</span>
         <span style={css("display:block;font:500 34px/1.05 'Geist',sans-serif;letter-spacing:-.03em;white-space:nowrap")}>{f(r2(cs.owed))}</span>
+        {cs.planRemaining > 0.005 && <span style={css('display:block;font-size:13px;color:var(--mute);margin-top:2px')}>{'incl. ' + f(Math.round(cs.planRemaining)) + ' in plans, still to be billed'}</span>}
       </span>
       {cs.limit ? (
         <div style={css('display:flex;flex-direction:column;gap:8px')}>
@@ -111,18 +136,24 @@ function CardTile({ L, x }: { L: Ledger; x: CardLine }) {
           <span style={sx('font-size:12.5px', { color: used > 0.3 ? 'var(--warn)' : 'var(--mute)' })}>{Math.round(used * 100) + '% of ' + f(cs.limit) + ' used' + (used > 0.3 ? ', above the 30% lenders like' : '')}</span>
         </div>
       ) : <span style={css('font-size:12.5px;color:var(--mute)')}>No limit set</span>}
-      {cs.owed > 0 ? (
+      {cs.owedOnCard > 0 ? (
         <div style={css('display:flex;flex-direction:column;gap:4px;font-size:13.5px')}>
           {cs.nextDue
             ? <span style={css('font-weight:500')}>{'Minimum ' + f(r2(cs.minDue)) + ' due ' + dLab(isoD(cs.nextDue))}</span>
             : <span><span style={css('font-weight:500')}>{'Minimum ' + f(r2(cs.minDue))}</span>{' · '}<button onClick={stop(() => ui.open({ kind: 'acct', acct: card }))} style={css("border:none;background:none;padding:0;font:500 13.5px 'Geist',sans-serif;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer")}>Set the due day</button></span>}
           <span style={css('color:var(--mute);text-wrap:pretty')}>{minOnly}</span>
           <span style={css('color:var(--mute)')}>{'Interest next month if you pay only the minimum: ' + f(r2(cs.interestIfMin))}</span>
+          {cs.billedThisCycle > 0.005 && <span style={css('color:var(--mute)')}>{'The minimum includes ' + f(r2(cs.billedThisCycle)) + ' of plan installments, due in full.'}</span>}
         </div>
-      ) : <span style={css('font-size:13.5px;color:var(--mute)')}>Nothing owed on this card.</span>}
-      {cs.owed > 0 && (
+      ) : <span style={css('font-size:13.5px;color:var(--mute)')}>{plans.some((p) => !p.ps.done) ? 'Nothing on the card’s balance. The plans bill themselves each month.' : 'Nothing owed on this card.'}</span>}
+      <div style={css('display:flex;flex-direction:column')}>
+        {plans.length > 0 && <span style={css('font-size:12.5px;color:var(--mute);padding-bottom:2px')}>Installment plans</span>}
+        {plans.map((p) => <PlanRow key={p.doc.id} L={L} p={p} />)}
+        <button onClick={stop(() => ui.open({ kind: 'planForm', acct: a.id }))} style={sx('', { ...linkBtn, marginTop: plans.length ? 8 : 0 })}>+ Installment plan</button>
+      </div>
+      {cs.owedOnCard > 0 && (
         <div style={css('display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px')}>
-          <button onClick={stop(() => pay(cs.owed))} style={sx(SOLID, { flex: 1 })}>Pay in full</button>
+          <button onClick={stop(() => pay(cs.owedOnCard))} style={sx(SOLID, { flex: 1 })}>Pay in full</button>
           <button onClick={stop(() => pay(cs.minDue))} style={sx(LINE_BTN, { flex: 1 })}>Pay minimum</button>
         </div>
       )}
@@ -133,7 +164,7 @@ function CardTile({ L, x }: { L: Ledger; x: CardLine }) {
 function Body({ L }: { L: Ledger }) {
   const ui = useUI()
   const { act } = useStore()
-  const { f, allDebts, curYm } = L
+  const { f, allDebts, calYm: curYm } = L
 
   // The slider moves locally and saves once it settles, so dragging doesn't write on every step.
   const [extra, setExtraLocal] = useState(L.extra)
@@ -182,7 +213,7 @@ function Body({ L }: { L: Ledger }) {
           <div style={css('padding-bottom:6px;min-height:44px;display:flex;align-items:center')}><span style={H22}>Order of payoff</span></div>
           {res.order.map((id, i) => {
             const x = allDebts.find((z) => z.id === id)!
-            const ln = L.loanBy[id]
+            const ln = L.loanBy[id], plan = L.planBy[id]
             const m = res.done[id]
             return (
               <button key={id} className="h-row" onClick={() => (x.card ? ui.open({ kind: 'acct', acct: x.card }) : ui.open({ kind: 'loan', id: x.id }))}
@@ -190,7 +221,7 @@ function Body({ L }: { L: Ledger }) {
                 <span style={css('width:44px;height:44px;flex:none;border-radius:13px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:17px;font-weight:600')}>{i + 1}</span>
                 <span style={css('flex:1;min-width:0;display:flex;flex-direction:column')}>
                   <span style={css('font-size:16px;font-weight:500')}>{x.name}</span>
-                  <span style={css('font-size:13px;color:var(--mute)')}>{(ln ? rateText(ln.doc, ln.st, L.todayIso) : pct(x.apr)) + ' · ' + f(r2(x.min)) + (x.card ? '/mo minimum' : '/mo')}</span>
+                  <span style={css('font-size:13px;color:var(--mute)')}>{(plan ? 'Plan on ' + L.aName(plan.doc.acct) + ' · ' + planRate(L, id) : ln ? rateText(ln.doc, ln.st, L.todayIso) : pct(x.apr)) + ' · ' + f(r2(x.min)) + (x.card ? '/mo minimum' : '/mo')}</span>
                 </span>
                 <span style={css('display:flex;flex-direction:column;align-items:flex-end')}>
                   <span style={css('font-size:15px;font-weight:500;white-space:nowrap')}>{f(Math.round(x.balance))}</span>
@@ -200,7 +231,7 @@ function Body({ L }: { L: Ledger }) {
             )
           })}
           {!allDebts.length && <div style={EMPTY}>Nothing owed. Add a loan below to plan its payoff.</div>}
-          <div style={css('font-size:13px;color:var(--mute);padding-top:12px;text-wrap:pretty')}>Loans at their installment and real rate; credit cards at their minimum.</div>
+          <div style={css('font-size:13px;color:var(--mute);padding-top:12px;text-wrap:pretty')}>Loans and card installment plans at their installment and real rate; credit cards at the minimum on what’s on the card.</div>
         </section>
       </div>
 
@@ -216,7 +247,10 @@ function Body({ L }: { L: Ledger }) {
       <section>
         <div style={HEAD}>
           <span style={H22}>Credit cards</span>
-          <button onClick={() => ui.open({ kind: 'acct', preset: 'card' })} style={PILL}>+ Card</button>
+          <span style={css('display:flex;gap:8px')}>
+            {L.cards.length > 0 && <button onClick={() => ui.open({ kind: 'planForm' })} style={PILL}>+ Installment plan</button>}
+            <button onClick={() => ui.open({ kind: 'acct', preset: 'card' })} style={PILL}>+ Card</button>
+          </span>
         </div>
         <div style={GRID}>{L.cards.map((x) => <CardTile key={x.acct.id} L={L} x={x} />)}</div>
         {!L.cards.length && <div style={EMPTY}>No credit cards. Cards you add under Accounts show here with their minimum and due date.</div>}
@@ -230,7 +264,7 @@ export const goalsTab: TabDef = {
   stage: 'cream',
   kicker: () => 'Payoff plan, loans and cards',
   hero: (L) => {
-    const { f, allDebts, debtPlan: res, curYm } = L
+    const { f, allDebts, debtPlan: res, calYm: curYm } = L
     const total = f(Math.round(sum(allDebts, (x) => x.balance)))
     const never = res.months >= NEVER
     const stp = Math.max(1, Math.ceil(res.series.length / 30)), dHi = res.series[0] || 1

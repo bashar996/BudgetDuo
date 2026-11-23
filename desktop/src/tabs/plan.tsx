@@ -89,7 +89,7 @@ function Body({ L }: { L: Ledger }) {
           {L.data.planned.map((p) => {
             const n = surplus > 0 ? Math.ceil(p.cost / surplus) : 0
             const verdict = L.safe >= p.cost ? 'Fits in this month’s safe-to-spend.'
-              : n ? 'Set aside ' + f(Math.ceil(p.cost / n)) + ' a month and it’s yours by ' + mLabel(addM(L.curYm, n), true) + '.'
+              : n ? 'Set aside ' + f(Math.ceil(p.cost / n)) + ' a month and it’s yours by ' + mLabel(addM(L.calYm, n), true) + '.'
                 : 'No spare room yet — free up a category first.'
             const vote = "font:500 13.5px 'Geist',sans-serif;padding:0 14px;height:44px;border-radius:22px;border:1.5px solid var(--ink);cursor:pointer"
             return (

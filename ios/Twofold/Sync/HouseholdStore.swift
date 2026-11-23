@@ -30,6 +30,16 @@ final class HouseholdStore {
     @ObservationIgnored private var pending: [String: Bool] = [:]
     /// Loan schedules are replayed only when the loans, the entries or the day change.
     @ObservationIgnored private var loanCache: (day: String, debts: [Debt], tx: [Tx], states: [String: LoanState])?
+    /// Today ("yyyy-MM-dd"), moved on by `dayTick()`, so screens (which read it through
+    /// `ledger()`) and plan billing move on at midnight.
+    private(set) var today = DateKit.iso(Date())
+    /// Collections that have had a snapshot from the server this session. Plans are billed
+    /// only once the entries, loans and accounts are all in (a half-loaded cache could make a
+    /// closed plan look open).
+    @ObservationIgnored private var synced: Set<String> = []
+    /// Card plans with a billing write in flight: plan id → the billedThrough it writes, and when.
+    @ObservationIgnored private var billing: [String: (to: Int, at: Date)] = [:]
+    @ObservationIgnored private var billQueued = false
 
     init(uid: String, householdId: String) {
         self.uid = uid
@@ -49,6 +59,8 @@ final class HouseholdStore {
                 if !snap.exists, !snap.metadata.isFromCache { self.missing = true }
                 if let hh = try? snap.data(as: Household.self) { self.household = hh; self.missing = false }
                 self.track("hh", snap.metadata.hasPendingWrites)
+                // Card plans may be waiting for the household (billPlans needs it).
+                if self.household != nil { self.queueBilling() }
             } else if let err {
                 self.error = err.localizedDescription
                 self.missing = true
@@ -71,6 +83,9 @@ final class HouseholdStore {
             guard let snap else { return }
             self[keyPath: path] = snap.documents.compactMap { try? $0.data(as: T.self) }.sorted(by: sort)
             self.track(name, snap.metadata.hasPendingWrites)
+            if !snap.metadata.isFromCache { self.synced.insert(name) }
+            // Card plans bill themselves whenever their data changes (billPlans).
+            if name == "tx" || name == "debts" || name == "accounts" { self.queueBilling() }
         })
     }
 
@@ -86,6 +101,8 @@ final class HouseholdStore {
 
     func ledger(today: Date = Date()) -> Ledger? {
         guard let household else { return nil }
+        // Read so that screens showing the ledger refresh when the day changes.
+        _ = self.today
         let day = DateKit.iso(today)
         let states: [String: LoanState]
         if let c = loanCache, c.day == day, c.debts == debts, c.tx == tx {
@@ -118,13 +135,25 @@ final class HouseholdStore {
         write { try ref.setData(from: t, completion: report) }
     }
 
+    /// The month a bill payment marked paid: the end of its fixed id ("bill-{billId}-{yyyy-MM}"),
+    /// which is the calendar month the bill was due (with a budget month that doesn't start
+    /// on the 1st, an imported payment can be dated in another month); else the entry's month.
+    private func paidKey(_ t: Tx, billId: String) -> String {
+        let prefix = "bill-\(billId)-"
+        if t.id.hasPrefix(prefix) {
+            let key = String(t.id.dropFirst(prefix.count))
+            if key.count == 7 { return key }
+        }
+        return t.month
+    }
+
     /// Deletes an entry; a bill payment also marks that bill unpaid again.
     func deleteEntry(_ t: Tx) {
         guard !t.id.isEmpty else { return }
         let batch = db.batch()
         batch.deleteDocument(col("tx").document(t.id))
         if let billId = t.billId, bills.contains(where: { $0.id == billId }) {
-            batch.updateData(["paid.\(t.month)": false], forDocument: col("bills").document(billId))
+            batch.updateData(["paid.\(paidKey(t, billId: billId))": false], forDocument: col("bills").document(billId))
         }
         batch.commit(completion: report)
     }
@@ -137,7 +166,7 @@ final class HouseholdStore {
         let ref = col("tx").document(t.id)
         write { try batch.setData(from: t, forDocument: ref) }
         if let billId = t.billId, bills.contains(where: { $0.id == billId }) {
-            batch.updateData(["paid.\(t.month)": true], forDocument: col("bills").document(billId))
+            batch.updateData(["paid.\(paidKey(t, billId: billId))": true], forDocument: col("bills").document(billId))
         }
         batch.commit(completion: report)
     }
@@ -201,21 +230,23 @@ final class HouseholdStore {
         return id
     }
 
-    /// Marks a bill paid (adding its expense) or unpaid (removing it). The entry's
-    /// ID is fixed per bill and month, so paying on both phones can't double-count.
-    /// A loan's bill logs a loan payment (debtId, installment) from the loan's account.
-    func togglePaid(_ row: BillRow, ym: String, account: String?) {
+    /// Marks a bill paid (adding its expense, dated the day it's due) or unpaid (removing
+    /// it). The paid flag and the entry's fixed ID use the calendar month of the due date
+    /// (`row.paidKey`), so paying on both phones can't double-count, whatever day the
+    /// budget month starts. A loan's bill logs a loan payment (debtId, installment) from
+    /// the loan's account.
+    func togglePaid(_ row: BillRow, account: String?) {
         let b = row.bill
+        let key = row.paidKey
         let batch = db.batch()
-        let txRef = col("tx").document("bill-\(b.id)-\(ym)")
-        batch.updateData(["paid.\(ym)": !row.isPaid], forDocument: col("bills").document(b.id))
+        let txRef = col("tx").document("bill-\(b.id)-\(key)")
+        batch.updateData(["paid.\(key)": !row.isPaid], forDocument: col("bills").document(b.id))
         if row.isPaid {
             batch.deleteDocument(txRef)
         } else {
-            let day = min(b.day, DateKit.daysIn(ym))
             let loan = b.debtId.flatMap { id in debts.first(where: { $0.id == id }) }
             let acct = existingAccount(loan?.acct) ?? account ?? ""
-            let t = Tx(id: txRef.documentID, date: "\(ym)-\(DateKit.pad(day))", name: b.name, cat: b.cat, amt: b.amt,
+            let t = Tx(id: txRef.documentID, date: row.due, name: b.name, cat: b.cat, amt: b.amt,
                        who: .joint, type: .expense, note: nil, billId: b.id, acct: acct, to: nil, pot: nil,
                        potDir: nil, createdAt: Date(), debtId: b.debtId, debtPart: b.debtId == nil ? nil : "installment")
             write { try batch.setData(from: t, forDocument: txRef) }
@@ -254,7 +285,7 @@ final class HouseholdStore {
     }
 
     /// Shared settings the Mac also writes: budgetStyle, rollover, cushion, coachTips,
-    /// splitMode, splitRule, roundUps, sweep.
+    /// splitMode, splitRule, roundUps, sweep, cycleStart (an integer, 1–28).
     func updateHousehold(_ fields: [AnyHashable: Any]) {
         guard !fields.isEmpty else { return }
         root.updateData(fields, completion: report)
@@ -456,11 +487,149 @@ final class HouseholdStore {
         if let bill = L.loanBill(d) {
             let ym = String((st.nextDue ?? L.todayIso).prefix(7))
             if !(bill.paid[ym] ?? false) {
-                togglePaid(BillRow(bill: bill, dueDay: bill.day, isPaid: false), ym: ym, account: L.mainAccountId)
+                let due = ym + "-" + DateKit.pad(min(bill.day, DateKit.daysIn(ym)))
+                togglePaid(BillRow(bill: bill, due: due, isPaid: false), account: L.mainAccountId)
                 return
             }
         }
         payLoan(d, amount: st.installment, part: "installment")
+    }
+
+    // MARK: Card installment plans (Loans.swift, "Card installment plans"; the Mac's store.tsx)
+
+    /// The category a plan's entries go in (Shopping when none is set, or the first one left).
+    private func planCat(_ p: Debt, _ L: Ledger?) -> String {
+        let c = (p.cat ?? "").isEmpty ? "shopping" : (p.cat ?? "shopping")
+        return L?.catOr(c) ?? c
+    }
+
+    /// Saves a plan on a card. Writes the legacy fields like a loan, and keeps billedThrough at
+    /// least at paidBefore. A new plan with a processing fee posts the fee on the card once.
+    /// Editing never touches entries already posted; new amounts apply to what's still to be
+    /// billed. Returns the plan's id.
+    @discardableResult
+    func savePlan(_ plan: Debt) -> String {
+        var d = plan
+        let planId = d.id
+        let old: Debt? = planId.isEmpty ? nil : debts.first(where: { $0.id == planId })
+        let ref = d.id.isEmpty ? col("debts").document() : col("debts").document(d.id)
+        d.id = ref.documentID
+        if d.createdAt == nil { d.createdAt = old?.createdAt ?? Date() }
+        let paidBefore = d.paidBefore ?? 0
+        d.kind = "cardplan"
+        d.rate = d.rate ?? 0
+        d.rateType = d.rateType ?? "flat"
+        d.installment = nil
+        d.paidBefore = paidBefore
+        d.billedThrough = max(paidBefore, old?.billedThrough ?? old?.paidBefore ?? 0)
+        d.apr = d.rate ?? 0
+        d.min = Loans.installmentOf(d)
+        d.balance = d.principal ?? 0
+
+        let batch = db.batch()
+        write { try batch.setData(from: d, forDocument: ref) }
+        let fee = d.procFee ?? 0
+        if old == nil, fee > 0, let acct = d.acct, !acct.isEmpty {
+            let feeRef = col("tx").document(Loans.planEntryId(d.id, "fee"))
+            let t = Tx(id: feeRef.documentID, date: Loans.planFeeDate(d, DateKit.iso(Date())), name: d.name + " · processing fee",
+                       cat: planCat(d, ledger()), amt: (fee * 100).rounded() / 100, who: .joint, type: .expense, note: nil,
+                       billId: nil, acct: acct, to: nil, pot: nil, potDir: nil, createdAt: Date(),
+                       debtId: d.id, debtPart: "fee")
+            write { try batch.setData(from: t, forDocument: feeRef) }
+        }
+        batch.commit(completion: report)
+        return d.id
+    }
+
+    /// Closes a plan early: one expense on the card for the quote (what's left plus the fee).
+    /// Returns it, or nil when there's nothing left to close.
+    @discardableResult
+    func closePlan(_ p: Debt) -> Tx? {
+        guard let acct = p.acct, !acct.isEmpty else { return nil }
+        let day = DateKit.iso(Date())
+        let ps = Loans.planState(p, Ledger.payments(of: p.id, in: tx), today: day)
+        let amt = (ps.settlement * 100).rounded() / 100
+        if ps.done || !(amt > 0) { return nil }
+        let t = Tx(id: Loans.planEntryId(p.id, "close"), date: day, name: p.name + " · closed early", cat: planCat(p, ledger()),
+                   amt: amt, who: .joint, type: .expense, note: nil, billId: nil, acct: acct, to: nil, pot: nil, potDir: nil,
+                   createdAt: Date(), debtId: p.id, debtPart: "extra")
+        save(t)
+        return t
+    }
+
+    /// Posts every plan installment that's due and not posted yet (`Loans.planChargesDue`), with
+    /// fixed ids and billedThrough in the same batch, so it's safe on every device at once.
+    /// Runs whenever the entries, loans or accounts change and when the day changes. A plan whose
+    /// last write hasn't come back yet is skipped, so a slow sync can't post the same
+    /// installments again and again. Returns how many entries it wrote.
+    @discardableResult
+    func billPlans(today day: String = DateKit.iso(Date())) -> Int {
+        let need: [String] = ["tx", "debts", "accounts"]
+        guard household != nil, need.allSatisfy({ synced.contains($0) }) else { return 0 }
+        guard debts.contains(where: Loans.isPlan) else { return 0 }
+        var batch = db.batch()
+        var count = 0, wrote = 0
+        var L: Ledger?
+        for p in debts {
+            guard Loans.isPlan(p), let acct = p.acct, accounts.contains(where: { $0.id == acct }) else { continue }
+            if let wait = billing[p.id] {
+                // Back in the data (or the write was given up on after a minute): bill again from there.
+                if (p.billedThrough ?? 0) >= wait.to || Date().timeIntervalSince(wait.at) > 60 {
+                    billing[p.id] = nil
+                } else {
+                    continue
+                }
+            }
+            let due = Loans.planChargesDue(p, Ledger.payments(of: p.id, in: tx), today: day)
+            guard let last = due.last else { continue }
+            // Each plan's entries and its billedThrough share a batch (Firestore: 500 writes at most).
+            if count > 0 && count + due.count + 1 > 450 {
+                batch.commit(completion: report)
+                batch = db.batch()
+                count = 0
+            }
+            if L == nil { L = ledger() }
+            let cat = planCat(p, L)
+            let term = p.termMonths ?? 0
+            for c in due {
+                let ref = col("tx").document(Loans.planEntryId(p.id, c.n))
+                // createdAt is the installment's date, the same on every device, so two writing at
+                // once write the same document.
+                let t = Tx(id: ref.documentID, date: c.date, name: "\(p.name) · \(c.n)/\(term)", cat: cat, amt: c.amt,
+                           who: .joint, type: .expense, note: nil, billId: nil, acct: acct, to: nil, pot: nil, potDir: nil,
+                           createdAt: DateKit.date(c.date), debtId: p.id, debtPart: "installment")
+                let current = batch
+                write { try current.setData(from: t, forDocument: ref) }
+                count += 1
+            }
+            wrote += due.count
+            batch.updateData(["billedThrough": last.n], forDocument: col("debts").document(p.id))
+            count += 1
+            billing[p.id] = (to: last.n, at: Date())
+        }
+        if count > 0 { batch.commit(completion: report) }
+        return wrote
+    }
+
+    /// Bills plans once the current run of snapshot callbacks is done (several collections
+    /// often change together).
+    private func queueBilling() {
+        guard !billQueued else { return }
+        billQueued = true
+        Task { [weak self] in
+            guard let self else { return }
+            self.billQueued = false
+            self.billPlans()
+        }
+    }
+
+    /// Called every minute while the app is open and when it comes to the front: moves `today`
+    /// on at midnight and then posts any plan installment that came due.
+    func dayTick(force: Bool = false) {
+        let d = DateKit.iso(Date())
+        let changed = d != today
+        if changed { today = d }
+        if changed || force { billPlans(today: d) }
     }
 
     func save(_ p: Planned) { saveDoc(p, in: "planned", id: p.id) { $0.id = $1; if $0.createdAt == nil { $0.createdAt = Date() } } }

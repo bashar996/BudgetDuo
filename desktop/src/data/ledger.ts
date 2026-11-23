@@ -3,8 +3,9 @@
 // totals worked out from entries (like the iPhone app's Ledger.swift).
 import { allCategories, catOr as firstOr, type Category } from './catalog'
 import type { Account, Bill, Data, Debt, Goal, Tx, Who } from './types'
-import { cardState, loanState, type CardState, type LoanPayment, type LoanState } from './loans'
+import { cardWithPlans, isPlan, loanState, minPayment, planState, type CardPlanState, type LoanPayment, type LoanState, type PlanState } from './loans'
 import { addDays, addM, dim, isoOf, ymOf } from '../lib/dates'
+import { billDue, cycleStartOf, dayIndex, periodKey, periodLabel, periodRange, rangeLabel } from '../lib/period'
 import { fmt, num, sum } from '../lib/money'
 
 export interface Row {
@@ -24,16 +25,19 @@ export interface Row {
   ratio: number
 }
 
-export interface BillRow extends Bill { d: number; isPaid: boolean }
+/** A bill in the selected period: `due` is its date there, `pm` the calendar month its `paid` flag is keyed by. */
+export interface BillRow extends Bill { d: number; due: string; pm: string; isPaid: boolean }
 export interface DebtLine { id: string; name: string; balance: number; apr: number; min: number; card?: Account; loan?: boolean }
 /** A loan with everything worked out today, its payment entries and its bill. */
 export interface LoanLine { doc: Debt; st: LoanState; payments: Tx[]; bill?: Bill }
-/** A credit card with its balance and card maths. */
-export interface CardLine { acct: Account & { balance: number }; cs: CardState }
+/** A card installment plan: the loan maths plus what's billed, what's left and what's next. */
+export interface PlanLine { doc: Debt; st: LoanState; ps: PlanState; payments: Tx[] }
+/** A credit card with its balance, card maths (installment plans included) and its plans. */
+export interface CardLine { acct: Account & { balance: number }; cs: CardPlanState; plans: PlanLine[] }
 
-/** A loan's payments for loanState(): every entry with its debtId. */
+/** A loan's payments for loanState(): every entry with its debtId (a card plan's fee isn't a payment). */
 export function loanPayments(tx: Tx[], id: string): LoanPayment[] {
-  return tx.filter((t) => t.debtId === id).map((t) => ({ date: t.date, amt: t.amt, part: t.debtPart ?? 'installment' }))
+  return tx.filter((t) => t.debtId === id && t.debtPart !== 'fee').map((t) => ({ date: t.date, amt: t.amt, part: t.debtPart === 'extra' ? 'extra' : 'installment' }))
 }
 export interface DebtPlan { months: number; interest: number; done: Record<string, number>; series: number[]; order: string[] }
 export interface CashEvent { i: number; d: Date; name: string; amt: number; late?: boolean; inc?: boolean }
@@ -63,17 +67,28 @@ export function simDebt(debts: DebtLine[], extra: number, strat: string): DebtPl
 
 /**
  * @param data   everything synced for the household
- * @param ym     the month picked in the header
+ * @param ym     the budget month (period key, see lib/period.ts) picked in the header
  * @param today  real today
  */
 export function makeLedger(data: Data, ym: string, today = new Date()) {
   const H = data.household
   const A = H.nameA, B = H.nameB, cur = H.currency
   const f = (n: number) => fmt(n, cur)
-  const curYm = ymOf(today), tDay = today.getDate()
-  const isCur = ym === curYm, days = dim(ym)
-  const day = isCur ? tDay : ym < curYm ? days : 0
-  const daysLeft = isCur ? days - tDay + 1 : ym > curYm ? days : 0
+  // Budget months start on H.cycleStart (1 = calendar months). `ym` and `curYm` are period keys;
+  // `calYm` is the calendar month, for month-by-month maths (goal and payoff dates).
+  const start = cycleStartOf(H)
+  const todayIso = isoOf(today), calYm = ymOf(today), tDay = today.getDate()
+  const curYm = periodKey(todayIso, start)
+  const pr = periodRange(ym, start)
+  const isCur = ym === curYm, days = dayIndex(pr.from, pr.to)
+  /** The selected period: first and last day, length, and its name ("November 2026 · 25 Oct – 24 Nov"). */
+  const period = { ...pr, days, label: periodLabel(ym, start), range: start > 1 ? rangeLabel(ym, start) : '' }
+  const prev = periodRange(addM(ym, -1), start)
+  /** Today's day number in the current period, and that period's length. */
+  const curP = periodRange(curYm, start)
+  const tIdx = dayIndex(curP.from, todayIso), tDays = dayIndex(curP.from, curP.to)
+  const day = isCur ? tIdx : ym < curYm ? days : 0
+  const daysLeft = isCur ? days - tIdx + 1 : ym > curYm ? days : 0
   const pace = day / days
   const whoName: Record<Who, string> = { A, B, J: 'Joint' }
   const whoCol: Record<Who, string> = { A: 'var(--a)', B: 'var(--b)', J: 'var(--mute)' }
@@ -116,7 +131,8 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   cats.forEach((c) => (catBy[c.id] = c))
   const catOf = (id: string) => catBy[id] ?? { name: 'Other', color: 'var(--mute)' }
 
-  const inM = (m: string) => data.tx.filter((t) => t.date.slice(0, 7) === m)
+  /** Entries in budget month `m` (a period key). */
+  const inM = (m: string) => { const r = m === ym ? pr : periodRange(m, start); return data.tx.filter((t) => t.date >= r.from && t.date <= r.to) }
   const byCat = (a: Tx[]) => { const o: Record<string, number> = {}; a.forEach((t) => (o[t.cat] = (o[t.cat] || 0) + t.amt)); return o }
   const desc = (a: Tx, b: Tx) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
 
@@ -136,8 +152,8 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const tAvail = sum(rows, (r) => r.avail), tSpent = sum(rows, (r) => r.sp), tLimit = sum(rows, (r) => r.limit)
 
   // Loans and cards (loans.ts): outstanding balances are worked out, never read from `balance`.
-  const todayIso = isoOf(today)
-  const loans: LoanLine[] = data.debts.map((d) => ({
+  // Card installment plans are debts too, but they show under their card, not as loans.
+  const loans: LoanLine[] = data.debts.filter((d) => !isPlan(d)).map((d) => ({
     doc: d,
     st: loanState(d, loanPayments(data.tx, d.id), todayIso),
     payments: data.tx.filter((t) => t.debtId === d.id).sort(desc),
@@ -145,11 +161,26 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   }))
   const loanBy: Record<string, LoanLine> = {}
   loans.forEach((l) => (loanBy[l.doc.id] = l))
-  const cards: CardLine[] = accounts.filter((a) => a.type === 'card').map((a) => ({ acct: a, cs: cardState(a, a.balance, todayIso) }))
+  const plans: PlanLine[] = data.debts.filter(isPlan).map((d) => {
+    const ps = planState(d, loanPayments(data.tx, d.id), todayIso)
+    return { doc: d, st: ps.st, ps, payments: data.tx.filter((t) => t.debtId === d.id).sort(desc) }
+  })
+  const planBy: Record<string, PlanLine> = {}
+  plans.forEach((p) => (planBy[p.doc.id] = p))
+  const cards: CardLine[] = accounts.filter((a) => a.type === 'card').map((a) => {
+    const mine = plans.filter((p) => p.doc.acct === a.id)
+    const charges = mine.flatMap((p) => p.payments.filter((t) => t.acct === a.id && t.debtPart !== 'extra'))
+    const cs = cardWithPlans(a, a.balance, sum(mine, (p) => p.ps.remaining), charges, todayIso)
+    return { acct: a, cs, plans: mine }
+  })
+  const cardBy: Record<string, CardLine> = {}
+  cards.forEach((c) => (cardBy[c.acct.id] = c))
 
   /** A paid-off loan's bill stops coming due (months it was paid still show). */
   const ended = (b: Bill) => !!b.debtId && !!loanBy[b.debtId] && loanBy[b.debtId].st.balance <= 0.005
-  const billsM: BillRow[] = data.bills.filter((b) => !ended(b) || b.paid?.[ym]).map((b) => ({ ...b, d: Math.min(b.day, days), isPaid: !!b.paid?.[ym] })).sort((a, b) => a.d - b.d)
+  // Each bill's due date inside the period; its paid flag stays keyed by that date's calendar month.
+  const billsM: BillRow[] = data.bills.map((b) => { const due = billDue(b.day, ym, start), pm = due.slice(0, 7); return { ...b, due, pm, d: Number(due.slice(8, 10)), isPaid: !!b.paid?.[pm] } })
+    .filter((b) => !ended(b) || b.isPaid).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))
   const unpaid = ym >= curYm ? sum(billsM.filter((b) => !b.isPaid), (b) => b.amt) : 0
   const safe = tAvail - tSpent - unpaid
   const leftAssign = income - tLimit - goalsMo
@@ -159,7 +190,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const holdSum = sum(holdings, (x) => x.value)
   const posSum = (types: string[]) => sum(accounts.filter((a) => types.includes(a.type) && a.balance > 0), (a) => a.balance)
   const assets = sum(accounts.filter((a) => a.balance > 0), (a) => a.balance) + holdSum
-  const liab = sum(loans, (l) => l.st.balance) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
+  const liab = sum(loans, (l) => l.st.balance) + sum(plans, (p) => p.ps.remaining) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
   /** What you own, in four groups (order and colours from the design). */
   const ownGroups: { label: string; v: number; color: string }[] = [
     { label: 'Cash', v: posSum(['current', 'cash', 'card']), color: 'var(--ink)' },
@@ -172,11 +203,15 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const withCost = investments.filter((a) => a.gain !== null)
   const invGain = withCost.length ? sum(withCost, (a) => a.gain!) : null
 
-  // Debt plan: loans still owing (at their effective rate and installment) plus cards in the red.
+  // Debt plan: loans still owing (at their effective rate and installment), each card plan on its
+  // own (what's left to bill, at its installment), plus cards in the red: only what's on the card,
+  // at the minimum on that (the plans' installments are already their own lines).
   const allDebts: DebtLine[] = loans.filter((l) => l.st.balance > 0.005).map((l): DebtLine => ({
     id: l.doc.id, name: l.doc.name, balance: l.st.balance, apr: l.st.effectiveRate, min: l.st.installment, loan: true,
-  })).concat(cards.filter((c) => c.cs.owed > 0).map((c) => ({
-    id: c.acct.id, name: c.acct.name, balance: c.cs.owed, apr: c.cs.apr, min: c.cs.minDue, card: data.accounts.find((x) => x.id === c.acct.id),
+  })).concat(plans.filter((p) => p.ps.remaining > 0.005).map((p): DebtLine => ({
+    id: p.doc.id, name: p.doc.name, balance: p.ps.remaining, apr: p.st.effectiveRate, min: p.st.installment, loan: true,
+  }))).concat(cards.filter((c) => c.cs.owedOnCard > 0).map((c) => ({
+    id: c.acct.id, name: c.acct.name, balance: c.cs.owedOnCard, apr: c.cs.apr, min: minPayment(c.cs.owedOnCard, c.acct), card: data.accounts.find((x) => x.id === c.acct.id),
   })))
   const strat = H.strat ?? 'avalanche', extra = H.extra ?? 0
   const debtPlan = simDebt(allDebts, extra, strat)
@@ -209,18 +244,19 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
     return { cash, series, events: ev, varAvg }
   }
 
-  // Round-ups: each everyday purchase this month rounded up to the next 10.
+  // Round-ups: each everyday purchase this budget month rounded up to the next 10.
   const roundUps = Math.max(0, Math.round(sum(inM(curYm).filter((t) => t.type === 'exp' && !t.billId && !t.debtId), (t) => Math.ceil(t.amt / 10) * 10 - t.amt) - (H.roundSwept?.[curYm] || 0)))
   const roundUpPot = goals.find((g) => g.id === H.roundUpPot) ?? goals[0]
 
   return {
-    data, H, A, B, cur, f, num, today, tDay, curYm, ym, isCur, days, day, daysLeft, pace,
+    data, H, A, B, cur, f, num, today, tDay, curYm, calYm, ym, isCur, days, day, daysLeft, pace,
+    start, period, prev, tIdx, tDays,
     whoName, whoCol, rollover, cushion,
     accounts, goals, acctBy, aName, mainAcct, balance, savedIn,
     cats, catBy, catOf, catOr, inM, byCat, desc,
     mtx, exp, inc, spent, pExp, pSpent, income, goalsMo,
     rows, tAvail, tSpent, tLimit, billsM, unpaid, safe, leftAssign,
-    todayIso, loans, loanBy, cards,
+    todayIso, loans, loanBy, plans, planBy, cards, cardBy,
     assets, liab, holdings, holdSum, ownGroups, investments, invGain, allDebts, strat, extra, debtPlan,
     events, forecast, roundUps, roundUpPot,
   }

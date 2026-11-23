@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// This month's calendar on the Bills screen: one square per day, coloured by
+/// The budget month's calendar on the Bills screen: one square per day from the period's
+/// first day to its last (weekday-aligned; a budget month that doesn't start on the 1st runs
+/// across two months, and the 1st of the next month carries its month's name), coloured by
 /// its bills (still due, overdue, all paid), today in black, paydays outlined.
 /// Tapping a day that has bills filters the bill list to it; tapping it again clears it.
 @MainActor
@@ -11,8 +13,12 @@ struct BillCalendar: View {
 
     private struct Cell: Identifiable {
         let id: Int
-        /// 0 for the blanks before the 1st.
+        /// 0 for the blanks before the first day.
         let day: Int
+        /// "yyyy-MM-dd" ("" for blanks).
+        let iso: String
+        /// "Dec" on the first day of a month after the period's first day, else nil.
+        let monthMark: String?
         let bills: Int
         let due: Bool
         let late: Bool
@@ -26,17 +32,22 @@ struct BillCalendar: View {
     }
 
     private var cells: [Cell] {
-        let first = DateKit.cal.component(.weekday, from: DateKit.date(L.ym + "-01")) - 1
+        let p = L.period
+        let first = DateKit.cal.component(.weekday, from: DateKit.date(p.from)) - 1
         var out: [Cell] = (0..<max(0, first)).map {
-            Cell(id: 100 + $0, day: 0, bills: 0, due: false, late: false, today: false, payday: false)
+            Cell(id: $0, day: 0, iso: "", monthMark: nil, bills: 0, due: false, late: false, today: false, payday: false)
         }
         let rows = L.billRows
-        for d in 1...max(1, L.daysInMonth) {
-            let bs = rows.filter { $0.dueDay == d }
+        for (k, iso) in p.dates.enumerated() {
+            let d = Int(iso.suffix(2)) ?? 1
+            let month = String(iso.prefix(7))
+            let dim = DateKit.daysIn(month)
+            let bs = rows.filter { $0.due == iso }
             let due = bs.contains { !$0.isPaid }
-            let payday = L.household.incomes.contains { $0.amt > 0 && min($0.day, L.daysInMonth) == d }
-            out.append(Cell(id: 200 + d, day: d, bills: bs.count, due: due, late: due && d < L.todayDay,
-                            today: d == L.todayDay, payday: payday))
+            let payday = L.household.incomes.contains { $0.amt > 0 && min($0.day, dim) == d }
+            let mark: String? = (k > 0 && d == 1) ? DateKit.monthName(month, short: true) : nil
+            out.append(Cell(id: 100 + k, day: d, iso: iso, monthMark: mark, bills: bs.count, due: due,
+                            late: due && iso < L.todayIso, today: iso == L.todayIso, payday: payday))
         }
         return out
     }
@@ -44,8 +55,13 @@ struct BillCalendar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(DateKit.monthLabel(L.ym)).font(.geist(18, .medium)).tracking(em: -0.01, size: 18)
-                    .accessibilityAddTraits(.isHeader)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(DateKit.monthLabel(L.ym)).font(.geist(18, .medium)).tracking(em: -0.01, size: 18)
+                        .accessibilityAddTraits(.isHeader)
+                    if L.cycleStart > 1 {
+                        Text(L.period.rangeLabel).font(.geist(12.5)).foregroundStyle(Palette.gray)
+                    }
+                }
                 Spacer(minLength: 0)
                 Text(hint).font(.geist(12.5)).foregroundStyle(Palette.gray).multilineTextAlignment(.trailing)
             }
@@ -87,8 +103,11 @@ struct BillCalendar: View {
         Color.clear
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                VStack(spacing: 3) {
-                    Text("\(c.day)").font(.geist(14, .medium))
+                VStack(spacing: 1) {
+                    if let mark = c.monthMark {
+                        Text(mark).font(.geist(9, .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                    }
+                    Text("\(c.day)").font(.geist(14, .medium)).lineLimit(1).minimumScaleFactor(0.6)
                     HStack(spacing: 2) {
                         ForEach(0..<min(c.bills, 5), id: \.self) { _ in Circle().frame(width: 4, height: 4) }
                     }
@@ -115,7 +134,8 @@ struct BillCalendar: View {
     }
 
     private func label(_ c: Cell) -> String {
-        var parts = ["\(c.day) \(L.monthShort)"]
+        let month: String = DateKit.monthName(String(c.iso.prefix(7)), short: true)
+        var parts = ["\(c.day) \(month)"]
         if c.today { parts.append("today") }
         if c.bills > 0 {
             parts.append("\(c.bills) bill" + (c.bills == 1 ? "" : "s"))
@@ -157,7 +177,7 @@ struct BillCalendarScreen: View {
         if let L = store.ledger() {
             // Only shown unfolded, where Back is the one by the tab rail: just the title here.
             Screen(color: Palette.cream, mirrored: true, contentPadding: 16) {
-                NavRow(title: "Bills")
+                NavRow(title: "Bills", onBack: { router.closeBillsSplit() })
             } content: {
                 BillCalendar(L: L, hint: "That day’s bills show on the right")
             }

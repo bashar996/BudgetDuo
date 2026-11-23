@@ -80,18 +80,23 @@ private struct MissingHousehold: View {
     @Environment(Session.self) private var session
     @Environment(HouseholdStore.self) private var store
     var body: some View {
-        ZStack {
-            Palette.black.ignoresSafeArea()
-            VStack(spacing: 16) {
-                Text("We couldn’t open your shared budget.").font(.geist(20, .medium)).multilineTextAlignment(.center)
-                if let e = store.error { Text(e).font(.geist(13)).foregroundStyle(Palette.mute).multilineTextAlignment(.center) }
-                BlockButton(title: "Start or join another", fill: Palette.lavender, text: Palette.black) {
-                    Task { await session.leaveHousehold(uid: store.uid) }
+        // Scrolls, so both buttons stay reachable with large text on a small phone.
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 16) {
+                    Text("We couldn’t open your shared budget.").font(.geist(20, .medium)).multilineTextAlignment(.center)
+                    if let e = store.error { Text(e).font(.geist(13)).foregroundStyle(Palette.mute).multilineTextAlignment(.center) }
+                    BlockButton(title: "Start or join another", fill: Palette.lavender, text: Palette.black) {
+                        Task { await session.leaveHousehold(uid: store.uid) }
+                    }
+                    BlockButton(title: "Sign out", fill: Palette.white, outline: true) { session.signOut() }
                 }
-                BlockButton(title: "Sign out", fill: Palette.white, outline: true) { session.signOut() }
+                .padding(24)
+                .frame(maxWidth: .infinity, minHeight: geo.size.height)
             }
-            .padding(24)
-            .foregroundStyle(Palette.white)
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .background(Palette.black.ignoresSafeArea())
+        .foregroundStyle(Palette.white)
     }
 }

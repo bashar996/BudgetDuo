@@ -60,7 +60,7 @@ function Toggle({ on, label, onClick }: { on: boolean; label: string; onClick():
 function PotCard({ L, g }: { L: Ledger; g: Pot }) {
   const ui = useUI()
   const { act } = useStore()
-  const { f, curYm } = L
+  const { f, calYm: curYm } = L
   const r = g.target ? g.saved / g.target : 0, rem = Math.max(0, g.target - g.saved)
   const n = g.monthly > 0 ? Math.ceil(rem / g.monthly) : 0, a = L.acctBy[g.acct]
   const left = g.due ? Math.max(1, mBetween(curYm, g.due)) : 0, need = left ? Math.ceil(rem / left / 10) * 10 : 0
@@ -195,14 +195,14 @@ export const savingsTab: TabDef = {
   hero: (L) => {
     const { f, ym } = L
     const { proj } = project(L)
-    const netM = sum(potMoves(L).filter((t) => t.date.slice(0, 7) === ym), (t) => (t.potDir === 'out' ? -t.amt : t.amt))
+    const netM = sum(potMoves(L).filter((t) => t.date >= L.period.from && t.date <= L.period.to), (t) => (t.potDir === 'out' ? -t.amt : t.amt))
     const m0 = L.today.getMonth()
     const bars: HeroBar[] = proj.map((v, i) => ({
       h: pc(Math.max(0.04, v / (proj[12] || 1))),
       bg: i === 0 ? LAV : CRM,
       label: MN[(m0 + i) % 12].slice(0, 1),
       tag: i === 12 ? f(Math.round(v)) : '',
-      title: mLabel(addM(L.curYm, i), true) + ' · ' + f(Math.round(v)),
+      title: mLabel(addM(L.calYm, i), true) + ' · ' + f(Math.round(v)),
     }))
     return {
       label: 'Saved across your pots',

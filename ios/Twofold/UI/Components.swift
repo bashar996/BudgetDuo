@@ -1,11 +1,22 @@
 import SwiftUI
+import UIKit
 
 // A plain EnvironmentKey rather than `@Entry`, which needs the Xcode 16 SDK.
 private struct ScreenTrailingInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 0
 }
 
+/// True inside the right-hand (detail) pane of the wide layout.
+private struct IsDetailPaneKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
 extension EnvironmentValues {
+    var isDetailPane: Bool {
+        get { self[IsDetailPaneKey.self] }
+        set { self[IsDetailPaneKey.self] = newValue }
+    }
+
     /// On wide screens the detail pane runs under the trailing safe area (the camera
     /// strip in landscape) so its colours reach the edge; text is pushed in by this much.
     var screenTrailingInset: CGFloat {
@@ -69,17 +80,21 @@ struct BigAmount: View {
 
 /// Back arrow + centred title used on pushed screens. Without a back arrow
 /// (sheets) it's just the title, aligned with the content below instead of centred
-/// between two empty slots. Unfolded (wide), no pane has its own arrow: the one Back
-/// sits by the tab rail, so every pane shows its title centred.
+/// between two empty slots. Unfolded iPhone Duo: no pane has its own arrow (the one
+/// Back sits by the tab rail), so every pane shows its title centred. iPad: each pane
+/// keeps its own arrow, which goes back within that pane.
 @MainActor
 struct NavRow: View {
     var title: String
     var showBack = true
+    /// Wide iPad: what Back does instead of popping the pane (e.g. closing the bills calendar).
+    var onBack: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isDetailPane) private var isDetailPane
     @Environment(Router.self) private var router
 
     var body: some View {
-        if router.isWide {
+        if router.isWide && !Router.isPad {
             Text(title).font(.geist(19, .medium)).lineLimit(1)
                 .accessibilityAddTraits(.isHeader)
                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -87,7 +102,11 @@ struct NavRow: View {
                 .padding(.top, 8)
         } else if showBack {
             HStack {
-                Button { router.back(dismiss) } label: {
+                Button {
+                    if let onBack { onBack() }
+                    else if router.isWide { router.paneBack(detail: isDetailPane, dismiss) }
+                    else { router.back(dismiss) }
+                } label: {
                     Text("←").font(.geist(24)).frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Back")
@@ -238,7 +257,7 @@ struct Chip: View {
     var body: some View {
         Button(action: action) {
             Text(label).font(.geist(13.5, .medium)).lineLimit(1)
-                .padding(.horizontal, 14).frame(height: 44)
+                .padding(.horizontal, 14).frame(minHeight: 44)
                 .foregroundStyle(on ? Palette.black : Palette.white)
                 .background(on ? selected : .clear, in: Capsule())
                 .overlay(Capsule().strokeBorder(on ? selected : Palette.white.opacity(0.3), lineWidth: 1))
@@ -248,7 +267,8 @@ struct Chip: View {
     }
 }
 
-/// Filled, rounded-square button.
+/// Filled, rounded-square button. `height` is a minimum, so large Dynamic Type grows it
+/// instead of clipping the title.
 struct BlockButton: View {
     var title: String
     var fill: Color = Palette.black
@@ -259,7 +279,8 @@ struct BlockButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(title).font(.geist(15, .medium)).frame(maxWidth: .infinity).frame(height: height)
+            Text(title).font(.geist(15, .medium)).multilineTextAlignment(.center)
+                .padding(.horizontal, 8).frame(maxWidth: .infinity).frame(minHeight: height)
                 .foregroundStyle(outline ? fill : text)
                 .background(outline ? .clear : fill, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(outline ? fill : .clear, lineWidth: 1.5))
@@ -304,6 +325,20 @@ private struct WideDockedAction: ViewModifier {
 }
 
 extension View {
+    /// A "Done" button above the system keyboard, so number and decimal pads (which have
+    /// no return key) can be put away and whatever they covered tapped.
+    @MainActor
+    func keyboardDoneBar() -> some View {
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    _ = UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        }
+    }
+
     /// See `WideDockedAction`.
     @MainActor
     func wideDockedAction(_ title: String, sheet: Color, action: @escaping () -> Void) -> some View {

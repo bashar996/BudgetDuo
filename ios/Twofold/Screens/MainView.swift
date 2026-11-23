@@ -4,6 +4,7 @@ import SwiftUI
 struct MainView: View {
     @Environment(HouseholdStore.self) private var store
     @Environment(Router.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         @Bindable var router = router
@@ -37,6 +38,17 @@ struct MainView: View {
         .sheet(item: $router.form) { f in FormHost(form: f) }
         .overlay(alignment: .top) { ErrorToast() }
         .overlay(alignment: .bottom) { UndoToast() }
+        // Today, checked every minute, so the numbers and card plan billing move on at midnight
+        // (plans also bill whenever their data changes: HouseholdStore.billPlans).
+        .task {
+            while !Task.isCancelled {
+                store.dayTick()
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { store.dayTick(force: true) }
+        }
     }
 }
 
@@ -62,6 +74,7 @@ private struct TabRoot: View {
                             .frame(width: half)
                         detail
                             .environment(\.screenTrailingInset, inset.trailing)
+                            .environment(\.isDetailPane, true)
                             .frame(width: half)
                             .overlay(alignment: .leading) {
                                 LinearGradient(colors: [.white.opacity(0.07), .black.opacity(0.3)], startPoint: .leading, endPoint: .trailing)
@@ -72,7 +85,7 @@ private struct TabRoot: View {
                     // One Back for both panes, docked in the rail column on the right edge,
                     // low down where the thumb rests when the phone is unfolded.
                     .overlay {
-                        if router.tab == tab {
+                        if router.tab == tab && router.dockedBack {
                             // Runs under the trailing safe area so the button can sit in the
                             // rail's column; empty space lets touches through.
                             VStack(spacing: 0) {
@@ -214,10 +227,14 @@ private struct UndoToast: View {
         .background(Palette.black, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.14), lineWidth: 1))
         .foregroundStyle(Palette.white)
+        // Swipe it down to put it away early if it's over something you want to tap.
+        .gesture(DragGesture(minimumDistance: 12).onEnded { v in
+            if v.translation.height > 16 { expire() }
+        })
         .padding(.horizontal, 14)
         // Clear of the tab bar; unfolded, in the right pane and clear of the rail and its Back.
         .frame(maxWidth: router.isWide ? CGFloat(440) : CGFloat.infinity)
-        .padding(.trailing, router.isWide ? max(0, 76 - router.railInset) : 0)
+        .padding(.trailing, router.dockedBack ? max(0, 76 - router.railInset) : 0)
         .frame(maxWidth: .infinity, alignment: router.isWide ? .trailing : .center)
         .padding(.bottom, router.isWide ? 18 : 58)
         .transition(.move(edge: .bottom).combined(with: .opacity))

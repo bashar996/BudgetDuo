@@ -20,7 +20,7 @@ const PILL = "flex:none;white-space:nowrap;font:500 14px 'Geist',sans-serif;padd
 const TH = css('position:sticky;top:0;background:var(--bg);font-weight:500;font-size:12.5px;color:var(--mute);text-align:right;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap')
 const TD = 'padding:7px 8px;text-align:right;white-space:nowrap'
 
-function Line({ k, v, sub }: { k: string; v: ReactNode; sub?: string }) {
+export function Line({ k, v, sub }: { k: string; v: ReactNode; sub?: string }) {
   return (
     <div style={css('display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)')}>
       <span style={css('font-size:14px;color:var(--mute);flex:none')}>{k}</span>
@@ -190,11 +190,15 @@ export function LoanPanel({ L, id }: { L: Ledger; id: string }) {
 
 }
 
-/** The schedule as agreed: paid rows ticked, the next one highlighted, overdue ones in red. */
-function Schedule({ L, st }: { L: Ledger; st: LoanState }) {
+/**
+ * The schedule as agreed: paid rows ticked, the next one highlighted, overdue ones in red.
+ * A card plan passes `billed` (rows up to it are ticked, none are overdue) and its own `title` and `foot`.
+ */
+export function Schedule({ L, st, billed, title = 'Payment schedule', foot }: { L: Ledger; st: LoanState; billed?: number; title?: string; foot?: string }) {
   const agreedEnd = st.schedule[st.schedule.length - 1]?.date.slice(0, 7)
   const box = useRef<HTMLDivElement>(null)
-  const next = st.schedule.findIndex((r) => !r.paid)
+  const isPaid = (r: LoanState['schedule'][number]) => (billed == null ? r.paid : r.n <= billed)
+  const next = st.schedule.findIndex((r) => !isPaid(r))
   // Start with the next installment in view.
   useLayoutEffect(() => {
     const el = box.current, row = el?.querySelector<HTMLElement>('[data-next]')
@@ -203,7 +207,7 @@ function Schedule({ L, st }: { L: Ledger; st: LoanState }) {
   return (
     <section style={css('min-width:0;position:sticky;top:12px')}>
       <div style={css('display:flex;justify-content:space-between;align-items:baseline;gap:10px')}>
-        <span style={H22}>Payment schedule</span>
+        <span style={H22}>{title}</span>
         <span style={css('font-size:13px;color:var(--mute)')}>{st.schedule.length + ' installments'}</span>
       </div>
       <div ref={box} style={css('max-height:calc(100vh - 230px);min-height:260px;overflow:auto;margin-top:8px;border-radius:16px')}>
@@ -220,11 +224,11 @@ function Schedule({ L, st }: { L: Ledger; st: LoanState }) {
           </thead>
           <tbody>
             {st.schedule.map((r, i) => {
-              const isNext = i === next, late = !r.paid && r.date < L.todayIso
+              const paid = isPaid(r), isNext = i === next, late = billed == null && !paid && r.date < L.todayIso
               return (
-                <tr key={r.n} data-next={isNext ? '' : undefined} title={r.paid ? 'Paid' : late ? 'Overdue' : undefined}
-                  style={sx('', { background: isNext ? 'var(--acc)' : 'transparent', color: r.paid ? 'var(--mute)' : late ? 'var(--bad)' : 'var(--ink)', fontWeight: isNext ? 500 : 400 })}>
-                  <td style={sx(TD, { textAlign: 'left', borderRadius: isNext ? '10px 0 0 10px' : undefined })}>{r.paid ? '✓' : r.n}</td>
+                <tr key={r.n} data-next={isNext ? '' : undefined} title={paid ? (billed == null ? 'Paid' : 'Billed') : late ? 'Overdue' : undefined}
+                  style={sx('', { background: isNext ? 'var(--acc)' : 'transparent', color: paid ? 'var(--mute)' : late ? 'var(--bad)' : 'var(--ink)', fontWeight: isNext ? 500 : 400 })}>
+                  <td style={sx(TD, { textAlign: 'left', borderRadius: isNext ? '10px 0 0 10px' : undefined })}>{paid ? '✓' : r.n}</td>
                   <td style={sx(TD, { textAlign: 'left' })}>{dLab(isoD(r.date)).slice(4) + ' ' + r.date.slice(0, 4)}</td>
                   <td style={css(TD)}>{n2(r.payment)}</td>
                   <td style={css(TD)}>{n2(r.interest)}</td>
@@ -237,7 +241,7 @@ function Schedule({ L, st }: { L: Ledger; st: LoanState }) {
         </table>
       </div>
       <div style={css('font-size:12.5px;color:var(--mute);padding-top:10px;text-wrap:pretty')}>
-        {'As agreed with the lender, in ' + L.cur + '. Ticked rows are paid' + (st.endsYm && agreedEnd && st.endsYm !== agreedEnd ? '; with what you’ve paid so far it now ends ' + mLabel(st.endsYm, true) + '.' : '.')}
+        {foot ?? 'As agreed with the lender, in ' + L.cur + '. Ticked rows are paid' + (st.endsYm && agreedEnd && st.endsYm !== agreedEnd ? '; with what you’ve paid so far it now ends ' + mLabel(st.endsYm, true) + '.' : '.')}
       </div>
     </section>
   )
