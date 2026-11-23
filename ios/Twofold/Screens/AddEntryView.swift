@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// Full-screen keypad entry. Folded/phone: one column. Unfolded/wide: amount,
-/// category and account on the left half, a large keypad on the right.
+/// Full-screen keypad entry. Folded/phone: the lavender top (title, type, amount, name)
+/// at the top, the keypad and Save pinned at the bottom, and the categories, chips and
+/// date scrolling in between, so Save is never pushed off even on an iPhone SE.
+/// Unfolded/wide: amount, category and account on the left half, a large keypad on the right.
 @MainActor
 struct AddEntryView: View {
     @Environment(HouseholdStore.self) private var store
@@ -9,8 +11,33 @@ struct AddEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var d: EntryDraft
     @State private var confirmDelete = false
+    /// Typing the name (the system keyboard is up).
+    @FocusState private var naming: Bool
 
     init(draft: EntryDraft) { _d = State(initialValue: draft) }
+
+    /// Phone sizes worked out from the height the screen has (system keyboard closed), so
+    /// the top, the keypad and Save always fit, from an iPhone SE (647pt) upwards.
+    private struct PhoneMetrics {
+        let amountSize: CGFloat
+        let edgeHeight: CGFloat
+        let saveHeight: CGFloat
+        let keyHeight: CGFloat
+
+        init(height h: CGFloat) {
+            let compact = h < 780
+            amountSize = compact ? 52 : 68
+            edgeHeight = compact ? 40 : 60
+            saveHeight = compact ? 50 : 58
+            // About what the lavender top takes, the keypad's gaps and padding, and the room
+            // the category tiles and chips in between would like; the keys get the rest.
+            let topHeight: CGFloat = compact ? 238 : 262
+            let gaps: CGFloat = 3 * 8 + 10 + 8 + 12
+            let middle: CGFloat = 170
+            let spare: CGFloat = h - topHeight - edgeHeight - saveHeight - gaps - middle
+            keyHeight = max(40, min(54, spare / 4))
+        }
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -18,39 +45,57 @@ struct AddEntryView: View {
             if let L = store.ledger() {
                 Group {
                     if wide {
+                        let wideKey: CGFloat = max(48, min(80, (geo.size.height - 360) / 4))
                         HStack(spacing: 10) {
                             VStack(spacing: 0) {
                                 top(L).clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28))
                                     .padding(.top, 44)
-                                edge
+                                edge(height: 60)
                                 ScrollView { categoryTiles(L, grid: true).padding(.horizontal, 14).padding(.bottom, 20) }
                                     .scrollIndicators(.hidden)
+                                    .scrollDismissesKeyboard(.immediately)
                             }
                             .frame(maxWidth: .infinity)
                             VStack(spacing: 10) {
                                 chipRows(L, split: true)
                                 Spacer(minLength: 10)
-                                keypad(keyHeight: 80)
+                                keypad(keyHeight: wideKey)
                             }
                             .padding(.horizontal, 18).padding(.top, 64).padding(.bottom, 30)
                             .frame(maxWidth: .infinity)
                         }
                     } else {
+                        let m = PhoneMetrics(height: geo.size.height)
                         VStack(spacing: 0) {
-                            top(L)
-                            edge
-                            VStack(spacing: 10) {
-                                categoryTiles(L, grid: false)
-                                chipRows(L, split: false)
-                                Spacer(minLength: 0)
-                                keypad(keyHeight: geo.size.height < 700 ? 46 : 54)
+                            top(L, amountSize: m.amountSize)
+                                .layoutPriority(1)
+                            edge(height: m.edgeHeight)
+                                .layoutPriority(1)
+                            // Everything between the name and the keypad scrolls in the
+                            // height that's left; the keypad and Save stay at the bottom.
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    categoryTiles(L, grid: false)
+                                    chipRows(L, split: false)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 14).padding(.bottom, 8)
                             }
-                            .padding(.horizontal, 14).padding(.bottom, 12)
+                            .scrollIndicators(.visible)
+                            .scrollBounceBehavior(.basedOnSize)
+                            .scrollDismissesKeyboard(.immediately)
+                            .frame(maxHeight: .infinity)
+                            keypad(keyHeight: m.keyHeight, saveHeight: m.saveHeight)
+                                .padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 12)
+                                .layoutPriority(1)
                         }
                     }
                 }
             }
         }
+        // The system keyboard (for the name) slides over the keypad instead of squeezing
+        // the layout; Done on it, a keypad tap or scrolling the middle puts it away.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .background(Palette.black.ignoresSafeArea())
         .foregroundStyle(Palette.white)
         .sensoryFeedback(.impact(weight: .light), trigger: d.amt)
@@ -64,8 +109,8 @@ struct AddEntryView: View {
         }
     }
 
-    private var edge: some View {
-        BlobEdge(fill: Palette.black, hole: Palette.lavender, height: 60).background(Palette.lavender)
+    private func edge(height: CGFloat) -> some View {
+        BlobEdge(fill: Palette.black, hole: Palette.lavender, height: height).background(Palette.lavender)
     }
 
     private var pot: Goal? { d.pot.flatMap { id in store.goals.first { $0.id == id } } }
@@ -92,7 +137,7 @@ struct AddEntryView: View {
 
     // MARK: Lavender top: title, type, amount, name
 
-    private func top(_ L: Ledger) -> some View {
+    private func top(_ L: Ledger, amountSize: CGFloat = 68) -> some View {
         VStack(spacing: 0) {
             HStack {
                 Button { dismiss() } label: { Text("×").font(.geist(26)).frame(width: 64, height: 44, alignment: .leading).padding(.leading, 10) }
@@ -126,15 +171,20 @@ struct AddEntryView: View {
             }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(L.money.currency).font(.geist(24, .medium)).foregroundStyle(Palette.ink)
-                Text(d.amt.isEmpty ? "0" : d.amt).font(.geist(68, .medium)).tracking(em: -0.045, size: 68)
+                Text(d.amt.isEmpty ? "0" : d.amt).font(.geist(amountSize, .medium)).tracking(em: -0.045, size: amountSize)
                     .foregroundStyle(d.amt.isEmpty ? Palette.amountPlaceholder : Palette.black)
                     .lineLimit(1).minimumScaleFactor(0.5)
                     .contentTransition(.numericText())
             }
-            .padding(.top, 14)
+            .padding(.top, amountSize < 60 ? 8 : 14)
             .accessibilityElement(children: .combine)
+            .contentShape(Rectangle())
+            .onTapGesture { naming = false }
             TextField("", text: $d.name, prompt: Text(placeholder).foregroundColor(Palette.ink.opacity(0.7)))
                 .font(.geist(16, .medium)).multilineTextAlignment(.center).frame(height: 44).padding(.top, 4)
+                .focused($naming)
+                .submitLabel(.done)
+                .onSubmit { naming = false }
                 .onChange(of: d.name) { _, _ in d.error = "" }
             Text(d.error).font(.geist(13, .semibold)).frame(minHeight: 18)
         }
@@ -253,7 +303,7 @@ struct AddEntryView: View {
 
     // MARK: Keypad
 
-    private func keypad(keyHeight: CGFloat) -> some View {
+    private func keypad(keyHeight: CGFloat, saveHeight: CGFloat = 58) -> some View {
         VStack(spacing: 10) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                 ForEach(["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], id: \.self) { k in
@@ -268,11 +318,12 @@ struct AddEntryView: View {
                     .accessibilityLabel(k == "⌫" ? "Delete digit" : k == "." ? "Decimal point" : k)
                 }
             }
-            BlockButton(title: saveLabel, fill: Palette.lavender, text: Palette.black, height: 58, radius: 20) { save() }
+            BlockButton(title: saveLabel, fill: Palette.lavender, text: Palette.black, height: saveHeight, radius: 20) { save() }
         }
     }
 
     private func key(_ k: String) {
+        naming = false
         var a = d.amt
         if k == "⌫" {
             if !a.isEmpty { a.removeLast() }
@@ -292,6 +343,7 @@ struct AddEntryView: View {
     // MARK: Save
 
     private func save() {
+        naming = false
         guard let L = store.ledger() else { return }
         guard let amt = Double(d.amt), amt > 0 else { d.error = "Enter an amount first"; return }
         guard !d.acct.isEmpty else { d.error = L.accounts.isEmpty ? "Add an account first" : "Pick an account"; return }

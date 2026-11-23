@@ -75,6 +75,7 @@ enum ImportStatus: String {
 struct ImportRow: Identifiable {
     struct BillMatch: Equatable {
         var id: String
+        /// The calendar month of the bill's due date: its `paid` key.
         var ym: String
         var name: String
     }
@@ -159,20 +160,23 @@ enum ImportPlanner {
         for (key, row) in rows.enumerated() {
             let name = StmtClean.name(row.desc)
             let isOut = row.amount < 0, amt = abs(row.amount)
-            let ym = String(row.date.prefix(7)), day = Int(row.date.suffix(2)) ?? 1
+            // The budget month the line falls in; a bill's due date in it gives the month it pays
+            // (its calendar month is the `paid` key). With the 1st as start day that's the line's month.
+            let rowPeriod = Period(containing: row.date, start: L.cycleStart)
             var p = ImportRow(id: key, row: row, importId: key < ids.count ? ids[key] : "", kind: isOut ? .expense : .income,
                               name: name, who: who)
 
             if isOut {
                 let bill = L.bills.first { (b: Bill) -> Bool in
-                    if b.paid[ym] ?? false { return false }
-                    if usedBills.contains(b.id + ym) { return false }
+                    let due: String = rowPeriod.billDue(day: b.day)
+                    let billKey = String(due.prefix(7))
+                    if b.paid[billKey] ?? false { return false }
+                    if usedBills.contains(b.id + billKey) { return false }
                     let tolerance: Double = max(0.011, b.amt * 0.01)
                     if abs(b.amt - amt) > tolerance { return false }
                     if StmtClean.similarity(name, b.name) >= 0.5 { return true }
                     if StmtClean.similarity(row.desc, b.name) >= 0.5 { return true }
-                    let dueDay: Int = min(b.day, Loans.dim(ym))
-                    return abs(dueDay - day) <= 3
+                    return abs(Period.daysBetween(due, row.date)) <= 3
                 }
                 var loan: Debt?
                 if bill == nil {
@@ -187,9 +191,10 @@ enum ImportPlanner {
                 }
                 let other = isCard ? nil : ownAccount(row.desc, L.accounts, acctId)
                 if let bill {
-                    usedBills.insert(bill.id + ym)
+                    let billKey = String(rowPeriod.billDue(day: bill.day).prefix(7))
+                    usedBills.insert(bill.id + billKey)
                     p.status = .bill; p.note = "Matches bill " + bill.name
-                    p.bill = ImportRow.BillMatch(id: bill.id, ym: ym, name: bill.name)
+                    p.bill = ImportRow.BillMatch(id: bill.id, ym: billKey, name: bill.name)
                     p.name = bill.name; p.cat = bill.cat; p.catHow = "rule"; p.who = .joint; p.debtId = bill.debtId
                 } else if let loan {
                     p.status = .loan; p.note = "Installment on " + loan.name; p.debtId = loan.id

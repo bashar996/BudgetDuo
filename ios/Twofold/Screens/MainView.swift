@@ -215,6 +215,10 @@ private struct UndoToast: View {
         .background(Palette.black, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.white.opacity(0.14), lineWidth: 1))
         .foregroundStyle(Palette.white)
+        // Swipe it down to put it away early if it's over something you want to tap.
+        .gesture(DragGesture(minimumDistance: 12).onEnded { v in
+            if v.translation.height > 16 { expire() }
+        })
         .padding(.horizontal, 14)
         // Clear of the tab bar; unfolded, in the right pane and clear of the rail and its Back.
         .frame(maxWidth: router.isWide ? CGFloat(440) : CGFloat.infinity)

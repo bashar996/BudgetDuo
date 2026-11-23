@@ -19,7 +19,7 @@ struct DarkField: View {
         .textInputAutocapitalization(caps ?? (keyboard == .emailAddress ? .never : .words))
         .autocorrectionDisabled(keyboard == .emailAddress)
         .padding(.horizontal, 16)
-        .frame(height: 52)
+        .frame(minHeight: 52)
         .background(Palette.field, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .foregroundStyle(Palette.white)
     }

@@ -10,7 +10,8 @@ struct BudgetView: View {
             let left = L.leftToAssign
             let note = L.assignNote
             // Zero-based budgets assign every bit of income; the other styles just show what's unbudgeted.
-            let heading: String = "\(L.isZeroBased ? "Left to assign" : "Unbudgeted") · \(L.monthName)"
+            let headingLead: String = L.isZeroBased ? "Left to assign" : "Unbudgeted"
+            let heading: String = headingLead + " · " + L.periodName
             Screen(color: Palette.cream, mirrored: true) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(heading).font(.geist(13)).foregroundStyle(Palette.mute)
@@ -173,7 +174,7 @@ struct SavingsView: View {
         let rem = max(0, g.target - saved)
         let n = g.monthly > 0 ? Int((rem / g.monthly).rounded(.up)) : 0
         let a = L.accounts.first { $0.id == g.acct }
-        let byText: String = "There by \(DateKit.monthLabel(DateKit.addMonths(L.ym, n), short: true))"
+        let byText: String = "There by \(DateKit.monthLabel(DateKit.addMonths(L.calendarYm, n), short: true))"
         let status: String = rem <= 0 ? "Reached" : (n > 0 ? byText : "Paused")
         let auto = g.auto ?? false
         let apyText: String = a?.apy.map { (x: Double) -> String in " · \(fmt(x))% a year" } ?? ""

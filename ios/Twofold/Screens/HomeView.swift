@@ -13,7 +13,8 @@ struct HomeView: View {
         let me = store.me, other: Who = me == .a ? .b : .a
         let safe = L.safeToSpend
         let syncNote: String = store.syncing ? " · syncing…" : ""
-        let greetingSub: String = "You & \(L.name(other)) · \(L.monthName)\(syncNote)"
+        let periodName: String = L.periodName
+        let greetingSub: String = "You & \(L.name(other)) · \(periodName)\(syncNote)"
         let perDay: String = "About \(L.money.f(safe / Double(L.daysLeft))) a day for \(L.daysLeft) days, bills covered"
         let safeNote: String = safe > 0 ? perDay
             : (L.totalLimit > 0 ? "Budgets are used up for now — bills are still covered" : "Give your categories a limit to see what’s safe to spend")
@@ -83,13 +84,13 @@ struct HomeView: View {
             SectionTitle(title: "Coming up", action: (label: "All bills →", run: { router.open(.bills) })).padding(.top, 26)
             ForEach(L.unpaidBills.prefix(2)) { b in
                 HStack(spacing: 12) {
-                    DateTile(day: b.dueDay, month: L.monthShort)
+                    DateTile(day: b.dueDay, month: b.monthShort)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(b.bill.name).font(.geist(16, .medium)).lineLimit(1)
                         Text("\(L.billStatus(b)) · \(L.money.f(b.bill.amt))").font(.geist(13)).foregroundStyle(Palette.ink)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Button("Pay") { store.togglePaid(b, ym: L.ym, account: L.mainAccountId) }
+                    Button("Pay") { store.togglePaid(b, account: L.mainAccountId) }
                         .font(.geist(13.5, .medium)).padding(.horizontal, 16).frame(height: 44)
                         .background(Palette.black, in: Capsule()).foregroundStyle(Palette.white)
                         .buttonStyle(.plain)

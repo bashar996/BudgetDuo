@@ -17,7 +17,7 @@ struct CreamField: View {
         TextField("", text: $text, prompt: Text(placeholder).foregroundColor(Palette.gray))
             .font(.geist(16, .medium))
             .keyboardType(keyboard)
-            .padding(.horizontal, 16).frame(height: 52)
+            .padding(.horizontal, 16).frame(minHeight: 52)
             .background(Palette.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.black.opacity(0.1), lineWidth: 1))
             .foregroundStyle(Palette.black)
@@ -30,7 +30,7 @@ struct CreamChip: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(label).font(.geist(13.5, .medium)).lineLimit(1).padding(.horizontal, 14).frame(height: 44)
+            Text(label).font(.geist(13.5, .medium)).lineLimit(1).padding(.horizontal, 14).frame(minHeight: 44)
                 .foregroundStyle(on ? Palette.white : Palette.black)
                 .background(on ? Palette.black : .clear, in: Capsule())
                 .overlay(Capsule().strokeBorder(Palette.black.opacity(on ? 1 : 0.3), lineWidth: 1))
@@ -62,7 +62,8 @@ struct DayStepper: View {
     }
 }
 
-/// Title on top, fields in the middle, Save / Delete pinned at the bottom.
+/// Title on top, fields in the middle (scrolling), Save / Delete pinned at the bottom
+/// (above the keyboard while typing), so they're reachable at any detent and text size.
 struct FormSheetFrame<Content: View>: View {
     var kicker: String
     var title: String
@@ -104,6 +105,7 @@ struct FormSheetFrame<Content: View>: View {
             .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
         }
         .foregroundStyle(Palette.black)
+        .keyboardDoneBar()
         .presentationBackground(Palette.cream)
         .presentationCornerRadius(30)
         .presentationDragIndicator(.visible)
@@ -144,10 +146,14 @@ private struct SheetHeightKey: PreferenceKey {
 }
 
 /// Cream bottom sheet with 30pt top corners, as tall as what's in it. The system
-/// caps the height at the large detent; anything taller scrolls as a whole.
+/// caps the height at the large detent; anything taller (a small phone, large text,
+/// the keyboard up) scrolls as a whole, so the buttons at the end stay reachable.
+/// It can also be dragged up to the full height.
 struct FitSheet<Content: View>: View {
     @ViewBuilder var content: Content
     @State private var height: CGFloat = 420
+    /// The fitted height until it's dragged up to `.large`.
+    @State private var detent: PresentationDetent = .height(420)
 
     var body: some View {
         ScrollView {
@@ -159,9 +165,16 @@ struct FitSheet<Content: View>: View {
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
-        .onPreferenceChange(SheetHeightKey.self) { h in if h > 0 { height = h } }
+        .onPreferenceChange(SheetHeightKey.self) { h in
+            guard h > 0, h != height else { return }
+            let fitted = detent != .large
+            height = h
+            if fitted { detent = .height(h) }
+        }
         .foregroundStyle(Palette.black)
-        .presentationDetents([.height(height)])
+        .keyboardDoneBar()
+        .presentationDetents([.height(height), .large], selection: $detent)
+        .presentationContentInteraction(.scrolls)
         .presentationBackground(Palette.cream)
         .presentationCornerRadius(30)
         .presentationDragIndicator(.visible)
@@ -181,7 +194,7 @@ struct SheetField: View {
             .font(.geist(size, .medium))
             .keyboardType(keyboard)
             .focused($focused)
-            .padding(.horizontal, 16).frame(height: 52)
+            .padding(.horizontal, 16).frame(minHeight: 52)
             .background(Palette.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.black.opacity(focused ? 1 : 0), lineWidth: 2))
             .foregroundStyle(Palette.black)

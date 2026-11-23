@@ -198,7 +198,7 @@ struct LoanDetailView: View {
         let endYm = st.endsYm ?? st.schedule.last.map { String($0.date.prefix(7)) }
         let end = endYm.map { DateKit.monthLabel($0, short: true) } ?? "—"
         let fee = d.fee ?? 0
-        let rateNow = Loans.rateAt(d, L.ym)
+        let rateNow = Loans.rateAt(d, L.calendarYm)
         var rows: [(String, String)] = [
             ("Borrowed", L.money.f(st.principal)),
             ("Outstanding", L.money.f(st.balance)),

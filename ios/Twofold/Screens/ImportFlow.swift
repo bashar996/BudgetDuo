@@ -46,7 +46,7 @@ enum ImportFormat {
 @MainActor
 struct ImportFlowView: View {
     var job: ImportJob
-    /// Called after importing: the account and the month ("yyyy-MM") to show in Activity.
+    /// Called after importing: the account and the budget month (its key, "yyyy-MM") to show in Activity.
     var onDone: (String, String) -> Void
 
     @Environment(HouseholdStore.self) private var store
@@ -591,8 +591,10 @@ struct ImportFlowView: View {
         m.posOut = posOut
         ImportMemory.save(m, acct: acctId, shape: shape)
         router.imported(undo)
-        let latest = entries.map { $0.tx.month }.max() ?? DateKit.ym(Date())
-        onDone(acctId, latest)
+        // Activity shows the budget month of the latest line.
+        let latest: String = entries.map { $0.tx.date }.max() ?? DateKit.iso(Date())
+        let start: Int = store.ledger()?.cycleStart ?? 1
+        onDone(acctId, Period.key(latest, start: start))
         dismiss()
     }
 }

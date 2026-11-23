@@ -80,6 +80,9 @@ struct Household: Codable, Equatable {
     var roundUps: Bool?
     /// Month-end sweep switched on (default off).
     var sweep: Bool?
+    /// Day of the month the budget month starts, 1–28 (missing = 1: calendar months).
+    /// See `Period` for how budget months are keyed and named.
+    var cycleStart: Int?
 
     static let budgetStyles = ["Zero-based", "Category limits", "50/30/20"]
     static let splitModes = ["One joint pot", "Split shared costs"]

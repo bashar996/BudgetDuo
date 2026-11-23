@@ -8,7 +8,7 @@ one shared budget for two people, synced between both phones.
   rollover; rename, regroup, add and delete categories, move money in from another one), Savings
   (pots with Edit / New pot sheets, auto-save switch, deposit/withdraw, round-ups, month-end
   sweep, where extra money goes, recent moves), More → Activity (search, who / account / category
-  filters, CSV export, statement import), Bills (with this month's calendar), Accounts, Net worth (add and edit
+  filters, CSV export, statement import), Bills (with the budget month's calendar), Accounts, Net worth (add and edit
   assets and investments), Debt (payoff plan, loans with their full schedule and payments, credit
   cards with minimums and payoff), Reports (with a CSV download), Plan ahead (30-day cash forecast
   against your cushion, planned purchases with both votes and Mark bought, trips with Log spend),
@@ -16,10 +16,23 @@ one shared budget for two people, synced between both phones.
   keypad for adding entries and the category / pot bottom sheets. Everything the Mac app can
   create, edit or delete can be done on the phone too.
 - **Settings shared with the Mac** (household document): budget style (Zero-based, Category
-  limits, 50/30/20), rollover, cash cushion, coach tips, how you share money and the split rule.
+  limits, 50/30/20), the day the budget month starts, rollover, cash cushion, coach tips, how you
+  share money and the split rule.
   They work the same on both: rollover adds last month's unspent limit to each category, the
   cushion drives Plan ahead, split mode adds settle-up to Us two ("Mark as settled" adds what
   was owed to `settled.{month}`). **Look** (the accent colour) is per phone.
+- **Budget month** (Settings → "Budget month starts on day", 1–28, written as the integer
+  `cycleStart`; missing = 1 = calendar months): e.g. 25 makes each budget month run 25th → 24th.
+  `Model/Period.swift` holds the rules (the same as the Mac's `desktop/src/lib/period.ts`): a
+  budget month keeps a "yyyy-MM" key, named after the month most of its days are in (start 25:
+  "2026-12" is 25 Nov – 24 Dec; start 10: "2026-11" is 10 Nov – 9 Dec), so `checks`,
+  `roundSwept` and `settled` stay keyed the same way. Everything "this month" follows it (spent,
+  safe to spend and the per-day figure, rollover, coach tips, Home, Us two, Reports, Savings'
+  "moved in", round-ups, Activity's month arrows); headings show the month name plus the range
+  when the start isn't the 1st. Each bill is due once per budget month (its day inside the
+  range); its `paid` flag and payment entry id (`bill-{billId}-{yyyy-MM}`) use the calendar month
+  of that due date, so existing data keeps working. Pay days, loans, cards and the 30-day
+  forecast stay on calendar dates.
 - **Look:** black, lavender (or the accent you pick) and cream with the stepped blob edges, Geist type.
 - **Wide screens** (an unfolded foldable): budget and tabs on the left, the detail on the right;
   the keypad screen uses both halves (all categories in a grid on the left, chips and keypad on the right).
@@ -141,7 +154,7 @@ households/{code}/assets/{id}    home, car, gold …: name, kind, value (missing
 The household document also holds your own categories (`custom`), renamed or regrouped
 built-in categories (`catOv`: id → name and group), removed built-ins (`catDel`) and the debt
 plan settings (`strat`, `extra`), the shared settings (`budgetStyle`, `rollover`, `cushion`,
-`coachTips`, `splitMode`, `splitRule`, `settled`, `roundUps`, `sweep`; missing = the default).
+`coachTips`, `splitMode`, `splitRule`, `settled`, `roundUps`, `sweep`, `cycleStart`; missing = the default).
 Investment accounts may carry `cost`, the amount put in, so Net worth can show the gain.
 Loan payments (`debtId`) don't count as everyday spending: they're left out of round-ups, the
 forecast's daily average and the last-7-days chart, as on the Mac.

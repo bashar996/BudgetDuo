@@ -102,7 +102,7 @@ struct DebtView: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(plan.order.enumerated()), id: \.element) { k, id in
                 if let x = debts.first(where: { $0.id == id }) {
-                    let clear: String = plan.done[id].map { (m: Int) -> String in "Clear by \(DateKit.monthLabel(DateKit.addMonths(L.ym, m), short: true))" } ?? "Not cleared at this rate"
+                    let clear: String = plan.done[id].map { (m: Int) -> String in "Clear by \(DateKit.monthLabel(DateKit.addMonths(L.calendarYm, m), short: true))" } ?? "Not cleared at this rate"
                     Button { openDebt(id, L) } label: {
                         HStack(spacing: 12) {
                             Text("\(k + 1)").font(.geist(15, .semibold)).frame(width: 32, height: 32)

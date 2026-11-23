@@ -118,13 +118,25 @@ final class HouseholdStore {
         write { try ref.setData(from: t, completion: report) }
     }
 
+    /// The month a bill payment marked paid: the end of its fixed id ("bill-{billId}-{yyyy-MM}"),
+    /// which is the calendar month the bill was due (with a budget month that doesn't start
+    /// on the 1st, an imported payment can be dated in another month); else the entry's month.
+    private func paidKey(_ t: Tx, billId: String) -> String {
+        let prefix = "bill-\(billId)-"
+        if t.id.hasPrefix(prefix) {
+            let key = String(t.id.dropFirst(prefix.count))
+            if key.count == 7 { return key }
+        }
+        return t.month
+    }
+
     /// Deletes an entry; a bill payment also marks that bill unpaid again.
     func deleteEntry(_ t: Tx) {
         guard !t.id.isEmpty else { return }
         let batch = db.batch()
         batch.deleteDocument(col("tx").document(t.id))
         if let billId = t.billId, bills.contains(where: { $0.id == billId }) {
-            batch.updateData(["paid.\(t.month)": false], forDocument: col("bills").document(billId))
+            batch.updateData(["paid.\(paidKey(t, billId: billId))": false], forDocument: col("bills").document(billId))
         }
         batch.commit(completion: report)
     }
@@ -137,7 +149,7 @@ final class HouseholdStore {
         let ref = col("tx").document(t.id)
         write { try batch.setData(from: t, forDocument: ref) }
         if let billId = t.billId, bills.contains(where: { $0.id == billId }) {
-            batch.updateData(["paid.\(t.month)": true], forDocument: col("bills").document(billId))
+            batch.updateData(["paid.\(paidKey(t, billId: billId))": true], forDocument: col("bills").document(billId))
         }
         batch.commit(completion: report)
     }
@@ -201,21 +213,23 @@ final class HouseholdStore {
         return id
     }
 
-    /// Marks a bill paid (adding its expense) or unpaid (removing it). The entry's
-    /// ID is fixed per bill and month, so paying on both phones can't double-count.
-    /// A loan's bill logs a loan payment (debtId, installment) from the loan's account.
-    func togglePaid(_ row: BillRow, ym: String, account: String?) {
+    /// Marks a bill paid (adding its expense, dated the day it's due) or unpaid (removing
+    /// it). The paid flag and the entry's fixed ID use the calendar month of the due date
+    /// (`row.paidKey`), so paying on both phones can't double-count, whatever day the
+    /// budget month starts. A loan's bill logs a loan payment (debtId, installment) from
+    /// the loan's account.
+    func togglePaid(_ row: BillRow, account: String?) {
         let b = row.bill
+        let key = row.paidKey
         let batch = db.batch()
-        let txRef = col("tx").document("bill-\(b.id)-\(ym)")
-        batch.updateData(["paid.\(ym)": !row.isPaid], forDocument: col("bills").document(b.id))
+        let txRef = col("tx").document("bill-\(b.id)-\(key)")
+        batch.updateData(["paid.\(key)": !row.isPaid], forDocument: col("bills").document(b.id))
         if row.isPaid {
             batch.deleteDocument(txRef)
         } else {
-            let day = min(b.day, DateKit.daysIn(ym))
             let loan = b.debtId.flatMap { id in debts.first(where: { $0.id == id }) }
             let acct = existingAccount(loan?.acct) ?? account ?? ""
-            let t = Tx(id: txRef.documentID, date: "\(ym)-\(DateKit.pad(day))", name: b.name, cat: b.cat, amt: b.amt,
+            let t = Tx(id: txRef.documentID, date: row.due, name: b.name, cat: b.cat, amt: b.amt,
                        who: .joint, type: .expense, note: nil, billId: b.id, acct: acct, to: nil, pot: nil,
                        potDir: nil, createdAt: Date(), debtId: b.debtId, debtPart: b.debtId == nil ? nil : "installment")
             write { try batch.setData(from: t, forDocument: txRef) }
@@ -254,7 +268,7 @@ final class HouseholdStore {
     }
 
     /// Shared settings the Mac also writes: budgetStyle, rollover, cushion, coachTips,
-    /// splitMode, splitRule, roundUps, sweep.
+    /// splitMode, splitRule, roundUps, sweep, cycleStart (an integer, 1–28).
     func updateHousehold(_ fields: [AnyHashable: Any]) {
         guard !fields.isEmpty else { return }
         root.updateData(fields, completion: report)
@@ -456,7 +470,8 @@ final class HouseholdStore {
         if let bill = L.loanBill(d) {
             let ym = String((st.nextDue ?? L.todayIso).prefix(7))
             if !(bill.paid[ym] ?? false) {
-                togglePaid(BillRow(bill: bill, dueDay: bill.day, isPaid: false), ym: ym, account: L.mainAccountId)
+                let due = ym + "-" + DateKit.pad(min(bill.day, DateKit.daysIn(ym)))
+                togglePaid(BillRow(bill: bill, due: due, isPaid: false), account: L.mainAccountId)
                 return
             }
         }
