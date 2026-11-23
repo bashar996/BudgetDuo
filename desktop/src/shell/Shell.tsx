@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { css, sx } from '../lib/css'
-import { addM, mLabel } from '../lib/dates'
+import { addM, isoOf, mLabel } from '../lib/dates'
+import { cycleStartOf, periodKey } from '../lib/period'
 import { makeLedger } from '../data/ledger'
 import { useStore } from '../data/store'
 import { Icon, ICON } from './icons'
 import { TABS, UICtx, type HeroSpec, type MenuSpec, type Panel, type TabId, type UI, type ViewState } from './ui'
 import { TAB_DEFS } from '../tabs'
 import { PanelHost } from '../panels/PanelHost'
-import { ymOf } from '../lib/dates'
 import { isStatementFile } from '../import/read'
 
 const LS = {
@@ -18,7 +18,16 @@ const LS = {
 export function Shell() {
   const { data } = useStore()
   const [tab, setTab] = useState<TabId>(() => (LS.get('tab') as TabId) || 'home')
-  const [ym, setYm] = useState(() => ymOf(new Date()))
+  // The budget month shown: a period key (lib/period.ts). It starts on the current one, and goes
+  // back to the current one when the household changes the day budget months start.
+  const start = cycleStartOf(data.household)
+  const [ym, setYm] = useState(() => periodKey(isoOf(new Date()), start))
+  const startRef = useRef(start)
+  useEffect(() => {
+    if (startRef.current === start) return
+    startRef.current = start
+    setYm(periodKey(isoOf(new Date()), start))
+  }, [start])
   const [view, setViewState] = useState<ViewState>({ q: '', fWho: 'all', fCat: 'all', fAcct: 'all', selAcct: null })
   const [panel, setPanel] = useState<Panel | null>(null)
   const [navMin, setNavMin] = useState(() => LS.get('navMin') === '1')
@@ -123,9 +132,12 @@ export function Shell() {
                 <div style={css('font-size:13.5px;color:#a9a7b8')}>{def.kicker(L)}<SyncNote /></div>
               </div>
               <div style={css('display:flex;align-items:center;gap:2px;background:#1d1d22;border-radius:16px;padding:0 4px;height:48px')}>
-                <button className="h-dark" onClick={() => setYm(addM(ym, -1))} aria-label="Previous month" style={css('width:40px;height:40px;border:none;border-radius:12px;background:transparent;color:#ffffff;font-size:20px;cursor:pointer')}>‹</button>
-                <span style={css("font:500 14px 'Geist',sans-serif;min-width:116px;text-align:center")}>{mLabel(ym)}</span>
-                <button className="h-dark" onClick={() => setYm(addM(ym, 1))} aria-label="Next month" style={css('width:40px;height:40px;border:none;border-radius:12px;background:transparent;color:#ffffff;font-size:20px;cursor:pointer')}>›</button>
+                <button className="h-dark" onClick={() => setYm(addM(ym, -1))} aria-label="Previous budget month" style={css('width:40px;height:40px;border:none;border-radius:12px;background:transparent;color:#ffffff;font-size:20px;cursor:pointer')}>‹</button>
+                <span style={css("font:500 14px/1.15 'Geist',sans-serif;min-width:116px;text-align:center;display:flex;flex-direction:column;align-items:center")}>
+                  {mLabel(ym)}
+                  {L.period.range && <span style={css('font-size:11.5px;font-weight:400;color:#a9a7b8')}>{L.period.range}</span>}
+                </span>
+                <button className="h-dark" onClick={() => setYm(addM(ym, 1))} aria-label="Next budget month" style={css('width:40px;height:40px;border:none;border-radius:12px;background:transparent;color:#ffffff;font-size:20px;cursor:pointer')}>›</button>
               </div>
               <button onClick={() => ui.open({ kind: 'tx' })} style={css("font:500 15px 'Geist',sans-serif;padding:0 22px;height:48px;border-radius:16px;border:none;background:var(--accBase);color:#0b0b0c;cursor:pointer")}>+ Add entry</button>
             </div>

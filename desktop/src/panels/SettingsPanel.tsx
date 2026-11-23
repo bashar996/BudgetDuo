@@ -6,6 +6,7 @@ import type { Household } from '../data/types'
 import { CURRENCIES } from '../data/catalog'
 import { useStore } from '../data/store'
 import { css, sx } from '../lib/css'
+import { cycleStartOf, periodKey, rangeLabel } from '../lib/period'
 import { useUI } from '../shell/ui'
 import { PanelFrame } from './PanelFrame'
 import { ChipGroup, chips, Pair, Switch, TextField, parse } from './parts'
@@ -32,6 +33,26 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   )
 }
 
+/** "Budget month starts on day" with − / + (1…28) and the budget month that gives today. */
+function CycleStart({ value, today, onChange }: { value: number; today: string; onChange(v: number): void }) {
+  const step = (n: number) => onChange(Math.max(1, Math.min(28, value + n)))
+  const btn = (n: number, label: string) => (
+    <button type="button" onClick={() => step(n)} disabled={value + n < 1 || value + n > 28} aria-label={label}
+      style={sx("width:46px;height:46px;flex:none;border-radius:16px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font:500 20px 'Geist',sans-serif;cursor:pointer", { opacity: value + n < 1 || value + n > 28 ? 0.35 : 1 })}>{n < 0 ? '−' : '+'}</button>
+  )
+  return (
+    <div>
+      <div style={css('font-size:13px;color:var(--mute);margin-bottom:8px')}>Budget month starts on day</div>
+      <div style={css('display:flex;align-items:center;gap:10px')}>
+        {btn(-1, 'Start a day earlier')}
+        <span aria-live="polite" style={css("min-width:52px;height:46px;box-sizing:border-box;border-radius:16px;background:var(--card);display:grid;place-items:center;font:500 20px 'Geist',sans-serif")}>{value}</span>
+        {btn(1, 'Start a day later')}
+        <span style={css('font-size:13.5px;text-wrap:pretty')}>{(value === 1 ? 'Calendar months · ' : 'This budget month: ') + rangeLabel(periodKey(today, value), value)}</span>
+      </div>
+    </div>
+  )
+}
+
 const outline = "font:500 14px 'Geist',sans-serif;padding:0 18px;height:46px;border-radius:16px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer"
 
 export function SettingsPanel({ L }: { L: Ledger }) {
@@ -41,7 +62,7 @@ export function SettingsPanel({ L }: { L: Ledger }) {
   const [d, setD] = useState({
     nameA: H.nameA, nameB: H.nameB, currency: H.currency,
     budgetStyle: (H.budgetStyle ?? 'Zero-based') as Style, rollover: !!H.rollover, cushion: String(H.cushion ?? 5000),
-    coachTips: H.coachTips ?? true, splitMode: (H.splitMode ?? 'One joint pot') as Mode, splitRule: (H.splitRule ?? '50/50') as Rule,
+    cycleStart: cycleStartOf(H), coachTips: H.coachTips ?? true, splitMode: (H.splitMode ?? 'One joint pot') as Mode, splitRule: (H.splitRule ?? '50/50') as Rule,
   })
   const [err, setErr] = useState('')
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => { setErr(''); setD((x) => ({ ...x, [k]: v })) }
@@ -63,7 +84,7 @@ export function SettingsPanel({ L }: { L: Ledger }) {
     if (!nameA || !nameB) return setErr('Give each of you a name.')
     const cushion = parse(d.cushion)
     if (isNaN(cushion) || cushion < 0) return setErr('Add a cash cushion, even if it’s 0.')
-    act.updateHousehold({ nameA, nameB, currency: d.currency, budgetStyle: d.budgetStyle, rollover: d.rollover, cushion, coachTips: d.coachTips, splitMode: d.splitMode, splitRule: d.splitRule })
+    act.updateHousehold({ nameA, nameB, currency: d.currency, budgetStyle: d.budgetStyle, rollover: d.rollover, cushion, cycleStart: Math.round(d.cycleStart), coachTips: d.coachTips, splitMode: d.splitMode, splitRule: d.splitRule })
     close()
   }
 
@@ -80,6 +101,7 @@ export function SettingsPanel({ L }: { L: Ledger }) {
 
         <Section title="Budgeting">
           <ChipGroup label="Budget style" chips={chips<Style>([['Zero-based', 'Zero-based'], ['Category limits', 'Category limits'], ['50/30/20', '50/30/20']], d.budgetStyle, (v) => set('budgetStyle', v))} />
+          <CycleStart value={d.cycleStart} today={L.todayIso} onChange={(v) => set('cycleStart', v)} />
           <Switch label={d.rollover ? 'Unspent money rolls into next month' : 'Each month starts fresh'} on={d.rollover} onChange={(v) => set('rollover', v)} />
           <TextField label={'Cash cushion (' + L.cur + ')'} decimal value={d.cushion} onChange={(v) => set('cushion', v)} />
           <Switch label={d.coachTips ? 'Coach tips on Today' : 'Coach tips hidden'} on={d.coachTips} onChange={(v) => set('coachTips', v)} />

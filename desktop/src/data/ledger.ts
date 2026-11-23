@@ -5,6 +5,7 @@ import { allCategories, catOr as firstOr, type Category } from './catalog'
 import type { Account, Bill, Data, Debt, Goal, Tx, Who } from './types'
 import { cardState, loanState, type CardState, type LoanPayment, type LoanState } from './loans'
 import { addDays, addM, dim, isoOf, ymOf } from '../lib/dates'
+import { billDue, cycleStartOf, dayIndex, periodKey, periodLabel, periodRange, rangeLabel } from '../lib/period'
 import { fmt, num, sum } from '../lib/money'
 
 export interface Row {
@@ -24,7 +25,8 @@ export interface Row {
   ratio: number
 }
 
-export interface BillRow extends Bill { d: number; isPaid: boolean }
+/** A bill in the selected period: `due` is its date there, `pm` the calendar month its `paid` flag is keyed by. */
+export interface BillRow extends Bill { d: number; due: string; pm: string; isPaid: boolean }
 export interface DebtLine { id: string; name: string; balance: number; apr: number; min: number; card?: Account; loan?: boolean }
 /** A loan with everything worked out today, its payment entries and its bill. */
 export interface LoanLine { doc: Debt; st: LoanState; payments: Tx[]; bill?: Bill }
@@ -63,17 +65,28 @@ export function simDebt(debts: DebtLine[], extra: number, strat: string): DebtPl
 
 /**
  * @param data   everything synced for the household
- * @param ym     the month picked in the header
+ * @param ym     the budget month (period key, see lib/period.ts) picked in the header
  * @param today  real today
  */
 export function makeLedger(data: Data, ym: string, today = new Date()) {
   const H = data.household
   const A = H.nameA, B = H.nameB, cur = H.currency
   const f = (n: number) => fmt(n, cur)
-  const curYm = ymOf(today), tDay = today.getDate()
-  const isCur = ym === curYm, days = dim(ym)
-  const day = isCur ? tDay : ym < curYm ? days : 0
-  const daysLeft = isCur ? days - tDay + 1 : ym > curYm ? days : 0
+  // Budget months start on H.cycleStart (1 = calendar months). `ym` and `curYm` are period keys;
+  // `calYm` is the calendar month, for month-by-month maths (goal and payoff dates).
+  const start = cycleStartOf(H)
+  const todayIso = isoOf(today), calYm = ymOf(today), tDay = today.getDate()
+  const curYm = periodKey(todayIso, start)
+  const pr = periodRange(ym, start)
+  const isCur = ym === curYm, days = dayIndex(pr.from, pr.to)
+  /** The selected period: first and last day, length, and its name ("November 2026 · 25 Oct – 24 Nov"). */
+  const period = { ...pr, days, label: periodLabel(ym, start), range: start > 1 ? rangeLabel(ym, start) : '' }
+  const prev = periodRange(addM(ym, -1), start)
+  /** Today's day number in the current period, and that period's length. */
+  const curP = periodRange(curYm, start)
+  const tIdx = dayIndex(curP.from, todayIso), tDays = dayIndex(curP.from, curP.to)
+  const day = isCur ? tIdx : ym < curYm ? days : 0
+  const daysLeft = isCur ? days - tIdx + 1 : ym > curYm ? days : 0
   const pace = day / days
   const whoName: Record<Who, string> = { A, B, J: 'Joint' }
   const whoCol: Record<Who, string> = { A: 'var(--a)', B: 'var(--b)', J: 'var(--mute)' }
@@ -116,7 +129,8 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   cats.forEach((c) => (catBy[c.id] = c))
   const catOf = (id: string) => catBy[id] ?? { name: 'Other', color: 'var(--mute)' }
 
-  const inM = (m: string) => data.tx.filter((t) => t.date.slice(0, 7) === m)
+  /** Entries in budget month `m` (a period key). */
+  const inM = (m: string) => { const r = m === ym ? pr : periodRange(m, start); return data.tx.filter((t) => t.date >= r.from && t.date <= r.to) }
   const byCat = (a: Tx[]) => { const o: Record<string, number> = {}; a.forEach((t) => (o[t.cat] = (o[t.cat] || 0) + t.amt)); return o }
   const desc = (a: Tx, b: Tx) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
 
@@ -136,7 +150,6 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const tAvail = sum(rows, (r) => r.avail), tSpent = sum(rows, (r) => r.sp), tLimit = sum(rows, (r) => r.limit)
 
   // Loans and cards (loans.ts): outstanding balances are worked out, never read from `balance`.
-  const todayIso = isoOf(today)
   const loans: LoanLine[] = data.debts.map((d) => ({
     doc: d,
     st: loanState(d, loanPayments(data.tx, d.id), todayIso),
@@ -149,7 +162,9 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
 
   /** A paid-off loan's bill stops coming due (months it was paid still show). */
   const ended = (b: Bill) => !!b.debtId && !!loanBy[b.debtId] && loanBy[b.debtId].st.balance <= 0.005
-  const billsM: BillRow[] = data.bills.filter((b) => !ended(b) || b.paid?.[ym]).map((b) => ({ ...b, d: Math.min(b.day, days), isPaid: !!b.paid?.[ym] })).sort((a, b) => a.d - b.d)
+  // Each bill's due date inside the period; its paid flag stays keyed by that date's calendar month.
+  const billsM: BillRow[] = data.bills.map((b) => { const due = billDue(b.day, ym, start), pm = due.slice(0, 7); return { ...b, due, pm, d: Number(due.slice(8, 10)), isPaid: !!b.paid?.[pm] } })
+    .filter((b) => !ended(b) || b.isPaid).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))
   const unpaid = ym >= curYm ? sum(billsM.filter((b) => !b.isPaid), (b) => b.amt) : 0
   const safe = tAvail - tSpent - unpaid
   const leftAssign = income - tLimit - goalsMo
@@ -209,12 +224,13 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
     return { cash, series, events: ev, varAvg }
   }
 
-  // Round-ups: each everyday purchase this month rounded up to the next 10.
+  // Round-ups: each everyday purchase this budget month rounded up to the next 10.
   const roundUps = Math.max(0, Math.round(sum(inM(curYm).filter((t) => t.type === 'exp' && !t.billId && !t.debtId), (t) => Math.ceil(t.amt / 10) * 10 - t.amt) - (H.roundSwept?.[curYm] || 0)))
   const roundUpPot = goals.find((g) => g.id === H.roundUpPot) ?? goals[0]
 
   return {
-    data, H, A, B, cur, f, num, today, tDay, curYm, ym, isCur, days, day, daysLeft, pace,
+    data, H, A, B, cur, f, num, today, tDay, curYm, calYm, ym, isCur, days, day, daysLeft, pace,
+    start, period, prev, tIdx, tDays,
     whoName, whoCol, rollover, cushion,
     accounts, goals, acctBy, aName, mainAcct, balance, savedIn,
     cats, catBy, catOf, catOr, inM, byCat, desc,

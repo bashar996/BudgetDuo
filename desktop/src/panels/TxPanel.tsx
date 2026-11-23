@@ -48,7 +48,7 @@ export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> 
     const c = L.cats.find((z) => z.id === cat)
     act.saveTx({
       id: tx?.id, createdAt: tx?.createdAt ?? undefined,
-      date: d.date || L.ym + '-01',
+      date: d.date || L.period.from,
       name: d.name.trim() || (isX ? 'Transfer' : inc ? 'Income' : (c && c.name) || 'Pocket money'),
       cat, amt, who: d.who, type: d.type, note: d.note.trim(), billId: d.billId ?? undefined, acct: d.acct,
       to: isX ? d.to : undefined, pot: isX ? d.pot ?? undefined : undefined, potDir: isX ? d.potDir ?? undefined : undefined,

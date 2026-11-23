@@ -99,7 +99,7 @@ function Detail({ L, id }: { L: Ledger; id: string }) {
     run -= v
     return { t, v, after }
   })
-  const mLed = led.filter((x) => x.t.date.slice(0, 7) === L.ym)
+  const mLed = led.filter((x) => x.t.date >= L.period.from && x.t.date <= L.period.to)
 
   const dayBal: { v: number; title: string }[] = []
   let b = sel.balance, k = 0

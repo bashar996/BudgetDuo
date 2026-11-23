@@ -40,6 +40,8 @@ export interface Household {
   settled?: Record<string, number>
   roundUps?: boolean
   sweep?: boolean
+  /** Day of the month the budget month starts, 1–28 (missing = 1, calendar months). See lib/period.ts. */
+  cycleStart?: number
 }
 
 /** households/{code}/tx/{id} */

@@ -9,6 +9,13 @@ import { dim, isoOf, pad } from '../lib/dates'
 
 type Draft<T extends { id: string }> = Omit<T, 'id'> & { id?: string }
 
+/** The calendar month a bill payment's `paid` flag is keyed by: from its fixed ID
+ *  ("bill-<bill>-YYYY-MM"), else the entry's own date. */
+export const billPaidKey = (t: Tx) => {
+  const pre = 'bill-' + t.billId + '-', m = t.id.startsWith(pre) ? t.id.slice(pre.length) : ''
+  return /^\d{4}-\d{2}$/.test(m) ? m : t.date.slice(0, 7)
+}
+
 function strip<T extends object>(v: T): Record<string, unknown> {
   const o: Record<string, unknown> = {}
   for (const [k, x] of Object.entries(v)) if (x !== undefined) o[k] = x
@@ -49,11 +56,12 @@ export function makeActions(be: Backend, getData: () => Data | null) {
     deleteTx(t: Tx) {
       const ops: Op[] = [{ kind: 'del', col: 'tx', id: t.id }]
       if (t.billId && getData()?.bills.some((b) => b.id === t.billId))
-        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + t.date.slice(0, 7)]: false } })
+        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + billPaidKey(t)]: false } })
       commit(...ops)
     },
 
     // Bills: the entry ID is fixed per bill and month, so paying twice can't double-count.
+    // `ym` is the CALENDAR month of the due date (BillRow.pm), not the budget-month key.
     togglePaid(b: Bill, ym: string, acct: string) {
       const paid = !!b.paid?.[ym]
       const txId = 'bill-' + b.id + '-' + ym
@@ -228,7 +236,7 @@ export function makeActions(be: Backend, getData: () => Data | null) {
     restoreTx(t: Tx) {
       const ops: Op[] = [put('tx', { ...t })]
       if (t.billId && getData()?.bills.some((b) => b.id === t.billId))
-        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + t.date.slice(0, 7)]: true } })
+        ops.push({ kind: 'patch', col: 'bills', id: t.billId, fields: { ['paid.' + billPaidKey(t)]: true } })
       commit(...ops)
     },
 

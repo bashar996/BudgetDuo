@@ -49,7 +49,7 @@ function rep(L: Ledger) {
   const merchants = mer.slice(0, 6).map((o) => ({ name: o.name, amt: f(o.a), count: o.n + '×' }))
 
   const data = () => ({
-    ym, month: mLabel(ym), names: L.A + ' & ' + L.B, ccy: L.cur, spent: Math.round(tSpent), income: Math.round(incM), stats,
+    ym, month: L.period.label, names: L.A + ' & ' + L.B, ccy: L.cur, spent: Math.round(tSpent), income: Math.round(incM), stats,
     cats: spRows.map((r) => [r.name, Math.round(r.sp), Math.round((r.sp / (tSpent || 1)) * 100) + '%', Math.round(pSpent[r.id] || 0)] as [string, number, string, number]),
     who: (['A', 'B', 'J'] as Who[]).map((w) => [whoName[w], Math.round(whoSp(w))] as [string, number]),
     mer: mer.slice(0, 10).map((o) => [o.name, o.n, Math.round(o.a)] as [string, number, number]),

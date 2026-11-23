@@ -133,7 +133,7 @@ function CardTile({ L, x }: { L: Ledger; x: CardLine }) {
 function Body({ L }: { L: Ledger }) {
   const ui = useUI()
   const { act } = useStore()
-  const { f, allDebts, curYm } = L
+  const { f, allDebts, calYm: curYm } = L
 
   // The slider moves locally and saves once it settles, so dragging doesn't write on every step.
   const [extra, setExtraLocal] = useState(L.extra)
@@ -230,7 +230,7 @@ export const goalsTab: TabDef = {
   stage: 'cream',
   kicker: () => 'Payoff plan, loans and cards',
   hero: (L) => {
-    const { f, allDebts, debtPlan: res, curYm } = L
+    const { f, allDebts, debtPlan: res, calYm: curYm } = L
     const total = f(Math.round(sum(allDebts, (x) => x.balance)))
     const never = res.months >= NEVER
     const stp = Math.max(1, Math.ceil(res.series.length / 30)), dHi = res.series[0] || 1

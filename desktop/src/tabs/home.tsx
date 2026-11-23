@@ -1,7 +1,8 @@
 // Today: safe-to-spend, quick actions, first-run checklist, coach tips and a summary of every area.
 import type { ReactNode } from 'react'
 import { css, sx } from '../lib/css'
-import { addM, dLab, dim, mLabel, pad } from '../lib/dates'
+import { addM, dLab, mLabel, pad } from '../lib/dates'
+import { dayIndex } from '../lib/period'
 import { pc, sum } from '../lib/money'
 import { ACCOUNT_TYPES } from '../data/catalog'
 import type { Ledger } from '../data/ledger'
@@ -34,7 +35,8 @@ function tips(L: Ledger) {
   if (over) out.push(over.name + ' went ' + f(-over.left) + ' past its limit. No stress — move a little from a category with room and you’re square.')
   const tight = watch.find((r) => r.left >= 0 && r.ratio > 0.75)
   if (tight && isCur) out.push(tight.name + ' has ' + f(tight.left) + ' left for the next ' + daysLeft + ' days — about ' + f(Math.round(tight.left / daysLeft)) + ' a day keeps it on track.')
-  const diff = sum(L.pExp.filter((t) => +t.date.slice(8) <= day), (t) => t.amt) - L.tSpent
+  // Last budget month up to the same day number.
+  const diff = sum(L.pExp.filter((t) => dayIndex(L.prev.from, t.date) <= day), (t) => t.amt) - L.tSpent
   if (isCur && L.pExp.length) out.push(diff >= 0 ? 'You’ve spent ' + f(diff) + ' less than at this point last month. Nicely done, you two.' : 'Spending is ' + f(-diff) + ' ahead of this point last month — worth a quick look together.')
   if (L.leftAssign > 0) out.push(f(L.leftAssign) + ' of income isn’t assigned yet. Sending it to a goal now means it won’t quietly disappear.')
   return { watch, tips: out.slice(0, 3) }
@@ -42,7 +44,7 @@ function tips(L: Ledger) {
 
 function Body({ L }: { L: Ledger }) {
   const ui = useUI()
-  const { f, H, data, safe, tSpent, tAvail, unpaid, isCur, daysLeft, ym, curYm } = L
+  const { f, H, data, safe, tSpent, tAvail, unpaid, isCur, daysLeft, ym, curYm, calYm } = L
   const { watch, tips: coach } = tips(L)
   const fresh = !data.tx.length && !data.accounts.length
   const perDay = fresh ? 'A clean slate. Add your accounts and pay, and this becomes your safe-to-spend number.'
@@ -154,7 +156,7 @@ function Body({ L }: { L: Ledger }) {
         <Section title="Savings goals" link="Savings →" to="savings">
           {goals.map((g) => {
             const rem = Math.max(0, g.target - g.saved), n = g.monthly > 0 ? Math.ceil(rem / g.monthly) : 0, r = g.target ? g.saved / g.target : 0
-            const eta = rem <= 0 ? 'reached' : n ? 'there by ' + mLabel(addM(curYm, n), true) : 'no monthly amount yet'
+            const eta = rem <= 0 ? 'reached' : n ? 'there by ' + mLabel(addM(calYm, n), true) : 'no monthly amount yet'
             return (
               <div key={g.id} style={css('padding:12px 0 4px')}>
                 <div style={css('display:flex;justify-content:space-between;align-items:flex-end;gap:10px')}><span style={css('font-size:16px')}>{g.name}</span><span style={css('font-size:27px;letter-spacing:-.02em;line-height:1')}>{Math.round(r * 100)}%</span></div>
@@ -195,6 +197,6 @@ function Body({ L }: { L: Ledger }) {
 export const homeTab: TabDef = {
   id: 'home',
   stage: 'lav',
-  kicker: (L) => dLab(L.today) + ' · day ' + L.tDay + ' of ' + dim(L.curYm),
+  kicker: (L) => dLab(L.today) + ' · day ' + L.tIdx + ' of ' + L.tDays,
   Body,
 }

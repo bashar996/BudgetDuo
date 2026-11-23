@@ -22,7 +22,12 @@ export function App() {
 
 /** Sample household in memory: nothing is saved or synced. */
 function DemoApp({ empty }: { empty: boolean }) {
-  const [data, setData] = useState<Data>(() => (empty ? emptyData() : demoData()))
+  const [data, setData] = useState<Data>(() => {
+    const d = empty ? emptyData() : demoData()
+    // Dev preview only: ?demo&cycle=25 tries a budget month that starts on the 25th.
+    const cycle = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('cycle')) : 0
+    return cycle >= 1 && cycle <= 28 ? { ...d, household: { ...d.household, cycleStart: Math.round(cycle) } } : d
+  })
   const ref = useRef(data)
   ref.current = data
   const ctx = useMemo<Ctx>(() => {

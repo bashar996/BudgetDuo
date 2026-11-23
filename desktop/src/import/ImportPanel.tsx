@@ -6,6 +6,7 @@ import type { Who } from '../data/types'
 import { useStore } from '../data/store'
 import { css, sx } from '../lib/css'
 import { MN } from '../lib/dates'
+import { periodKey } from '../lib/period'
 import { useUI } from '../shell/ui'
 import { BTN_LINE, inputStyle, PanelFrame } from '../panels/PanelFrame'
 import { ChipGroup, type ChipOpt } from '../panels/parts'
@@ -135,7 +136,7 @@ export function ImportPanel({ L, file: initialFile, acct: initialAcct }: { L: Le
     ui.closeAll()
     ui.go('activity')
     ui.setView({ fAcct: acct, q: '', fCat: 'all', fWho: 'all' })
-    if (last) ui.setYm(last.slice(0, 7))
+    if (last) ui.setYm(periodKey(last, L.start))
     const n = res.ids.length
     ui.toast('Imported ' + n + (n === 1 ? ' entry' : ' entries'), () => act.undoImport(res))
   }

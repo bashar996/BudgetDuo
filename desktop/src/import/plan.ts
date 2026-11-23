@@ -2,8 +2,9 @@
 // match, duplicates. Pure, so it can be tested without the app.
 import { allCategories } from '../data/catalog'
 import { installmentOf } from '../data/loans'
-import type { Account, Data, Tx, Who } from '../data/types'
-import { dim } from '../lib/dates'
+import type { Account, Bill, Data, Tx, Who } from '../data/types'
+import { addM, dim, pad } from '../lib/dates'
+import { daysBetween } from '../lib/period'
 import { round2 } from './amounts'
 import { cleanName, similarity } from './clean'
 import { historyIndex, suggestCategory } from './categorise'
@@ -51,6 +52,23 @@ function ownAccount(desc: string, accounts: Account[], self: string): Account | 
   ))
 }
 
+/**
+ * Which month's due date of a bill a statement line pays: the nearest unpaid, unmatched due date
+ * within 3 days (this calendar month, the one before or after), else this calendar month's.
+ * `ym` is that due date's calendar month, the bill's `paid` key.
+ */
+function nearestDue(b: Bill, date: string, used: Set<string>): { ym: string; gap: number } | null {
+  let best: { ym: string; gap: number } | null = null
+  for (const k of [0, -1, 1]) {
+    const ym = addM(date.slice(0, 7), k)
+    if (b.paid?.[ym] || used.has(b.id + ym)) continue
+    const gap = Math.abs(daysBetween(ym + '-' + pad(Math.min(b.day, dim(ym))), date))
+    if (k && gap > 3) continue
+    if (!best || gap < best.gap) best = { ym, gap }
+  }
+  return best
+}
+
 /** `ids` come from importIds(acctId, rows) (async: SHA-256). */
 export function planRows(rows: StmtRow[], data: Data, acctId: string, ids: string[]): PlanRow[] {
   const acct = data.accounts.find((a) => a.id === acctId)
@@ -67,13 +85,20 @@ export function planRows(rows: StmtRow[], data: Data, acctId: string, ids: strin
     const name = cleanName(row.desc)
     const base: PlanRow = { key, row, importId: ids[key], on: true, status: 'new', note: '', kind: row.amount < 0 ? 'exp' : 'inc', name, cat: null, catHow: null, who }
     const out = row.amount < 0, amt = Math.abs(row.amount)
-    const ym = row.date.slice(0, 7), day = Number(row.date.slice(8, 10))
 
     // What it would be, before the duplicate checks.
     const p: PlanRow = { ...base }
     if (out) {
-      const bill = data.bills.find((b) => !b.paid?.[ym] && !usedBills.has(b.id + ym) && Math.abs(b.amt - amt) <= Math.max(0.011, b.amt * 0.01) &&
-        (similarity(name, b.name) >= 0.5 || similarity(row.desc, b.name) >= 0.5 || Math.abs(Math.min(b.day, dim(ym)) - day) <= 3))
+      // A bill: same amount (±1%), and a similar name or a due date within 3 days. The paid key is
+      // the calendar month of the due date nearest the statement date (whatever the budget month).
+      let ym = ''
+      const bill = data.bills.find((b) => {
+        if (Math.abs(b.amt - amt) > Math.max(0.011, b.amt * 0.01)) return false
+        const due = nearestDue(b, row.date, usedBills)
+        if (!due || !(similarity(name, b.name) >= 0.5 || similarity(row.desc, b.name) >= 0.5 || due.gap <= 3)) return false
+        ym = due.ym
+        return true
+      })
       const loan = !bill ? data.debts.find((l) => {
         const inst = installmentOf(l)
         const named = similarity(row.desc, l.name) >= 0.5 || (!!l.lender && similarity(row.desc, l.lender) >= 0.5)
@@ -115,7 +140,7 @@ export function planRows(rows: StmtRow[], data: Data, acctId: string, ids: strin
     const dupe = likelyDuplicate(data.tx, acctId, { date: row.date, amount: row.amount, name, desc: row.desc, cat: p.cat ?? undefined }, used)
     if (dupe) {
       used.add(dupe.id)
-      if (p.bill) usedBills.delete(p.bill.id + ym)
+      if (p.bill) usedBills.delete(p.bill.id + p.bill.ym)
       return { ...p, on: false, status: 'dupe', note: 'Already in Twofold · ' + dupe.name, dupeOf: dupe }
     }
     return p
