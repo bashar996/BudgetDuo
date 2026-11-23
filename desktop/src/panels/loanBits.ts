@@ -5,7 +5,7 @@ import { dLab, isoD } from '../lib/dates'
 
 export type LoanKind = NonNullable<Debt['kind']>
 export const LOAN_KINDS: [LoanKind, string][] = [['personal', 'Personal'], ['car', 'Car'], ['mortgage', 'Mortgage'], ['student', 'Student'], ['other', 'Other']]
-const KIND_NAME: Record<LoanKind, string> = { personal: 'Personal loan', car: 'Car loan', mortgage: 'Mortgage', student: 'Student loan', other: 'Loan' }
+const KIND_NAME: Record<LoanKind, string> = { personal: 'Personal loan', car: 'Car loan', mortgage: 'Mortgage', student: 'Student loan', other: 'Loan', cardplan: 'Installment plan' }
 export const kindName = (k?: Debt['kind']) => KIND_NAME[k ?? 'other'] ?? 'Loan'
 
 export const r2 = (n: number) => Math.round(n * 100) / 100

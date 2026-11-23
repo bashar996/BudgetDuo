@@ -1,14 +1,14 @@
 // Statement rows → proposed entries: expense / income / transfer, category, bill or loan
 // match, duplicates. Pure, so it can be tested without the app.
 import { allCategories } from '../data/catalog'
-import { installmentOf } from '../data/loans'
+import { installmentOf, isPlan } from '../data/loans'
 import type { Account, Bill, Data, Tx, Who } from '../data/types'
 import { addM, dim, pad } from '../lib/dates'
 import { daysBetween } from '../lib/period'
 import { round2 } from './amounts'
 import { cleanName, similarity } from './clean'
 import { historyIndex, suggestCategory } from './categorise'
-import { likelyDuplicate } from './dedupe'
+import { likelyDuplicate, planInstallmentDupe } from './dedupe'
 import type { StmtRow } from './detect'
 
 export type Status = 'new' | 'needsCat' | 'imported' | 'dupe' | 'transfer' | 'cardPayment' | 'refund' | 'bill' | 'loan' | 'income' | 'salary'
@@ -79,6 +79,8 @@ export function planRows(rows: StmtRow[], data: Data, acctId: string, ids: strin
   const known = new Set(data.tx.map((t) => t.importId).filter(Boolean) as string[])
   const used = new Set<string>(), usedBills = new Set<string>()
   const who: Who = acct?.who === 'A' || acct?.who === 'B' ? acct.who : 'J'
+  // The card's installment plans: Twofold posts their installments itself, so a statement line for one is already in.
+  const cardPlans = isCard ? data.debts.filter((l) => isPlan(l) && l.acct === acctId) : []
   const main = (data.accounts.find((a) => a.type === 'current' && a.id !== acctId) ?? data.accounts.find((a) => (a.type === 'current' || a.type === 'cash') && a.id !== acctId))?.id
 
   return rows.map((row, key): PlanRow => {
@@ -100,6 +102,7 @@ export function planRows(rows: StmtRow[], data: Data, acctId: string, ids: strin
         return true
       })
       const loan = !bill ? data.debts.find((l) => {
+        if (isPlan(l)) return false
         const inst = installmentOf(l)
         const named = similarity(row.desc, l.name) >= 0.5 || (!!l.lender && similarity(row.desc, l.lender) >= 0.5)
         return named && inst > 0 && Math.abs(inst - amt) <= Math.max(1, inst * 0.02)
@@ -137,6 +140,12 @@ export function planRows(rows: StmtRow[], data: Data, acctId: string, ids: strin
 
     // Duplicates.
     if (known.has(ids[key])) return { ...p, on: false, status: 'imported', note: 'Already imported' }
+    const inst = isCard ? planInstallmentDupe(data.tx, cardPlans, acctId, row, used) : null
+    if (inst) {
+      used.add(inst.id)
+      if (p.bill) usedBills.delete(p.bill.id + p.bill.ym)
+      return { ...p, on: false, status: 'dupe', note: 'Already in Twofold · ' + inst.name, dupeOf: inst }
+    }
     const dupe = likelyDuplicate(data.tx, acctId, { date: row.date, amount: row.amount, name, desc: row.desc, cat: p.cat ?? undefined }, used)
     if (dupe) {
       used.add(dupe.id)

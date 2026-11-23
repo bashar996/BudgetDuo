@@ -3,7 +3,7 @@
 // totals worked out from entries (like the iPhone app's Ledger.swift).
 import { allCategories, catOr as firstOr, type Category } from './catalog'
 import type { Account, Bill, Data, Debt, Goal, Tx, Who } from './types'
-import { cardState, loanState, type CardState, type LoanPayment, type LoanState } from './loans'
+import { cardWithPlans, isPlan, loanState, minPayment, planState, type CardPlanState, type LoanPayment, type LoanState, type PlanState } from './loans'
 import { addDays, addM, dim, isoOf, ymOf } from '../lib/dates'
 import { billDue, cycleStartOf, dayIndex, periodKey, periodLabel, periodRange, rangeLabel } from '../lib/period'
 import { fmt, num, sum } from '../lib/money'
@@ -30,12 +30,14 @@ export interface BillRow extends Bill { d: number; due: string; pm: string; isPa
 export interface DebtLine { id: string; name: string; balance: number; apr: number; min: number; card?: Account; loan?: boolean }
 /** A loan with everything worked out today, its payment entries and its bill. */
 export interface LoanLine { doc: Debt; st: LoanState; payments: Tx[]; bill?: Bill }
-/** A credit card with its balance and card maths. */
-export interface CardLine { acct: Account & { balance: number }; cs: CardState }
+/** A card installment plan: the loan maths plus what's billed, what's left and what's next. */
+export interface PlanLine { doc: Debt; st: LoanState; ps: PlanState; payments: Tx[] }
+/** A credit card with its balance, card maths (installment plans included) and its plans. */
+export interface CardLine { acct: Account & { balance: number }; cs: CardPlanState; plans: PlanLine[] }
 
-/** A loan's payments for loanState(): every entry with its debtId. */
+/** A loan's payments for loanState(): every entry with its debtId (a card plan's fee isn't a payment). */
 export function loanPayments(tx: Tx[], id: string): LoanPayment[] {
-  return tx.filter((t) => t.debtId === id).map((t) => ({ date: t.date, amt: t.amt, part: t.debtPart ?? 'installment' }))
+  return tx.filter((t) => t.debtId === id && t.debtPart !== 'fee').map((t) => ({ date: t.date, amt: t.amt, part: t.debtPart === 'extra' ? 'extra' : 'installment' }))
 }
 export interface DebtPlan { months: number; interest: number; done: Record<string, number>; series: number[]; order: string[] }
 export interface CashEvent { i: number; d: Date; name: string; amt: number; late?: boolean; inc?: boolean }
@@ -150,7 +152,8 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const tAvail = sum(rows, (r) => r.avail), tSpent = sum(rows, (r) => r.sp), tLimit = sum(rows, (r) => r.limit)
 
   // Loans and cards (loans.ts): outstanding balances are worked out, never read from `balance`.
-  const loans: LoanLine[] = data.debts.map((d) => ({
+  // Card installment plans are debts too, but they show under their card, not as loans.
+  const loans: LoanLine[] = data.debts.filter((d) => !isPlan(d)).map((d) => ({
     doc: d,
     st: loanState(d, loanPayments(data.tx, d.id), todayIso),
     payments: data.tx.filter((t) => t.debtId === d.id).sort(desc),
@@ -158,7 +161,20 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   }))
   const loanBy: Record<string, LoanLine> = {}
   loans.forEach((l) => (loanBy[l.doc.id] = l))
-  const cards: CardLine[] = accounts.filter((a) => a.type === 'card').map((a) => ({ acct: a, cs: cardState(a, a.balance, todayIso) }))
+  const plans: PlanLine[] = data.debts.filter(isPlan).map((d) => {
+    const ps = planState(d, loanPayments(data.tx, d.id), todayIso)
+    return { doc: d, st: ps.st, ps, payments: data.tx.filter((t) => t.debtId === d.id).sort(desc) }
+  })
+  const planBy: Record<string, PlanLine> = {}
+  plans.forEach((p) => (planBy[p.doc.id] = p))
+  const cards: CardLine[] = accounts.filter((a) => a.type === 'card').map((a) => {
+    const mine = plans.filter((p) => p.doc.acct === a.id)
+    const charges = mine.flatMap((p) => p.payments.filter((t) => t.acct === a.id && t.debtPart !== 'extra'))
+    const cs = cardWithPlans(a, a.balance, sum(mine, (p) => p.ps.remaining), charges, todayIso)
+    return { acct: a, cs, plans: mine }
+  })
+  const cardBy: Record<string, CardLine> = {}
+  cards.forEach((c) => (cardBy[c.acct.id] = c))
 
   /** A paid-off loan's bill stops coming due (months it was paid still show). */
   const ended = (b: Bill) => !!b.debtId && !!loanBy[b.debtId] && loanBy[b.debtId].st.balance <= 0.005
@@ -174,7 +190,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const holdSum = sum(holdings, (x) => x.value)
   const posSum = (types: string[]) => sum(accounts.filter((a) => types.includes(a.type) && a.balance > 0), (a) => a.balance)
   const assets = sum(accounts.filter((a) => a.balance > 0), (a) => a.balance) + holdSum
-  const liab = sum(loans, (l) => l.st.balance) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
+  const liab = sum(loans, (l) => l.st.balance) + sum(plans, (p) => p.ps.remaining) + sum(accounts.filter((a) => a.balance < 0), (a) => -a.balance)
   /** What you own, in four groups (order and colours from the design). */
   const ownGroups: { label: string; v: number; color: string }[] = [
     { label: 'Cash', v: posSum(['current', 'cash', 'card']), color: 'var(--ink)' },
@@ -187,11 +203,15 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
   const withCost = investments.filter((a) => a.gain !== null)
   const invGain = withCost.length ? sum(withCost, (a) => a.gain!) : null
 
-  // Debt plan: loans still owing (at their effective rate and installment) plus cards in the red.
+  // Debt plan: loans still owing (at their effective rate and installment), each card plan on its
+  // own (what's left to bill, at its installment), plus cards in the red: only what's on the card,
+  // at the minimum on that (the plans' installments are already their own lines).
   const allDebts: DebtLine[] = loans.filter((l) => l.st.balance > 0.005).map((l): DebtLine => ({
     id: l.doc.id, name: l.doc.name, balance: l.st.balance, apr: l.st.effectiveRate, min: l.st.installment, loan: true,
-  })).concat(cards.filter((c) => c.cs.owed > 0).map((c) => ({
-    id: c.acct.id, name: c.acct.name, balance: c.cs.owed, apr: c.cs.apr, min: c.cs.minDue, card: data.accounts.find((x) => x.id === c.acct.id),
+  })).concat(plans.filter((p) => p.ps.remaining > 0.005).map((p): DebtLine => ({
+    id: p.doc.id, name: p.doc.name, balance: p.ps.remaining, apr: p.st.effectiveRate, min: p.st.installment, loan: true,
+  }))).concat(cards.filter((c) => c.cs.owedOnCard > 0).map((c) => ({
+    id: c.acct.id, name: c.acct.name, balance: c.cs.owedOnCard, apr: c.cs.apr, min: minPayment(c.cs.owedOnCard, c.acct), card: data.accounts.find((x) => x.id === c.acct.id),
   })))
   const strat = H.strat ?? 'avalanche', extra = H.extra ?? 0
   const debtPlan = simDebt(allDebts, extra, strat)
@@ -236,7 +256,7 @@ export function makeLedger(data: Data, ym: string, today = new Date()) {
     cats, catBy, catOf, catOr, inM, byCat, desc,
     mtx, exp, inc, spent, pExp, pSpent, income, goalsMo,
     rows, tAvail, tSpent, tLimit, billsM, unpaid, safe, leftAssign,
-    todayIso, loans, loanBy, cards,
+    todayIso, loans, loanBy, plans, planBy, cards, cardBy,
     assets, liab, holdings, holdSum, ownGroups, investments, invGain, allDebts, strat, extra, debtPlan,
     events, forecast, roundUps, roundUpPot,
   }

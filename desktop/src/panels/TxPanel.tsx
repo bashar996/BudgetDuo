@@ -12,7 +12,7 @@ import { ChipGroup, chips, Pair, parse } from './parts'
 interface Draft {
   type: TxType; amt: string; name: string; cat: string; who: Who; acct: string; to: string; date: string; note: string
   pot?: string | null; potDir?: 'in' | 'out' | null; billId?: string | null
-  debtId?: string | null; debtPart?: 'installment' | 'extra' | null
+  debtId?: string | null; debtPart?: 'installment' | 'extra' | 'fee' | null
 }
 
 export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> }) {
@@ -68,7 +68,9 @@ export function TxPanel({ L, tx, pre }: { L: Ledger; tx?: Tx; pre?: Partial<Tx> 
       onDelete={tx ? () => { act.deleteTx(tx); toast('Deleted ' + tx.name, () => act.restoreTx(tx)); close() } : undefined}>
       <div style={css('display:flex;flex-direction:column;gap:16px')}>
         {dPot && <div style={css('font-size:14.5px;text-wrap:pretty')}>{potInfo}</div>}
-        {loan && d.type === 'exp' && <div style={css('font-size:14.5px;text-wrap:pretty')}>{(d.debtPart === 'extra' ? 'Extra payment' : 'Installment') + ' on ' + loan.name + '. Changing or deleting it updates the loan.'}</div>}
+        {loan && d.type === 'exp' && <div style={css('font-size:14.5px;text-wrap:pretty')}>{loan.kind === 'cardplan'
+          ? (d.debtPart === 'fee' ? 'Processing fee' : d.debtPart === 'extra' ? 'Early closure' : 'Installment') + ' of the ' + loan.name + ' installment plan, posted by Twofold. Deleting it won’t post it again.'
+          : (d.debtPart === 'extra' ? 'Extra payment' : 'Installment') + ' on ' + loan.name + '. Changing or deleting it updates the loan.'}</div>}
         <input className="h-focus-ink" placeholder="What was it? (optional)" value={d.name} onChange={(e) => set('name', e.target.value)} style={inputStyle} />
         {d.type === 'exp' && <ChipGroup label="Category" chips={L.cats.map((c) => ({ key: c.id, label: c.name, on: d.cat === c.id, pick: () => set('cat', c.id) }))} />}
         {!(dPot && out) && <ChipGroup label={isX ? 'From' : d.type === 'inc' ? 'Into account' : 'Paid from'} chips={acctChips('acct')} />}

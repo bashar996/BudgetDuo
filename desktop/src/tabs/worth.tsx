@@ -41,7 +41,13 @@ function Body({ L }: { L: Ledger }) {
   const ui = useUI()
   const { f } = L
   const own = L.assets
-  const owe = L.accounts.filter((a) => a.balance < 0).map((a) => ({ id: a.id, name: a.name, meta: (ACCOUNT_TYPES[a.type] ?? ACCOUNT_TYPES.current)[0], bal: -a.balance }))
+  // A card owes its balance plus what its installment plans still have to bill (shown under it).
+  const inPlans = (id: string) => L.cardBy[id]?.cs.planRemaining ?? 0
+  const owe = L.accounts.filter((a) => a.balance < 0 || inPlans(a.id) > 0.005).map((a) => ({
+    id: a.id, name: a.name,
+    meta: (ACCOUNT_TYPES[a.type] ?? ACCOUNT_TYPES.current)[0] + (inPlans(a.id) > 0.005 ? ' · incl. ' + f(Math.round(inPlans(a.id))) + ' in installment plans' : ''),
+    bal: Math.max(0, -a.balance) + inPlans(a.id),
+  }))
     .concat(L.loans.filter((l) => l.st.balance > 0.005).map(({ doc: x, st }) => ({ id: x.id, name: x.name, meta: Math.round(st.rate * 100) / 100 + '% ' + (st.rateType === 'flat' ? 'flat' : 'interest') + (st.endsYm ? ' · ends ' + mLabel(st.endsYm, true) : ''), bal: st.balance })))
 
   return (

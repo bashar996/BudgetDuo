@@ -55,9 +55,10 @@ export interface Tx {
   type: TxType
   note?: string | null
   billId?: string | null
-  /** Loan payment: the loan it pays, and whether it's the installment or an extra payment. */
+  /** Loan payment: the loan it pays, and whether it's the installment or an extra payment.
+   *  'fee': a card plan's processing fee (linked to the plan, not a payment). */
   debtId?: string | null
-  debtPart?: 'installment' | 'extra' | null
+  debtPart?: 'installment' | 'extra' | 'fee' | null
   acct: string
   to?: string | null
   pot?: string | null

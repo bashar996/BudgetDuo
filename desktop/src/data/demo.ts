@@ -2,8 +2,8 @@
 // Real use always starts empty.
 import { CATS } from './catalog'
 import type { Account, Bill, Data, Debt, Goal, Tx, Who } from './types'
-import { installmentOf } from './loans'
-import { addM, dim, pad, ymOf } from '../lib/dates'
+import { installmentOf, planChargesDue, planEntryId } from './loans'
+import { addM, dim, isoD, isoOf, pad, ymOf } from '../lib/dates'
 
 const SAMPLE: Record<string, { n: number; lo: number; hi: number; m: string[]; who?: Who }> = {
   groceries: { n: 9, lo: 150, hi: 450, m: ['Hypermarket', 'Corner grocery', 'Fruit & veg market', 'Bakery', 'Online groceries'] },
@@ -62,6 +62,15 @@ export function demoData(today = new Date()): Data {
       }
     })
   }
+  // A 0% installment plan on the shared card: a phone over 12 months. The first one was billed
+  // before Twofold; the ones since were posted on the card, as the app does each month.
+  const phone: Debt = { id: 'd3', name: 'Phone', kind: 'cardplan', acct: 'a3', principal: 4800, rate: 0, rateType: 'flat', termMonths: 12,
+    firstDue: addM(cur, -3) + '-21', paidBefore: 1, billedThrough: 1, fee: 0, cat: 'shopping', balance: 4800, apr: 0, min: 400 }
+  const posted = planChargesDue(phone, [], isoOf(today))
+  posted.forEach((c) => tx.push({ id: planEntryId('d3', c.n), date: c.date, name: 'Phone · ' + c.n + '/12', cat: 'shopping', amt: c.amt, who: 'J', type: 'exp', acct: 'a3', debtId: 'd3', debtPart: 'installment', createdAt: isoD(c.date) }))
+  phone.billedThrough = posted.length ? posted[posted.length - 1].n : 1
+  debts.push(phone)
+
   const now: (Account & { balance: number })[] = [
     { id: 'a1', name: 'Joint current account', type: 'current', who: 'J', bank: 'Main bank', last4: '4821', balance: 24600, opening: 0 },
     { id: 'a2', name: 'Cash at home', type: 'cash', who: 'J', balance: 1200, opening: 0 },

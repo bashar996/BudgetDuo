@@ -3,7 +3,8 @@
 //
 // Loans are households/{code}/debts/{id}. Payments are ordinary expense entries
 // with `debtId` (and `debtPart`: 'installment' | 'extra'), so deleting an entry
-// in Activity undoes the payment. Outstanding balance is never stored.
+// in Activity undoes the payment. Outstanding balance is never stored. A card plan's
+// processing fee has debtPart 'fee': it's linked to the plan but isn't a payment.
 import { addM, dim, pad, ymOf } from '../lib/dates'
 
 export type RateType = 'reducing' | 'flat'
@@ -12,7 +13,8 @@ export type RateType = 'reducing' | 'flat'
 export interface LoanDoc {
   id: string
   name: string
-  kind?: 'personal' | 'car' | 'mortgage' | 'student' | 'other'
+  /** 'cardplan': a card installment plan (see "Card installment plans" below). */
+  kind?: 'personal' | 'car' | 'mortgage' | 'student' | 'other' | 'cardplan'
   lender?: string | null
   /** Amount borrowed. Missing on loans added before this version (see `balance`). */
   principal?: number | null
@@ -34,6 +36,13 @@ export interface LoanDoc {
   acct?: string | null
   /** Linked bill that shows the installment under Bills. */
   billId?: string | null
+  // Card installment plans only (kind 'cardplan'; `acct` is the card):
+  /** Budget category the installments are posted in. */
+  cat?: string | null
+  /** One-off processing fee, posted once when the plan is added. */
+  procFee?: number | null
+  /** Highest installment number already posted on the card (starts at paidBefore). */
+  billedThrough?: number | null
   // Older, simple loans (and kept up to date for older app versions):
   balance: number
   apr: number
@@ -329,5 +338,162 @@ export function cardState(c: CardDoc, balance: number, today: string): CardState
     nextStatement: c.statementDay ? nextDay(c.statementDay, today) : null,
     interestIfMin: ((owed - minDue) * apr) / 1200,
     minOnly: cardPayoff(owed, apr, (b) => minPayment(b, c)),
+  }
+}
+
+/** The latest date with this day of the month, on or before today ("YYYY-MM-DD"). */
+export function lastDay(day: number, today: string): string {
+  const ym = today.slice(0, 7), d = Math.min(day, dim(ym))
+  if (Number(today.slice(8, 10)) >= d) return ym + '-' + pad(d)
+  const pv = addM(ym, -1)
+  return pv + '-' + pad(Math.min(day, dim(pv)))
+}
+
+// MARK: Card installment plans (Easy Payment Plan, Flexi installments, …)
+//
+// A purchase on a credit card turned into monthly installments. It is a debts/{id} document with
+// kind 'cardplan' and `acct` = the card, so the loan maths above (schedule, flat / reducing rate,
+// paidBefore, early-closure fee) is reused as is. Defaults: rate 0, rateType 'flat'.
+//
+// Each month Twofold posts that month's installment as an expense on the card, in the plan's
+// category (`cat`), so the budget counts the installment, not the full price:
+//   entry id   "plan-{planId}-{n}"   (n = 1-based installment number; same id on every device)
+//   date       nthDue(firstDue, n - 1)
+//   amount     planInstallmentAmount(plan, n)
+//   debtId     the plan, debtPart 'installment'
+// and sets billedThrough = n in the same write. A deleted installment is never posted again
+// (billedThrough already covers it). Other entries a plan can have:
+//   "plan-{planId}-fee"    the processing fee      (debtPart 'fee': not a payment, see loanPayments)
+//   "plan-{planId}-close"  closed early: the quote (debtPart 'extra', clears what's left)
+// Until an installment is posted, its principal is "still in plans": the bank has blocked it on
+// the card (it counts in what's owed and the limit used) but it isn't on the card's balance yet.
+
+const r2 = (n: number) => Math.round(n * 100) / 100
+
+export const isPlan = (l: Pick<LoanDoc, 'kind'>) => l.kind === 'cardplan'
+
+/** The id of a plan's entry: installment n, the processing fee or the early closure. */
+export const planEntryId = (planId: string, n: number | 'fee' | 'close') => 'plan-' + planId + '-' + n
+
+/**
+ * What installment n (1-based) of a plan posts. The schedule's payments are rounded to cents so
+ * that together they add up to the rounded total, never a cent more or less:
+ * 1,000 over 3 months → 333.33, 333.34, 333.33.
+ */
+export function planInstallmentAmount(p: LoanDoc, n: number): number {
+  if (isSimple(p) || n < 1) return 0
+  const rows = loanState(p, [], p.firstDue!).schedule // as agreed; payments don't change it
+  let before = 0, upTo = 0
+  for (let i = 0; i < Math.min(n, rows.length); i++) {
+    if (i < n - 1) before += rows[i].payment
+    upTo += rows[i].payment
+  }
+  return r2(r2(upTo) - r2(before))
+}
+
+export interface PlanState {
+  /** The loan maths over the plan's posted entries (schedule, interest, rate, …). */
+  st: LoanState
+  term: number
+  /** Installments billed so far: billedThrough (at least paidBefore), at most the term. */
+  billed: number
+  /** Paid off before the last installment was billed (the "close early" entry). */
+  closed: boolean
+  /** Nothing more will be billed: every installment billed, or closed early. */
+  done: boolean
+  /** Principal still to be billed on the card (0 when done). */
+  remaining: number
+  /** The next installment Twofold will post, or null when done. */
+  next: { n: number; date: string; amt: number } | null
+  /** Month of the last installment, as agreed. */
+  endsYm: string | null
+  /** Close early today: remaining × (1 + fee %). */
+  settlement: number
+}
+
+/**
+ * Everything about a plan today.
+ * @param payments loanPayments() of its entries: installments and the closing payment (not the fee)
+ */
+export function planState(p: LoanDoc, payments: LoanPayment[], today: string): PlanState {
+  const st = loanState(p, payments, today)
+  const term = p.termMonths ?? 0
+  const billed = Math.max(0, Math.min(term, Math.round(Math.max(p.billedThrough ?? 0, p.paidBefore ?? 0))))
+  const closed = !st.simple && billed < term && st.balance <= 0.005
+  const done = st.simple || closed || billed >= term
+  const remaining = done ? 0 : st.balance
+  return {
+    st, term, billed, closed, done, remaining,
+    next: done ? null : { n: billed + 1, date: nthDue(p.firstDue!, billed), amt: planInstallmentAmount(p, billed + 1) },
+    endsYm: st.simple || !term ? null : nthDue(p.firstDue!, term - 1).slice(0, 7),
+    settlement: remaining * (1 + (p.fee ?? 0) / 100),
+  }
+}
+
+/**
+ * The installments to post now: from billedThrough + 1 on, each one due on or before today.
+ * Posting them (with their fixed ids) and setting billedThrough to the last n is idempotent, so two
+ * devices doing it at once write the same documents.
+ */
+export function planChargesDue(p: LoanDoc, payments: LoanPayment[], today: string): { n: number; date: string; amt: number }[] {
+  const ps = planState(p, payments, today)
+  const out: { n: number; date: string; amt: number }[] = []
+  if (ps.done) return out
+  for (let n = ps.billed + 1; n <= ps.term; n++) {
+    const date = nthDue(p.firstDue!, n - 1)
+    if (date > today) break
+    out.push({ n, date, amt: planInstallmentAmount(p, n) })
+  }
+  return out
+}
+
+/** The processing fee's date: the day before the first installment, or today if that's later on. */
+export function planFeeDate(p: LoanDoc, today: string): string {
+  if (!p.firstDue) return today
+  const d = new Date(+p.firstDue.slice(0, 4), +p.firstDue.slice(5, 7) - 1, +p.firstDue.slice(8, 10) - 1)
+  const iso = ymOf(d) + '-' + pad(d.getDate())
+  return iso < today ? iso : today
+}
+
+export interface CardPlanState extends CardState {
+  /** On the card's balance (billed installments included), 0 when in credit. */
+  owedOnCard: number
+  /** Principal of the card's plans still to be billed. */
+  planRemaining: number
+  /** Plan installments and fees billed this cycle (part of the minimum, in full). */
+  billedThisCycle: number
+  /** What's owed on the card apart from this cycle's installments: the part the minimum % and interest apply to. */
+  revolving: number
+}
+
+/**
+ * A credit card with its installment plans. With no plans it's exactly cardState().
+ *   owed        = −balance + planRemaining       (the bank blocks the whole remaining plan amount)
+ *   utilisation = owed / limit
+ *   minDue      = minPayment(revolving) + billedThisCycle, where billedThisCycle = installments and
+ *                 fees dated after the last statement (or in this calendar month when there's no
+ *                 statement day) and on or before today, and revolving = owedOnCard − that.
+ *   interestIfMin and minOnly use the revolving part only.
+ * @param balance      the card account's balance from entries (negative = owed)
+ * @param planRemaining Σ planState(plan).remaining over the card's plans
+ * @param charges      the card's plan installment and fee entries
+ */
+export function cardWithPlans(c: CardDoc, balance: number, planRemaining: number, charges: { date: string; amt: number }[], today: string): CardPlanState {
+  const base = cardState(c, balance, today)
+  const owedOnCard = Math.max(0, -balance)
+  const after = c.statementDay ? lastDay(c.statementDay, today) : today.slice(0, 7) + '-00'
+  let billed = 0
+  for (const x of charges) if (x.date > after && x.date <= today) billed += x.amt
+  const billedThisCycle = Math.min(owedOnCard, billed)
+  const revolving = owedOnCard - billedThisCycle
+  const minRev = minPayment(revolving, c)
+  const owed = Math.max(0, -balance + planRemaining)
+  return {
+    ...base,
+    owed, owedOnCard, planRemaining, billedThisCycle, revolving,
+    utilisation: c.limit ? owed / c.limit : null,
+    minDue: minRev + billedThisCycle,
+    interestIfMin: ((revolving - minRev) * base.apr) / 1200,
+    minOnly: cardPayoff(revolving, base.apr, (b) => minPayment(b, c)),
   }
 }

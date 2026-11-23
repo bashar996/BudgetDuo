@@ -16,7 +16,17 @@ const LS = {
 }
 
 export function Shell() {
-  const { data } = useStore()
+  const { data, act } = useStore()
+  // Today, checked every minute, so the numbers and plan billing move on at midnight.
+  const [day, setDay] = useState(() => isoOf(new Date()))
+  useEffect(() => {
+    const t = setInterval(() => { const d = isoOf(new Date()); setDay((x) => (x === d ? x : d)) }, 60000)
+    return () => clearInterval(t)
+  }, [])
+  // Card installment plans bill themselves: post any installment that's come due (store.tsx billPlans).
+  // It writes only what's missing and skips plans whose last write is still on its way, so the data
+  // change it causes runs this again without posting anything twice.
+  useEffect(() => { act.billPlans(day) }, [data, day])
   const [tab, setTab] = useState<TabId>(() => (LS.get('tab') as TabId) || 'home')
   // The budget month shown: a period key (lib/period.ts). It starts on the current one, and goes
   // back to the current one when the household changes the day budget months start.
@@ -80,7 +90,7 @@ export function Shell() {
     }
   }, [view.fAcct, view.selAcct, tab])
 
-  const L = useMemo(() => makeLedger(data, ym), [data, ym])
+  const L = useMemo(() => makeLedger(data, ym), [data, ym, day])
   const def = TAB_DEFS[tab]
   const hero = def.hero?.(L, view) ?? null
   const A = data.household.nameA, B = data.household.nameB

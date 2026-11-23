@@ -32,7 +32,7 @@ const dayNum = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1,
 
 /**
  * Finds the existing entry a row probably is: same account and amount (±0.01) in the same
- * direction, within 3 days, and also: the same day, a similar name, a bill payment, or the same
+ * direction, within 3 days, and also: the same day, a similar name, a bill or loan payment, or the same
  * category as the row's suggestion. An entry on another account counts only with a similar name. Each entry matches at most one row (`used`).
  */
 export function likelyDuplicate(
@@ -50,10 +50,37 @@ export function likelyDuplicate(
     const dirOk = inflow ? t.type !== 'exp' : t.type !== 'inc'
     if (!dirOk) continue
     const sim = Math.max(similarity(row.name, t.name), similarity(row.desc, t.name))
-    const alike = dd === 0 || sim >= 0.5 || !!t.billId || (!!row.cat && row.cat === t.cat)
+    const alike = dd === 0 || sim >= 0.5 || !!t.billId || !!t.debtId || (!!row.cat && row.cat === t.cat)
     if (sameAcct ? !alike : !(sim >= 0.5)) continue
     const score = (sameAcct ? 2 : 0) + sim - dd * 0.1
     if (score > bestScore) { best = t; bestScore = score }
+  }
+  return best
+}
+
+/** How banks label a card installment on the statement ("EPP 4/12", "IPP", "INSTALMENT", "EASY PAYMENT PLAN", "FLEXI"). */
+const PLAN_WORDS = /\bEPP\b|\bIPP\b|\bINSTAL|\bEASY\s*PAYMENT|\bFLEXI/i
+
+/**
+ * A card statement line that is an installment (or fee) Twofold already posted for one of the
+ * card's installment plans: an expense on this card from that plan, amount within 1%, date within
+ * 5 days, and the description names the plan or reads like an installment. Each entry matches once.
+ * @param plans the card's installment plans ({ id, name })
+ */
+export function planInstallmentDupe(
+  tx: Tx[], plans: { id: string; name: string }[], acct: string, row: { date: string; amount: number; desc: string }, used: Set<string>,
+): Tx | null {
+  if (row.amount >= 0 || !plans.length) return null
+  const amt = -row.amount, d = dayNum(row.date), desc = row.desc.toLowerCase()
+  let best: Tx | null = null, bestGap = Infinity
+  for (const t of tx) {
+    const plan = t.debtId ? plans.find((p) => p.id === t.debtId) : undefined
+    if (!plan || used.has(t.id) || t.type !== 'exp' || t.acct !== acct || t.debtPart === 'extra') continue
+    if (Math.abs(t.amt - amt) > Math.max(0.011, t.amt * 0.01)) continue
+    const gap = Math.abs(dayNum(t.date) - d)
+    if (gap > 5) continue
+    if (!(PLAN_WORDS.test(row.desc) || (plan.name.trim().length >= 2 && desc.includes(plan.name.trim().toLowerCase())))) continue
+    if (gap < bestGap) { best = t; bestGap = gap }
   }
   return best
 }
