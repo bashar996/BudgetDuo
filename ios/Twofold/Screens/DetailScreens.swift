@@ -589,9 +589,30 @@ struct ActivityView: View {
             }
             .accessibilityHint("Adds entries to \(a.name) from a CSV, Excel or PDF statement")
             .padding(.top, 8)
+            if a.type == .card { cardPlans(a, L) }
         }
         .padding(16)
         .background(Palette.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    /// A card's installment plans, under its balance: what each still has to bill and the next
+    /// one (each opens its own screen), and "+ Installment plan".
+    private func cardPlans(_ a: Account, _ L: Ledger) -> some View {
+        let plans = L.plansOnCard(a.id)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Installment plans").font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 14)
+            ForEach(plans) { p in PlanRowButton(plan: p, ledger: L) }
+            if plans.isEmpty {
+                Text("Bought something in monthly installments on this card? Add it as a plan and each installment is posted here in its month.")
+                    .font(.geist(13)).foregroundStyle(Palette.gray).padding(.vertical, 6)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button { router.form = .cardPlan(nil, a.id) } label: {
+                Text("+ Installment plan").font(.geist(13.5, .medium)).foregroundStyle(Palette.accentText)
+                    .frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
 

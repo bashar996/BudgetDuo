@@ -4,6 +4,7 @@ import SwiftUI
 struct MainView: View {
     @Environment(HouseholdStore.self) private var store
     @Environment(Router.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         @Bindable var router = router
@@ -37,6 +38,17 @@ struct MainView: View {
         .sheet(item: $router.form) { f in FormHost(form: f) }
         .overlay(alignment: .top) { ErrorToast() }
         .overlay(alignment: .bottom) { UndoToast() }
+        // Today, checked every minute, so the numbers and card plan billing move on at midnight
+        // (plans also bill whenever their data changes: HouseholdStore.billPlans).
+        .task {
+            while !Task.isCancelled {
+                store.dayTick()
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { store.dayTick(force: true) }
+        }
     }
 }
 

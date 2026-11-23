@@ -134,6 +134,7 @@ struct FormHost: View {
         case .newInvestment: AccountForm(editing: nil, preset: .invest)
         case .asset(let a): AssetForm(editing: a)
         case .tripSpend(let t): TripSpendSheet(trip: t)
+        case .cardPlan(let d, let card): PlanForm(editing: d, card: card)
         }
     }
 }

@@ -132,12 +132,21 @@ struct NetWorthView: View {
         let amount: Double
     }
 
-    /// Accounts below zero (cards), then loans.
+    /// Accounts below zero (cards) — a card also owes what its installment plans still have to
+    /// bill, shown under it — then loans.
     private func oweRows(_ L: Ledger) -> [OweRow] {
-        let cards: [OweRow] = L.accounts.filter { L.balance($0) < 0 }.map { a in
-            OweRow(id: "a-" + a.id, name: a.name, meta: a.type.label, amount: -L.balance(a))
+        var inPlans: [String: Double] = [:]
+        for p in L.plans {
+            if let acct = p.acct { inPlans[acct, default: 0] += L.planState(p).remaining }
         }
-        let loans: [OweRow] = L.debts.compactMap { (d: Debt) -> OweRow? in
+        let cards: [OweRow] = L.accounts.compactMap { (a: Account) -> OweRow? in
+            let bal = L.balance(a)
+            let plan = inPlans[a.id] ?? 0
+            guard bal < 0 || plan > 0.005 else { return nil }
+            let meta: String = plan > 0.005 ? a.type.label + " · incl. \(L.money.f(plan)) in installment plans" : a.type.label
+            return OweRow(id: "a-" + a.id, name: a.name, meta: meta, amount: max(0, -bal) + plan)
+        }
+        let loans: [OweRow] = L.loans.compactMap { (d: Debt) -> OweRow? in
             let st = L.loanState(d)
             guard st.balance > 0.005 else { return nil }
             return OweRow(id: "d-" + d.id, name: d.name, meta: "\(d.kindLabel) · \(rateText(st))", amount: st.balance)

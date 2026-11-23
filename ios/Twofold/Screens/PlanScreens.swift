@@ -17,8 +17,9 @@ struct DebtView: View {
                 if !debts.isEmpty { payoffOrder(L, debts: debts, plan: plan) }
 
                 SectionTitle(title: "Loans", action: (label: "+ Loan", run: { router.form = .debt(nil) })).padding(.top, 22)
-                ForEach(L.debts) { d in loanCard(d, L).padding(.top, 10) }
-                if L.debts.isEmpty {
+                // Card installment plans show under their card, not here.
+                ForEach(L.loans) { d in loanCard(d, L).padding(.top, 10) }
+                if L.loans.isEmpty {
                     EmptyNote(text: "No loans yet. Add one with its rate, term and first payment date for a full schedule.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -123,7 +124,7 @@ struct DebtView: View {
         }
     }
 
-    /// A loan opens its detail; a card its account form.
+    /// A loan (or card installment plan) opens its detail; a card its account form.
     private func openDebt(_ id: String, _ L: Ledger) {
         if L.debts.contains(where: { $0.id == id }) { router.drill(.loan(id)) }
         else if let card = L.accounts.first(where: { $0.id == id }) { router.form = .account(card) }
@@ -192,23 +193,35 @@ struct DebtView: View {
 
     // MARK: Cards
 
+    /// A card: what's owed (its installment plans' remaining amount included), the limit used,
+    /// the minimum, its plans and the payment buttons (`Loans.cardWithPlans`).
     private func cardPanel(_ a: Account, _ L: Ledger) -> some View {
         let cs = L.cardState(a)
+        let plans = L.plansOnCard(a.id)
+        let anyActive = plans.contains { !L.planState($0).done }
         let used = cs.utilisation ?? 0
         let warn = used > 0.3
         let months = cs.minOnly.months
         let minOnly: String = cs.minOnly.never
             ? "Paying only the minimum: never paid off"
             : "Paying only the minimum: \(months) month" + (months == 1 ? "" : "s") + ", \(L.money.f(cs.minOnly.interest)) interest"
+        let inPlans: String = "incl. \(L.money.f(cs.planRemaining)) in plans, still to be billed"
+        let nothing: String = anyActive ? "Nothing on the card’s balance. The plans bill themselves each month." : "Nothing owed on this card."
         return VStack(alignment: .leading, spacing: 0) {
             Button { router.form = .account(a) } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(a.name).font(.geist(18, .medium)).lineLimit(1)
-                        Text(cardMeta(a, cs)).font(.geist(12.5)).foregroundStyle(Palette.gray).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(a.name).font(.geist(18, .medium)).lineLimit(1)
+                            Text(cardMeta(a, cs)).font(.geist(12.5)).foregroundStyle(Palette.gray).lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(L.money.f(cs.owed)).font(.geist(22, .medium)).tracking(em: -0.02, size: 22).lineLimit(1).fixedSize()
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(L.money.f(cs.owed)).font(.geist(22, .medium)).tracking(em: -0.02, size: 22).lineLimit(1).fixedSize()
+                    if cs.planRemaining > 0.005 {
+                        Text(inPlans).font(.geist(12.5)).foregroundStyle(Palette.gray)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
                 .contentShape(Rectangle())
             }
@@ -220,7 +233,7 @@ struct DebtView: View {
                 Text("\(Int((used * 100).rounded()))% of \(L.money.f(limit)) used").font(.geist(12.5))
                     .foregroundStyle(warn ? Palette.overText : Palette.gray).padding(.top, 6)
             }
-            if cs.owed > 0 {
+            if cs.owedOnCard > 0 {
                 VStack(alignment: .leading, spacing: 4) {
                     if let due = cs.nextDue {
                         Text("Minimum \(L.money.f(cs.minDue)) due \(DateKit.dayLabel(due))").font(.geist(14, .medium))
@@ -236,22 +249,47 @@ struct DebtView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Text("Interest next month if you pay only the minimum: \(L.money.f(cs.interestIfMin))")
                         .font(.geist(13)).foregroundStyle(Palette.gray).fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.top, 12)
-                HStack(spacing: 8) {
-                    BlockButton(title: "Pay in full", height: 46, radius: 16) { payCard(a, cs.owed, L) }
-                    BlockButton(title: "Pay minimum", fill: Palette.black, outline: true, height: 46, radius: 16) { payCard(a, cs.minDue, L) }
+                    if cs.billedThisCycle > 0.005 {
+                        Text("The minimum includes \(L.money.f(cs.billedThisCycle)) of plan installments, due in full.")
+                            .font(.geist(13)).foregroundStyle(Palette.gray).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .padding(.top, 12)
             } else {
-                Text("Nothing owed on this card.").font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 8)
+                Text(nothing).font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 8)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            cardPlans(a, plans, L)
+            if cs.owedOnCard > 0 {
+                HStack(spacing: 8) {
+                    BlockButton(title: "Pay in full", height: 46, radius: 16) { payCard(a, cs.owedOnCard, L) }
+                    BlockButton(title: "Pay minimum", fill: Palette.black, outline: true, height: 46, radius: 16) { payCard(a, cs.minDue, L) }
+                }
+                .padding(.top, 12)
             }
         }
         .padding(16)
         .background(Palette.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    private func cardMeta(_ a: Account, _ cs: CardState) -> String {
+    /// The card's installment plans (each opens its own screen) and "+ Installment plan".
+    private func cardPlans(_ a: Account, _ plans: [Debt], _ L: Ledger) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !plans.isEmpty {
+                Text("Installment plans").font(.geist(12.5)).foregroundStyle(Palette.gray).padding(.top, 12)
+                ForEach(plans) { p in PlanRowButton(plan: p, ledger: L) }
+            }
+            Button { router.form = .cardPlan(nil, a.id) } label: {
+                Text("+ Installment plan").font(.geist(13.5, .medium)).foregroundStyle(Palette.accentText)
+                    .frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Adds a purchase on \(a.name) split into monthly installments")
+            .padding(.top, plans.isEmpty ? 4 : 2)
+        }
+    }
+
+    private func cardMeta(_ a: Account, _ cs: CardPlanState) -> String {
         [a.bank, a.last4.map { "•• \($0)" }, "\(pctText(cs.apr))% APR"].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 

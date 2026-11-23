@@ -37,7 +37,7 @@ enum StmtDedupe {
 
     /// The existing entry a row probably is: same amount (±0.01) in the same direction, dated
     /// within 3 days. On the same account it also needs one of: the same date, a similar name
-    /// (word overlap ≥ 0.5), a bill payment, or the category the row would get; on another
+    /// (word overlap ≥ 0.5), a bill or loan payment, or the category the row would get; on another
     /// account, a similar name. Best score wins; each entry matches at most one row (`used`).
     static func likelyDuplicate(_ tx: [Tx], acct: String, date: String, amount: Double, name: String, desc: String,
                                 cat: String?, used: Set<String>) -> Tx? {
@@ -54,12 +54,43 @@ enum StmtDedupe {
             let dirOk = inflow ? t.type != .expense : t.type != .income
             if !dirOk { continue }
             let sim = max(StmtClean.similarity(name, t.name), StmtClean.similarity(desc, t.name))
-            let alike = dd == 0 || sim >= 0.5 || t.billId != nil || (cat != nil && cat == t.cat)
+            let alike = dd == 0 || sim >= 0.5 || t.billId != nil || t.debtId != nil || (cat != nil && cat == t.cat)
             let keep = sameAcct ? alike : sim >= 0.5
             if !keep { continue }
             let base: Double = sameAcct ? 2 : 0
             let score = base + sim - Double(dd) * 0.1
             if score > bestScore { best = t; bestScore = score }
+        }
+        return best
+    }
+
+    /// How banks label a card installment on the statement ("EPP 4/12", "IPP", "INSTALMENT",
+    /// "EASY PAYMENT PLAN", "FLEXI").
+    private static let planWords = RX(#"\bEPP\b|\bIPP\b|\bINSTAL|\bEASY\s*PAYMENT|\bFLEXI"#, ci: true)
+
+    /// A card statement line that is an installment (or fee) Twofold already posted for one of the
+    /// card's installment plans: an expense on this card from that plan, amount within 1%, date
+    /// within 5 days, and the description names the plan or reads like an installment. Closest
+    /// date wins; each entry matches once (`used`).
+    /// - Parameter plans: the card's installment plans
+    static func planInstallmentDupe(_ tx: [Tx], plans: [Debt], acct: String, date: String, amount: Double,
+                                    desc: String, used: Set<String>) -> Tx? {
+        if amount >= 0 || plans.isEmpty { return nil }
+        let amt = -amount, d = StmtDates.dayNumber(date), lower = desc.lowercased()
+        let worded = planWords.test(desc)
+        var best: Tx?
+        var bestGap = Int.max
+        for t in tx {
+            guard let id = t.debtId, let plan = plans.first(where: { $0.id == id }) else { continue }
+            if used.contains(t.id) || t.type != .expense || t.acct != acct || t.debtPart == "extra" { continue }
+            let tolerance: Double = max(0.011, t.amt * 0.01)
+            if abs(t.amt - amt) > tolerance { continue }
+            let gap = abs(StmtDates.dayNumber(t.date) - d)
+            if gap > 5 { continue }
+            let planName = plan.name.jsTrim
+            let named = planName.u16Count >= 2 && lower.contains(planName.lowercased())
+            if !(worded || named) { continue }
+            if gap < bestGap { best = t; bestGap = gap }
         }
         return best
     }
@@ -155,6 +186,9 @@ enum ImportPlanner {
         let main = (L.accounts.first { $0.type == .current && $0.id != acctId }
             ?? L.accounts.first { ($0.type == .current || $0.type == .cash) && $0.id != acctId })
         let firstCard = L.accounts.first { $0.type == .card }
+        // The card's installment plans: Twofold posts their installments itself, so a statement
+        // line for one is already in.
+        let cardPlans: [Debt] = isCard ? L.debts.filter({ (l: Debt) -> Bool in Loans.isPlan(l) && l.acct == acctId }) : []
 
         var out: [ImportRow] = []
         for (key, row) in rows.enumerated() {
@@ -181,6 +215,8 @@ enum ImportPlanner {
                 var loan: Debt?
                 if bill == nil {
                     loan = L.debts.first { (l: Debt) -> Bool in
+                        // Card plans bill themselves (see the duplicates below).
+                        if Loans.isPlan(l) { return false }
                         let inst = Loans.installmentOf(l)
                         let lender = l.lender ?? ""
                         let named = StmtClean.similarity(row.desc, l.name) >= 0.5
@@ -235,6 +271,11 @@ enum ImportPlanner {
             // Duplicates.
             if known.contains(p.importId) {
                 p.on = false; p.status = .imported; p.note = "Already imported"
+            } else if isCard, let inst = StmtDedupe.planInstallmentDupe(L.tx, plans: cardPlans, acct: acctId, date: row.date,
+                                                                         amount: row.amount, desc: row.desc, used: used) {
+                used.insert(inst.id)
+                if let b = p.bill { usedBills.remove(b.id + b.ym) }
+                p.on = false; p.status = .dupe; p.note = "Already in Twofold · " + inst.name
             } else if let dupe = StmtDedupe.likelyDuplicate(L.tx, acct: acctId, date: row.date, amount: row.amount,
                                                             name: name, desc: row.desc, cat: p.cat, used: used) {
                 used.insert(dupe.id)

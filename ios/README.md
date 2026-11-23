@@ -10,7 +10,7 @@ one shared budget for two people, synced between both phones.
   sweep, where extra money goes, recent moves), More → Activity (search, who / account / category
   filters, CSV export, statement import), Bills (with the budget month's calendar), Accounts, Net worth (add and edit
   assets and investments), Debt (payoff plan, loans with their full schedule and payments, credit
-  cards with minimums and payoff), Reports (with a CSV download), Plan ahead (30-day cash forecast
+  cards with minimums and payoff, card installment plans), Reports (with a CSV download), Plan ahead (30-day cash forecast
   against your cushion, planned purchases with both votes and Mark bought, trips with Log spend),
   Us two (settle-up, who paid, pay, pocket money, money date), Settings; plus the full-screen
   keypad for adding entries and the category / pot bottom sheets. Everything the Mac app can
@@ -138,14 +138,15 @@ ios/
 ```
 users/{uid}                      { householdId }
 households/{code}                names, currency, members, budgets, incomes, checks, round-ups
-households/{code}/tx/{id}        entries (expense / income / transfer, pot moves; loan payments carry debtId, debtPart;
+households/{code}/tx/{id}        entries (expense / income / transfer, pot moves; loan payments and card plan entries carry debtId, debtPart;
                                  imported ones carry importId and source "import")
 households/{code}/accounts/{id}  opening balance + details (cards: limit, apr, statementDay, dueDay, minPct, minFloor)
 households/{code}/bills/{id}     day, amount, category, paid months (a loan's bill carries debtId)
 households/{code}/goals/{id}     pots: target, starting amount, monthly, account
 households/{code}/debts/{id}     loans: kind, lender, principal, rate, rateType, termMonths, firstDue,
                                  installment, paidBefore, rateChanges, fee, acct, billId
-                                 (+ legacy balance, apr, min kept up to date for older builds)
+                                 (+ legacy balance, apr, min kept up to date for older builds);
+                                 card installment plans: kind "cardplan", acct = the card, cat, procFee, billedThrough
 households/{code}/planned/{id}   planned purchases with each partner's vote
 households/{code}/events/{id}    trips and events: budget, spent
 households/{code}/assets/{id}    home, car, gold …: name, kind, value (missing = none)
@@ -168,6 +169,33 @@ the loan; a rate change re-works the installment so the loan still ends when it 
 installment. Card minimums are `minPct`% of what's owed but at least `minFloor` (defaults 5% and
 100; APR 36%). Entries can be deleted from any list (touch and hold → Delete), with Undo for 5 s
 that restores the same entry id.
+
+### Card installment plans
+
+A purchase the bank split into monthly installments on a credit card (Easy Payment Plan, Flexi
+installments …): Debt → a card → **+ Installment plan** (or a card's entries, from Accounts). It's
+a `debts/{id}` document with `kind: "cardplan"` and `acct` = the card, so the loan maths is reused
+(rate 0 and "flat" by default). The budget counts **one installment a month** in the plan's
+category (`cat`, Shopping by default), not the full price:
+
+- Each installment n is posted by the app as an expense on the card: id `plan-{planId}-{n}`, dated
+  `nthDue(firstDue, n − 1)`, `debtId` = the plan, `debtPart` "installment", amounts rounded so they add
+  up to the total (1,000 over 3 → 333.33, 333.34, 333.33). The same batch sets `billedThrough = n`.
+  `HouseholdStore.billPlans` runs when entries, loans or accounts change and when the day changes
+  (checked every minute and when the app comes to the front), only once all three collections have
+  synced from the server, and skips a plan whose last write hasn't come back yet. Both phones and
+  the Mac write identical documents, so nothing doubles; a deleted installment isn't posted again.
+- A processing fee (`procFee`) is posted once when the plan is added (`plan-{id}-fee`, `debtPart`
+  "fee": linked to the plan but not a payment). **Close early** posts the quote (what's left ×
+  (1 + fee %)) as `plan-{id}-close` (`debtPart` "extra"); billing then stops. Editing never rewrites
+  posted entries.
+- The card's numbers (`Loans.cardWithPlans`): owed = what's on the card + what its plans still have
+  to bill (the bank blocks it), and the limit used counts both; the minimum = the usual minimum on
+  the rest + this cycle's installments in full. In the payoff plan each plan is its own line; Net
+  worth counts the remaining plan amount under the card. Plans never show in Bills or the Loans list.
+- Statement import: a card line matching a posted installment (amount ±1%, date ±5 days, and the
+  plan's name or "EPP", "IPP", "INSTAL…", "EASY PAYMENT", "FLEXI" in the description) is "Already in
+  Twofold". An existing entry with a `debtId` also counts towards the usual duplicate rule.
 
 Deleting a category can move its entries and bills to another
 one (written in batches of at most 450); otherwise they show as "Other" and count towards no budget.

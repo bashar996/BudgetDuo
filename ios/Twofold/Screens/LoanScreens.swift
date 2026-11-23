@@ -50,7 +50,12 @@ struct LoanDetailView: View {
         Group {
             if let L = store.ledger() {
                 if let d = L.debts.first(where: { $0.id == id }) {
-                    detail(d, L)
+                    // A card installment plan has its own screen (no Pay; it bills itself).
+                    if Loans.isPlan(d) {
+                        PlanDetailView(plan: d, ledger: L, showBack: showBack)
+                    } else {
+                        detail(d, L)
+                    }
                 } else {
                     Screen(color: Palette.cream, mirrored: true) {
                         NavRow(title: "Loan", showBack: showBack)

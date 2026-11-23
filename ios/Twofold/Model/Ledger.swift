@@ -309,9 +309,10 @@ struct Ledger {
     var assetsTotal: Double { assets.reduce(0) { $0 + $1.value } }
     /// Accounts in the black plus assets.
     var own: Double { accounts.map(balance).filter { $0 > 0 }.reduce(0, +) + assetsTotal }
-    /// Loans (outstanding today) plus accounts in the red (cards).
+    /// Loans (outstanding today), what card installment plans still have to bill, plus accounts
+    /// in the red (cards).
     var liabilities: Double {
-        accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + loansOwed
+        accounts.map(balance).filter { $0 < 0 }.reduce(0) { $0 - $1 } + loansOwed + plansOwed
     }
     var netWorth: Double { own - liabilities }
 
@@ -370,9 +371,11 @@ struct Ledger {
 
     // MARK: Loans & cards
 
-    /// A loan's payments for `Loans.loanState`: entries with its debtId.
+    /// A loan's payments for `Loans.loanState`: entries with its debtId (a card plan's
+    /// processing fee, debtPart "fee", isn't a payment).
     static func payments(of debtId: String, in tx: [Tx]) -> [LoanPayment] {
-        tx.filter { $0.debtId == debtId }.map { LoanPayment(date: $0.date, amt: $0.amt, part: $0.debtPart ?? "installment") }
+        tx.filter { $0.debtId == debtId && $0.debtPart != "fee" }
+            .map { LoanPayment(date: $0.date, amt: $0.amt, part: $0.debtPart == "extra" ? "extra" : "installment") }
     }
 
     /// Every loan's state today (loan id → state).
@@ -386,27 +389,48 @@ struct Ledger {
         loanStates[d.id] ?? Loans.loanState(d, Ledger.payments(of: d.id, in: tx), today: todayIso)
     }
 
-    /// Entries that paid this loan, newest first.
+    /// Entries that paid this loan (a card plan: every entry it posted), newest first.
     func loanPayments(_ d: Debt) -> [Tx] { tx.filter { $0.debtId == d.id } }
 
+    /// Loans, without card installment plans (those show under their card).
+    var loans: [Debt] { debts.filter { !Loans.isPlan($0) } }
     /// Loans with something still owed.
-    var activeLoans: [Debt] { debts.filter { loanState($0).balance > 0.005 } }
-    var loansOwed: Double { debts.reduce(0) { $0 + loanState($1).balance } }
+    var activeLoans: [Debt] { loans.filter { loanState($0).balance > 0.005 } }
+    var loansOwed: Double { loans.reduce(0) { $0 + loanState($1).balance } }
 
     /// The bill that shows this loan's installment, if any.
     func loanBill(_ d: Debt) -> Bill? {
         bills.first { $0.debtId == d.id && (d.billId == nil || $0.id == d.billId) }
     }
 
-    var cards: [Account] { accounts.filter { $0.type == .card } }
-    func cardState(_ a: Account) -> CardState { Loans.cardState(a, balance(a), today: todayIso) }
+    // Card installment plans (Loans.swift, "Card installment plans").
 
-    /// Installments plus card minimums due each month.
-    var debtMonthly: Double {
-        let installments: Double = activeLoans.reduce(0) { $0 + loanState($1).installment }
-        let minimums: Double = cards.reduce(0) { $0 + cardState($1).minDue }
-        return installments + minimums
+    /// Every card installment plan.
+    var plans: [Debt] { debts.filter(Loans.isPlan) }
+    /// A plan's installments billed, what's left and what's next, today.
+    func planState(_ p: Debt) -> PlanState { Loans.planState(p, st: loanState(p)) }
+    /// The installment plans on a card.
+    func plansOnCard(_ card: String) -> [Debt] { plans.filter { $0.acct == card } }
+    /// What every plan still has to bill (part of what's owed on the cards).
+    var plansOwed: Double { plans.reduce(0) { $0 + planState($1).remaining } }
+
+    var cards: [Account] { accounts.filter { $0.type == .card } }
+
+    /// A card's numbers with its installment plans (`Loans.cardWithPlans`).
+    func cardState(_ a: Account) -> CardPlanState {
+        let mine = plans(on: a.id)
+        let ids = Set(mine.map(\.id))
+        let remaining: Double = mine.reduce(0) { $0 + planState($1).remaining }
+        let charges: [(date: String, amt: Double)] = tx.compactMap { (t: Tx) -> (date: String, amt: Double)? in
+            guard let id = t.debtId, ids.contains(id), t.acct == a.id, t.debtPart != "extra" else { return nil }
+            return (date: t.date, amt: t.amt)
+        }
+        return Loans.cardWithPlans(a, balance(a), planRemaining: remaining, charges: charges, today: todayIso)
     }
+
+    /// Installments (loans and card plans) plus card minimums due each month: what the payoff
+    /// plan pays before any extra (as the Mac's "Monthly payments").
+    var debtMonthly: Double { allDebts.reduce(0) { $0 + $1.min } }
 
     /// Whole days from today to a "yyyy-MM-dd" (negative when it's past).
     func daysUntil(_ iso: String) -> Int {
@@ -423,20 +447,26 @@ struct Ledger {
 
     // MARK: Debt plan
 
-    /// Loans still owing (outstanding today, effective rate, current installment) plus
-    /// cards in the red (owed, APR and minimum from `Loans.cardState`).
+    /// Loans still owing (outstanding today, effective rate, current installment), each card
+    /// installment plan on its own (what's left to bill, at its installment), plus cards in the
+    /// red: only what's on the card, at the minimum on that (the plans are their own lines).
     var allDebts: [DebtLine] {
-        let loans: [DebtLine] = debts.compactMap { (d: Debt) -> DebtLine? in
+        let owingLoans: [DebtLine] = loans.compactMap { (d: Debt) -> DebtLine? in
             let st = loanState(d)
             guard st.balance > 0.005 else { return nil }
             return DebtLine(id: d.id, name: d.name, balance: st.balance, apr: st.effectiveRate, min: st.installment)
         }
-        let owing: [DebtLine] = cards.compactMap { (a: Account) -> DebtLine? in
-            let cs = cardState(a)
-            guard cs.owed > 0 else { return nil }
-            return DebtLine(id: a.id, name: a.name, balance: cs.owed, apr: cs.apr, min: cs.minDue)
+        let owingPlans: [DebtLine] = plans.compactMap { (p: Debt) -> DebtLine? in
+            let ps = planState(p)
+            guard ps.remaining > 0.005 else { return nil }
+            return DebtLine(id: p.id, name: p.name, balance: ps.remaining, apr: ps.st.effectiveRate, min: ps.st.installment)
         }
-        return loans + owing
+        let owingCards: [DebtLine] = cards.compactMap { (a: Account) -> DebtLine? in
+            let cs = cardState(a)
+            guard cs.owedOnCard > 0 else { return nil }
+            return DebtLine(id: a.id, name: a.name, balance: cs.owedOnCard, apr: cs.apr, min: Loans.minPayment(cs.owedOnCard, a))
+        }
+        return owingLoans + owingPlans + owingCards
     }
 
     var strategy: String { household.strat ?? "avalanche" }

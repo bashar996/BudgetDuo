@@ -24,7 +24,8 @@ enum AppTab: String, CaseIterable {
 enum Route: Hashable {
     case activity(account: String?)
     case bills, accounts, worth, debt, reports, plan, us, settings
-    /// One loan's detail (schedule, payments), by loan id.
+    /// One loan's detail (schedule, payments), by loan id. A card installment plan opens its
+    /// own version (PlanDetailView).
     case loan(String)
 
     /// The screen's title, as its NavRow shows it (a loan shows its own name).
@@ -95,6 +96,8 @@ enum FormSheet: Identifiable {
     case asset(Asset?)
     /// Log spending on a trip or event.
     case tripSpend(Trip)
+    /// New / edit card installment plan; the account id picks the card for a new one.
+    case cardPlan(Debt?, String?)
     var id: String {
         switch self {
         case .account(let a): return "account-\(a?.id ?? "new")"
@@ -111,6 +114,7 @@ enum FormSheet: Identifiable {
         case .newInvestment: return "new-investment"
         case .asset(let a): return "asset-\(a?.id ?? "new")"
         case .tripSpend(let t): return "trip-spend-\(t.id)"
+        case .cardPlan(let d, let card): return "cardplan-\(d?.id ?? "new")-\(card ?? "")"
         }
     }
 }
