@@ -83,6 +83,8 @@ struct PlanDetailView: View {
     var plan: Debt
     var ledger: Ledger
     var showBack = true
+    /// Schedule row height; grows with the text size so rows aren't clipped.
+    @ScaledMetric(relativeTo: .body) private var scheduleRowHeight: CGFloat = 60
     @Environment(HouseholdStore.self) private var store
     @Environment(Router.self) private var router
     @State private var confirmClose = false
@@ -292,7 +294,7 @@ struct PlanDetailView: View {
     /// the next one highlighted.
     private func scheduleSection(_ ps: PlanState, _ L: Ledger) -> some View {
         let rows = ps.st.schedule
-        let rowHeight: CGFloat = 60
+        let rowHeight: CGFloat = scheduleRowHeight
         let billed = ps.billed
         let next: Int? = ps.done ? nil : rows.first(where: { $0.n > billed })?.n
         let foot: String = "In \(L.money.currency). Ticked rows are billed on the card" + (ps.closed ? "; the plan was closed early." : ".")
@@ -565,8 +567,10 @@ struct PlanForm: View {
         if pf > 0 { line2 += " · plus \(m.f(pf)) processing fee" }
         let payments: [LoanPayment] = editing.map { Ledger.payments(of: $0.id, in: L.tx) } ?? []
         let sched = Loans.planChargesDue(d, payments, today: L.todayIso)
+        // Editing: installments Twofold already posted count as billed too (as in Loans.planState).
+        let billedN: Int = max(paidN, d.billedThrough ?? 0)
         let line3: String
-        if paidN >= term {
+        if billedN >= term {
             line3 = "All \(term) installments already billed."
         } else if !sched.isEmpty {
             let n = sched.count
@@ -575,8 +579,9 @@ struct PlanForm: View {
             let day = Int(first.suffix(2)) ?? 1
             line3 = (editing == nil ? "On saving, " : "") + "\(what) \(verb) posted on the card; then one on the \(ordinal(day)) each month."
         } else {
-            let nx = Loans.nthDue(first, paidN)
-            line3 = "Installment \(paidN + 1) of \(term) is posted \(DateKit.dayLabel(nx)) \(nx.prefix(4)), in \(L.categoryName(cat))."
+            let nx = Loans.nthDue(first, billedN)
+            let when: String = DateKit.dayLabel(nx) + " " + String(nx.prefix(4))
+            line3 = "Installment \(billedN + 1) of \(term) is posted \(when), in \(L.categoryName(cat))."
         }
         return (line1, line2, line3)
     }

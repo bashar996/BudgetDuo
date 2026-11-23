@@ -36,7 +36,7 @@ struct Period: Equatable {
     static func clamp(_ start: Int?) -> Int { max(1, min(28, start ?? 1)) }
 
     /// The household's start day.
-    static func start(of h: Household) -> Int { clamp(h.cycleStart) }
+    static func startDay(of h: Household) -> Int { clamp(h.cycleStart) }
 
     /// Key of the period containing `iso` ("yyyy-MM-dd").
     static func key(_ iso: String, start: Int) -> String {

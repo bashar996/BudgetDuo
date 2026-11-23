@@ -38,6 +38,8 @@ func termText(_ n: Int) -> String {
 struct LoanDetailView: View {
     var id: String
     var showBack = true
+    /// Schedule row height; grows with the text size so rows aren't clipped.
+    @ScaledMetric(relativeTo: .body) private var scheduleRowHeight: CGFloat = 60
     @Environment(HouseholdStore.self) private var store
     @Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
@@ -244,7 +246,7 @@ struct LoanDetailView: View {
 
     private func scheduleSection(_ st: LoanState, _ L: Ledger) -> some View {
         let rows = st.schedule
-        let rowHeight: CGFloat = 60
+        let rowHeight: CGFloat = scheduleRowHeight
         let next: Int? = st.balance > 0.005 && st.installmentsPaid < rows.count ? rows[st.installmentsPaid].n : nil
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {

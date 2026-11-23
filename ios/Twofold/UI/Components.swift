@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // A plain EnvironmentKey rather than `@Entry`, which needs the Xcode 16 SDK.
 private struct ScreenTrailingInsetKey: EnvironmentKey {

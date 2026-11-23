@@ -150,7 +150,7 @@ struct Ledger {
         self.today = today
         let iso = DateKit.iso(today)
         todayIso = iso
-        let start = Period.start(of: household)
+        let start = Period.startDay(of: household)
         let cur = Period(containing: iso, start: start)
         cycleStart = start
         period = cur
