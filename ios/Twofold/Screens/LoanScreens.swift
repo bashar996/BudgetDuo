@@ -415,8 +415,11 @@ struct LoanForm: View {
             }
             Text(term > 0 ? "\(termText(term)) in all" : "Years and months, or just months.")
                 .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6)
+            FormLabel("Installments already paid").padding(.top, 16)
+            CreamField(placeholder: "0", text: $paidBefore, keyboard: .numberPad)
+            // The date asked for is installment (already paid + 1): the next one, paid in Twofold.
             DatePicker(selection: $firstDue, displayedComponents: .date) {
-                Text("First payment").font(.geist(15))
+                Text(paidN > 0 ? "Installment \(paidN + 1) due (your next)" : "First installment due").font(.geist(15))
             }
             .environment(\.colorScheme, .light)
             .tint(Palette.black)
@@ -430,9 +433,6 @@ struct LoanForm: View {
             Text("Leave it empty to use the calculated figure, or enter it as on your bank statement.")
                 .font(.geist(13)).foregroundStyle(Palette.gray).padding(.top, 6)
                 .fixedSize(horizontal: false, vertical: true)
-            FormLabel("Installments already paid").padding(.top, 16)
-            CreamField(placeholder: "0", text: $paidBefore, keyboard: .numberPad)
-
             FormLabel("Pays from").padding(.top, 16)
             FlowLayout(spacing: 6) {
                 ForEach(payFrom(L)) { a in CreamChip(label: a.name, on: acct == a.id) { acct = a.id } }
@@ -526,8 +526,15 @@ struct LoanForm: View {
             let st = Loans.loanState(d, editing.map { Ledger.payments(of: $0.id, in: L.tx) } ?? [], today: L.todayIso)
             let endYm = st.endsYm ?? st.schedule.last.map { String($0.date.prefix(7)) }
             let ends = endYm.map { DateKit.monthLabel($0, short: true) } ?? "—"
-            Text("\(L.money.f(Loans.installmentOf(d)))/month · \(L.money.f(st.totalInterest)) interest · ends \(ends)")
-                .font(.geist(15, .medium))
+            let total = d.termMonths ?? st.schedule.count
+            let next: String = st.nextDue.map { (due: String) -> String in "Installment \(st.installmentsPaid + 1) of \(total) due \(DateKit.dayLabel(due)) \(due.prefix(4))" }
+                ?? "All \(total) installments paid"
+            let first: String = d.firstDue.map { (f: String) -> String in " · first one \(DateKit.dayLabel(f)) \(f.prefix(4))" } ?? ""
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(L.money.f(Loans.installmentOf(d)))/month · \(L.money.f(st.totalInterest)) interest · ends \(ends)")
+                    .font(.geist(15, .medium))
+                Text(next + first).font(.geist(13)).foregroundStyle(Palette.ink)
+            }
                 .padding(14).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Palette.lavender, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .fixedSize(horizontal: false, vertical: true)
@@ -560,7 +567,8 @@ struct LoanForm: View {
             months = n % 12 > 0 ? "\(n % 12)" : ""
         }
         if let f = d.firstDue, !f.isEmpty {
-            firstDue = DateKit.date(f)
+            // Show the date of the installment after the ones already paid.
+            firstDue = DateKit.date(Loans.nthDue(f, d.paidBefore ?? 0))
         } else {
             firstDue = DateKit.cal.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         }
@@ -583,9 +591,9 @@ struct LoanForm: View {
         d.rate = max(0, parseAmount(rate) ?? 0)
         d.rateType = rateType
         d.termMonths = term > 0 ? term : nil
-        d.firstDue = DateKit.iso(firstDue)
+        d.firstDue = Self.backDate(DateKit.iso(firstDue), paidN)
         d.installment = parseAmount(installment).flatMap { $0 > 0 ? $0 : nil }
-        d.paidBefore = Int(paidBefore.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
+        d.paidBefore = paidN > 0 ? paidN : nil
         let rc: [RateChange] = rateType == "reducing"
             ? changes.compactMap { c in parseAmount(c.rate).map { RateChange(from: c.from, rate: max(0, $0)) } }.sorted { $0.from < $1.from }
             : []
@@ -597,5 +605,18 @@ struct LoanForm: View {
 
     private func save() {
         store.saveLoan(draft(), showInBills: showInBills)
+    }
+
+    /// Installments already paid before Twofold (never more than the term).
+    private var paidN: Int {
+        let n = max(0, Int(paidBefore.trimmingCharacters(in: .whitespaces)) ?? 0)
+        return term > 0 ? min(n, term) : n
+    }
+
+    /// The first installment's date, given the date of installment n + 1.
+    static func backDate(_ due: String, _ n: Int) -> String {
+        let ym = DateKit.addMonths(String(due.prefix(7)), -n)
+        let day = min(Int(due.suffix(2)) ?? 1, DateKit.daysIn(ym))
+        return ym + "-" + DateKit.pad(day)
     }
 }

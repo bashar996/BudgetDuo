@@ -8,7 +8,7 @@ import { flatToReducing, installmentOf, isSimple, loanState, nthDue, type RateTy
 import { loanPayments } from '../data/ledger'
 import { useStore } from '../data/store'
 import { css, sx } from '../lib/css'
-import { mLabel } from '../lib/dates'
+import { addM, dim, dLab, isoD, mLabel, pad } from '../lib/dates'
 import { useUI } from '../shell/ui'
 import { Field, inputStyle, PanelFrame } from './PanelFrame'
 import { ChipGroup, chips, Pair, Pill, Switch, TextField, parse } from './parts'
@@ -16,11 +16,16 @@ import { LOAN_KINDS, pct, r2, termText, type LoanKind } from './loanBits'
 
 interface Draft {
   name: string; kind: LoanKind; lender: string; principal: string; rate: string; rateType: RateType
-  years: string; months: string; firstDue: string; installment: string; paidBefore: string
+  years: string; months: string; due: string; installment: string; paidBefore: string
   acct: string; inBills: boolean; fee: string; changes: { from: string; rate: string }[]
 }
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+/** The first installment's date, given the date of installment n + 1 (n already paid). */
+const backDate = (due: string, n: number) => {
+  const ym = addM(due.slice(0, 7), -n)
+  return ym + '-' + pad(Math.min(Number(due.slice(8, 10)) || 1, dim(ym)))
+}
 
 export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
   const { act } = useStore()
@@ -34,7 +39,8 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
       principal: old?.principal ? String(old.principal) : '', rate: old ? String(old.rate ?? old.apr ?? '') : '',
       rateType: old?.rateType ?? 'reducing',
       years: t ? String(Math.floor(t / 12)) : '', months: t ? String(t % 12 || '') : '',
-      firstDue: old?.firstDue ?? '', installment: old?.installment ? String(old.installment) : '',
+      // The date asked for is installment (already paid + 1): the first one paid in Twofold.
+      due: old?.firstDue ? nthDue(old.firstDue, old.paidBefore ?? 0) : '', installment: old?.installment ? String(old.installment) : '',
       paidBefore: old?.paidBefore ? String(old.paidBefore) : '',
       acct: old?.acct ?? L.mainAcct, inBills: old ? !!line?.bill : true, fee: old?.fee ? String(old.fee) : '',
       changes: (old?.rateChanges ?? []).map((c) => ({ from: c.from, rate: String(c.rate) })),
@@ -48,7 +54,9 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
   // The loan as typed so far, for the placeholder and the live summary.
   const principal = parse(d.principal), rate = parse(d.rate) || 0
   const term = Math.round((parseInt(d.years) || 0) * 12 + (parseInt(d.months) || 0))
-  const ready = principal > 0 && term > 0 && isDate(d.firstDue)
+  const paidN = Math.round(Math.max(0, Math.min(term || Infinity, parseInt(d.paidBefore) || 0)))
+  const firstDue = isDate(d.due) ? backDate(d.due, paidN) : ''
+  const ready = principal > 0 && term > 0 && isDate(firstDue)
   const changes = d.rateType === 'reducing'
     ? d.changes.filter((c) => /^\d{4}-\d{2}$/.test(c.from) && !isNaN(parse(c.rate))).map((c) => ({ from: c.from, rate: parse(c.rate) })).sort((a, b) => (a.from < b.from ? -1 : 1))
     : []
@@ -56,8 +64,8 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
   const doc: Debt = {
     ...(old ?? {}), id: old?.id ?? 'draft', name: d.name.trim(), kind: d.kind, lender: d.lender.trim() || null,
     principal: principal > 0 ? principal : null, rate, rateType: d.rateType, termMonths: term || null,
-    firstDue: isDate(d.firstDue) ? d.firstDue : null, installment: bank > 0 ? bank : null,
-    paidBefore: Math.round(Math.max(0, Math.min(term || 0, parseInt(d.paidBefore) || 0))) || null,
+    firstDue: firstDue || null, installment: bank > 0 ? bank : null,
+    paidBefore: paidN || null,
     rateChanges: changes.length ? changes : null, fee: parse(d.fee) > 0 ? parse(d.fee) : null, acct: d.acct || null,
     billId: old?.billId ?? null, balance: principal > 0 ? principal : old?.balance ?? 0, apr: rate, min: old?.min ?? 0,
   }
@@ -66,7 +74,7 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
   const ends = st ? st.endsYm ?? st.schedule[st.schedule.length - 1]?.date.slice(0, 7) : null
   // Installments due before today by the schedule, less those already logged in Twofold.
   let dueSoFar = 0
-  if (ready) while (dueSoFar < term && nthDue(d.firstDue, dueSoFar) < L.todayIso) dueSoFar++
+  if (ready) while (dueSoFar < term && nthDue(firstDue, dueSoFar) < L.todayIso) dueSoFar++
   const logged = old ? line!.payments.filter((t) => (t.debtPart ?? 'installment') === 'installment').length : 0
   const suggest = Math.max(0, dueSoFar - logged)
 
@@ -77,7 +85,7 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
     if (!keepSimple) {
       if (!(principal > 0)) return setErr('Add the amount borrowed.')
       if (!(term > 0)) return setErr('Add the term, in years or months.')
-      if (!isDate(d.firstDue)) return setErr('Add the date of the first installment.')
+      if (!isDate(d.due)) return setErr(paidN ? 'Add the date of installment ' + (paidN + 1) + ', your next one.' : 'Add the date of the first installment.')
     }
     if (rate < 0 || rate > 100) return setErr('The interest rate looks off. Use a yearly % like 7.9.')
     const { id: _draft, ...rest } = doc
@@ -124,13 +132,16 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
           <TextField label="and months" decimal value={d.months} onChange={(v) => set('months', v.replace(/\D/g, ''))} />
         </Pair>
         <Pair>
-          <Field label="First installment">
-            <input type="date" className="h-focus-ink" value={d.firstDue} onChange={(e) => set('firstDue', e.target.value)} style={inputStyle} />
-          </Field>
           <TextField label="Installments already paid" decimal placeholder="0" value={d.paidBefore} onChange={(v) => set('paidBefore', v.replace(/\D/g, ''))} />
+          <Field label={paidN ? 'Installment ' + (paidN + 1) + ' due (your next)' : 'First installment due'}>
+            <input type="date" className="h-focus-ink" value={d.due} onChange={(e) => set('due', e.target.value)} style={inputStyle} />
+          </Field>
         </Pair>
-        {ready && suggest > 0 && String(suggest) !== d.paidBefore && (
-          <Pill onClick={() => set('paidBefore', String(suggest))}>{'Use ' + suggest + ', the ones due before today' + (logged ? ' not logged here' : '')}</Pill>
+        {ready && suggest > paidN && (
+          // Moving installments into "already paid" keeps the first installment's date put.
+          <Pill onClick={() => setD((x) => ({ ...x, paidBefore: String(suggest), due: nthDue(firstDue, suggest) }))}>
+            {'Mark ' + suggest + ' as paid: the ones due before today' + (logged ? ' not logged here' : '')}
+          </Pill>
         )}
         <TextField label="Installment, as on your bank statement (optional)" decimal placeholder={calc ? L.num(r2(calc)) + ' worked out' : 'Worked out for you'}
           value={d.installment} onChange={(v) => set('installment', v)} />
@@ -162,6 +173,10 @@ export function LoanForm({ L, id }: { L: Ledger; id?: string }) {
               </span>
               <span style={css('font-size:12.5px;color:#a9a7b8')}>
                 {termText(term) + ' · ' + f(Math.round(principal + st.totalInterest)) + ' in total' + (st.installmentsPaid ? ' · ' + f(Math.round(st.balance)) + ' still owed today' : '')}
+              </span>
+              <span style={css('font-size:12.5px;color:#d9d7e4')}>
+                {(st.nextDue ? 'Installment ' + (st.installmentsPaid + 1) + ' of ' + term + ' due ' + dLab(isoD(st.nextDue)) + ' ' + st.nextDue.slice(0, 4) : 'All ' + term + ' installments paid')
+                  + ' · first one ' + dLab(isoD(firstDue)) + ' ' + firstDue.slice(0, 4)}
               </span>
             </>
           ) : (
